@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building a Physics Engine from Scratch - Part 1</title>
+    <!-- Highlight.js -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            document.querySelectorAll('pre').forEach((el) => {
+                // If the pre doesn't have a code child, wrap its content in one
+                if (!el.querySelector('code')) {
+                    const code = document.createElement('code');
+                    code.className = 'language-javascript'; // Default to JS for this tutorial
+                    code.innerHTML = el.innerHTML;
+                    el.innerHTML = '';
+                    el.appendChild(code);
+                }
+            });
+            hljs.highlightAll();
+        });
+    </script>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --text: #cccccc;
+            --text-heading: #ffffff;
+            --accent: #3794ff;
+            --code-bg: #2d2d2d;
+            --note-bg: #252526;
+            --note-border: #3794ff;
+            --border: #3e3e42;
+        }
+
+        body {
+            font-family: 'Segoe UI', Inter, system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0 auto;
+            padding: 15px;
+            /* Smaller padding for mobile */
+            background-color: var(--bg);
+            max-width: 100%;
+        }
+
+        /* PC View */
+        @media (min-width: 768px) {
+            body {
+                padding: 30px;
+                max-width: 800px;
+            }
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            color: var(--text-heading);
+            margin-top: 1.5em;
+        }
+
+        h1 {
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h2 {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            color: #ff9d9d;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        .note {
+            background-color: var(--note-bg);
+            border-left: 4px solid var(--note-border);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        strong {
+            color: #fff;
+        }
+
+        .diagram {
+            text-align: center;
+            margin: 30px 0;
+            background: #fff;
+            /* Keep white for diagrams for now as they are SVG */
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Lists */
+        ul,
+        ol {
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        img,
+        svg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <h1>Building a Physics Engine from Scratch - Part 1</h1>
+
+    <div class="note">
+        <h3 style="margin-top:0;">A Quick Note Before We Start</h3>
+        <p>
+            Before we go into details, I just want to say that this is not my first time trying to
+            build a physics engine from scratch.
+            I've built <strong>dozens of failed versions</strong> till now.
+        </p>
+
+        <h4>Why Document This Time?</h4>
+        <p>There are several reasons why I want to document my journey this time:</p>
+        <ol>
+            <li><strong>Picking up where I left off</strong> — Instead of starting from nothing every time I gave up and
+                start a new one after a couple of months, I can pick up from where I left off. Think of it as a sort of
+                documentation for several physics topics and code.</li>
+            <li><strong>Getting help along the way</strong> — Maybe I could get some help from you if I get stuck
+                somewhere in the process.</li>
+            <li><strong>Helping others</strong> — It will be helpful and serve as a good reference for others who also
+                have a similar goal.</li>
+        </ol>
+
+        <p><strong>Let's begin.</strong></p>
+    </div>
+
+    <h2>Goals</h2>
+    <p>First of all, the realistic goals I have for the final product is that it should be able to do these things:</p>
+    <ul>
+        <li><strong>Rigid bodies</strong>: Circles, Polygons.</li>
+        <li><strong>Composite bodies</strong>: Combination of rigid bodies that act as a single body.</li>
+        <li><strong>Collision detection and resolution</strong>: Handling impacts with orientation.</li>
+        <li><strong>Constraints</strong>: Joints, hinges, ropes, rods, springs, jelly physics.</li>
+        <li><strong>Spatial optimization</strong>: So objects that are far off from each other don't need to check for
+            collision detection.</li>
+        <li><strong>Stability</strong>: This is hardest to achieve for home made engines but still I aim for "good
+            enough" stability.</li>
+    </ul>
+
+    <h2>Chapter 1: The Core Concepts</h2>
+
+    <h3>1. The Coordinate System</h3>
+    <p>
+        Generally Y goes <strong>Up</strong>. <br>
+        But in HTML5 Canvas, Y goes <strong>Down</strong>.
+    </p>
+    <ul>
+        <li><strong>(0, 0)</strong> is the top-left corner of the screen.</li>
+        <li><strong>+X</strong> is Right.</li>
+        <li><strong>+Y</strong> is <strong>Down</strong>.</li>
+    </ul>
+    <div class="diagram">
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <!-- Screen Border -->
+            <rect x="10" y="10" width="280" height="180" fill="white" stroke="#333" stroke-width="2" />
+
+            <!-- Axes -->
+            <line x1="20" y1="20" x2="250" y2="20" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)" />
+            <line x1="20" y1="20" x2="20" y2="150" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)" />
+
+            <circle cx="20" cy="20" r="4" fill="#e74c3c" />
+            <text x="25" y="35" font-weight="bold" fill="#e74c3c">(0, 0)</text>
+
+            <text x="260" y="25" fill="#e74c3c" font-weight="bold">+X</text>
+            <text x="30" y="160" fill="#e74c3c" font-weight="bold">+Y (Down!)</text>
+
+            <defs>
+                <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+                </marker>
+            </defs>
+        </svg>
+        <p><em>Figure 1.1: The screen coordinate system. Gravity (0, 9.8) is positive because it pulls things DOWN.</em>
+        </p>
+    </div>
+
+    <h3>2. What is a Vector?</h3>
+    <p>
+        In school, you might have heard that a vector has "magnitude and direction". But what does that actually mean
+        for our game?
+    </p>
+    <p>
+        Imagine you are on a treasure map.
+        If I say <strong>"The treasure is at (5, 3)"</strong>, I am giving you a <strong>Position Vector</strong>. It
+        means "Walk 5 steps Right, and 3 steps Down/Up".
+    </p>
+    <p>
+        If I say <strong>"The wind is blowing (2, 0)"</strong>, I am giving you a <strong>Force Vector</strong>. It
+        means "The wind pushes you 2 steps Right every second".
+    </p>
+
+    <div class="diagram">
+        <!-- SVG Vector Diagram -->
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <!-- Grid -->
+            <defs>
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ddd" stroke-width="1" />
+                </pattern>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+                </marker>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+
+            <!-- Axis -->
+            <line x1="20" y1="180" x2="280" y2="180" stroke="#333" stroke-width="2" />
+            <line x1="20" y1="180" x2="20" y2="20" stroke="#333" stroke-width="2" />
+            <text x="270" y="175" font-size="12">X</text>
+            <text x="25" y="30" font-size="12">Y</text>
+
+            <!-- Vector -->
+            <line x1="20" y1="180" x2="200" y2="60" stroke="#e74c3c" stroke-width="3" marker-end="url(#arrowhead)" />
+
+            <!-- Components -->
+            <line x1="20" y1="180" x2="200" y2="180" stroke="#2980b9" stroke-width="2" stroke-dasharray="5,5" />
+            <line x1="200" y1="180" x2="200" y2="60" stroke="#2980b9" stroke-width="2" stroke-dasharray="5,5" />
+
+            <text x="100" y="195" fill="#2980b9" font-size="14">x component</text>
+            <text x="210" y="120" fill="#2980b9" font-size="14">y component</text>
+            <text x="120" y="110" fill="#e74c3c" font-size="16" font-weight="bold">Vector (x, y)</text>
+        </svg>
+        <p><em>Figure 1: A vector represents a value with X and Y parts.</em></p>
+    </div>
+
+    <h3>3. What is a Rigid Body?</h3>
+    <p>
+        A "Rigid Body" is just a fancy name for a solid object that doesn't squish. Think of a rock, a brick, or a steel
+        ball.
+        It has properties that determine how it moves:
+    </p>
+    <ul>
+        <li><strong>Mass:</strong> How heavy is it? Heavy things are harder to push.</li>
+        <li><strong>Inertia:</strong> How hard is it to spin? Think of a heavy door vs. a fidget spinner.</li>
+        <li><strong>Velocity:</strong> How fast is it moving linearly?</li>
+        <li><strong>Angular Velocity:</strong> How fast is it spinning?</li>
+    </ul>
+
+    <div class="diagram">
+        <!-- SVG Rigid Body Diagram -->
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <defs>
+                <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#3498db" />
+                </marker>
+                <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#2ecc71" />
+                </marker>
+            </defs>
+
+            <!-- Body -->
+            <rect x="100" y="50" width="100" height="100" rx="10" fill="#ecf0f1" stroke="#333" stroke-width="2"
+                transform="rotate(15, 150, 100)" />
+
+            <!-- Center of Mass -->
+            <circle cx="150" cy="100" r="5" fill="#e74c3c" />
+            <text x="155" y="105" font-size="12" fill="#e74c3c">Center of Mass</text>
+
+            <!-- Velocity -->
+            <line x1="150" y1="100" x2="220" y2="80" stroke="#3498db" stroke-width="3"
+                marker-end="url(#arrowhead-blue)" />
+            <text x="210" y="70" font-size="14" fill="#3498db">Velocity</text>
+
+            <!-- Rotation -->
+            <path d="M 120 100 A 30 30 0 0 1 180 100" stroke="#2ecc71" stroke-width="3" fill="none"
+                marker-end="url(#arrowhead-green)" />
+            <text x="110" y="140" font-size="14" fill="#2ecc71">Angular Velocity</text>
+        </svg>
+        <p><em>Figure 2: A rigid body has linear motion (Velocity) and rotational motion (Angular Velocity).</em></p>
+    </div>
+
+    <h2>Chapter 2: Building the Vector Class (<code>vector.js</code>)</h2>
+
+    <p>
+        We need a tool to handle all the (x, y) math. Instead of manually writing <code>x1 + x2</code> and
+        <code>y1 + y2</code> every single time, we create a <strong>Vector class</strong> so we can just say
+        <code>v1.add(v2)</code>.
+    </p>
+
+    <h3>The Constructor</h3>
+    <p>Every vector starts with an <code>x</code> and <code>y</code> value. If you don't provide them, they default to
+        0.</p>
+    <pre>
+class Vector {
+    constructor(x = 0, y = 0) {
+        this._x = x;
+        this._y = y;
+    }
+    // getters and setters for x and y...
+}
+    </pre>
+
+    <h3>Key Vector Methods Explained</h3>
+
+    <h4><code>add(v)</code> — Vector Addition</h4>
+    <p>
+        Adds another vector to this one. Think of it as <strong>combining two movements</strong>.
+        If you walk (3, 0) and then (0, 4), the total movement is (3, 4).
+    </p>
+    <div class="diagram">
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <defs>
+                <marker id="arr-red2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+                </marker>
+                <marker id="arr-blue2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#2980b9" />
+                </marker>
+                <marker id="arr-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#8e44ad" />
+                </marker>
+            </defs>
+            <!-- Vector A -->
+            <line x1="30" y1="170" x2="150" y2="170" stroke="#e74c3c" stroke-width="3" marker-end="url(#arr-red2)" />
+            <text x="80" y="190" fill="#e74c3c" font-size="14" font-weight="bold">A (3, 0)</text>
+            <!-- Vector B -->
+            <line x1="150" y1="170" x2="150" y2="50" stroke="#2980b9" stroke-width="3" marker-end="url(#arr-blue2)" />
+            <text x="160" y="115" fill="#2980b9" font-size="14" font-weight="bold">B (0, 4)</text>
+            <!-- Result -->
+            <line x1="30" y1="170" x2="150" y2="50" stroke="#8e44ad" stroke-width="3" stroke-dasharray="8,4"
+                marker-end="url(#arr-purple)" />
+            <text x="60" y="100" fill="#8e44ad" font-size="14" font-weight="bold">A + B = (3, 4)</text>
+        </svg>
+        <p><em>Figure 3: Adding two vectors produces a combined movement.</em></p>
+    </div>
+    <pre>
+add(v) {
+    this.x += v.x;
+    this.y += v.y;
+    return this; // allows chaining: v.add(a).add(b)
+}
+    </pre>
+
+    <h4><code>sub(v)</code> — Vector Subtraction</h4>
+    <p>
+        Subtracting vector B from A gives the <strong>difference</strong> between them. This is commonly used to find
+        the direction <em>from</em> one object <em>to</em> another.
+    </p>
+    <pre>
+// Direction from player to enemy:
+let direction = Vector.sub(enemy.pos, player.pos);
+    </pre>
+    <div class="diagram">
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <defs>
+                <marker id="arr-green-sub" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#2ecc71" />
+                </marker>
+            </defs>
+            <!-- A -->
+            <line x1="50" y1="150" x2="100" y2="50" stroke="#e74c3c" stroke-width="2" stroke-dasharray="5,3" />
+            <circle cx="100" cy="50" r="4" fill="#e74c3c" />
+            <text x="80" y="40" fill="#e74c3c" font-weight="bold">A (Enemy)</text>
+
+            <!-- B -->
+            <line x1="50" y1="150" x2="200" y2="150" stroke="#3498db" stroke-width="2" stroke-dasharray="5,3" />
+            <circle cx="200" cy="150" r="4" fill="#3498db" />
+            <text x="210" y="160" fill="#3498db" font-weight="bold">B (Player)</text>
+
+            <!-- Result A - B -->
+            <line x1="200" y1="150" x2="105" y2="55" stroke="#2ecc71" stroke-width="3"
+                marker-end="url(#arr-green-sub)" />
+            <text x="160" y="100" fill="#2ecc71" font-weight="bold">A - B</text>
+        </svg>
+        <p><em>Figure 4: Subtraction finds the vector pointing FROM B TO A.</em></p>
+    </div>
+
+    <h4><code>mult(n)</code> — Scalar Multiplication</h4>
+    <p>
+        Scales a vector by a number. If velocity is (2, 1) and you multiply by 3, it becomes (6, 3) — <strong>same
+            direction, triple the speed</strong>.
+    </p>
+    <div class="diagram">
+        <svg width="300" height="150" viewBox="0 0 300 150">
+            <defs>
+                <marker id="arr-black" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+                </marker>
+            </defs>
+
+            <!-- Original -->
+            <line x1="50" y1="100" x2="100" y2="100" stroke="#95a5a6" stroke-width="4" marker-end="url(#arr-black)" />
+            <text x="60" y="120" fill="#7f8c8d">v (1x)</text>
+
+            <!-- x2 -->
+            <line x1="50" y1="70" x2="150" y2="70" stroke="#34495e" stroke-width="4" marker-end="url(#arr-black)" />
+            <text x="80" y="60" fill="#34495e" font-weight="bold">v * 2</text>
+
+            <!-- x0.5 -->
+            <line x1="50" y1="40" x2="75" y2="40" stroke="#bdc3c7" stroke-width="4" marker-end="url(#arr-black)" />
+            <text x="85" y="45" fill="#7f8c8d" font-size="12">v * 0.5</text>
+        </svg>
+        <p><em>Figure 5: Multiplication changes length but keeps direction.</em></p>
+    </div>
+
+    <h4><code>mag()</code> — Magnitude (Length)</h4>
+    <p>
+        Returns the <strong>length</strong> of the vector. We use the Pythagorean theorem: <code>√(x² + y²)</code>.
+    </p>
+    <div class="diagram">
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <!-- Triangle -->
+            <path d="M 50 150 L 250 150 L 250 50 Z" fill="#ecf0f1" stroke="#333" stroke-width="1"
+                stroke-dasharray="5,5" />
+
+            <!-- x component -->
+            <line x1="50" y1="150" x2="250" y2="150" stroke="#3498db" stroke-width="3" />
+            <text x="150" y="170" fill="#3498db" font-weight="bold">x</text>
+
+            <!-- y component -->
+            <line x1="250" y1="150" x2="250" y2="50" stroke="#e74c3c" stroke-width="3" />
+            <text x="260" y="100" fill="#e74c3c" font-weight="bold">y</text>
+
+            <!-- Hypotenuse -->
+            <line x1="50" y1="150" x2="250" y2="50" stroke="#8e44ad" stroke-width="3" />
+            <text x="120" y="90" fill="#8e44ad" font-weight="bold" font-size="14">mag() = √(x² + y²)</text>
+
+            <!-- Right angle symbol -->
+            <path d="M 230 150 L 230 130 L 250 130" fill="none" stroke="#333" stroke-width="1" />
+        </svg>
+        <p><em>Figure 4: The magnitude is the length of the diagonal side (hypotenuse).</em></p>
+    </div>
+
+    <h4><code>normalize()</code> — Unit Vector</h4>
+    <p>
+        Makes the vector's length exactly <strong>1</strong>, keeping the direction.
+        This is useful when you only care about <em>direction</em>, not speed.
+    </p>
+    <div class="diagram">
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <defs>
+                <marker id="arr-faded" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#bdc3c7" />
+                </marker>
+                <marker id="arr-unit" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+                </marker>
+            </defs>
+
+            <circle cx="50" cy="150" r="3" fill="#333" />
+
+            <!-- Big Vector -->
+            <line x1="50" y1="150" x2="250" y2="50" stroke="#bdc3c7" stroke-width="2" stroke-dasharray="5,3"
+                marker-end="url(#arr-faded)" />
+            <text x="200" y="60" fill="#bdc3c7">Original Vector (Length 5)</text>
+
+            <!-- Unit Vector -->
+            <line x1="50" y1="150" x2="90" y2="130" stroke="#e74c3c" stroke-width="4" marker-end="url(#arr-unit)" />
+            <text x="60" y="125" fill="#e74c3c" font-weight="bold">Normalized (Length 1)</text>
+
+        </svg>
+        <p><em>Figure 7: Normalizing shrinks (or stretches) the vector so its length is exactly 1.</em></p>
+    </div>
+
+    <h4><code>dot(v)</code> — Dot Product</h4>
+    <p>
+        Returns a number telling us how much two vectors point in the same direction.
+        <br>Positive = Same way. Zero = Perpendicular. Negative = Opposite way.
+    </p>
+
+    <h4><code>rotate(angle)</code> — Rotation</h4>
+    <p>
+        Rotates the vector by a given angle (in radians).
+    </p>
+    <div class="diagram">
+        <svg width="300" height="200" viewBox="0 0 300 200">
+            <defs>
+                <marker id="arrow-start" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#95a5a6" />
+                </marker>
+                <marker id="arrow-rotated" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#2ecc71" />
+                </marker>
+            </defs>
+
+            <!-- Center -->
+            <circle cx="150" cy="150" r="3" fill="#333" />
+
+            <!-- Original Vector -->
+            <line x1="150" y1="150" x2="250" y2="150" stroke="#95a5a6" stroke-width="2" stroke-dasharray="5,3"
+                marker-end="url(#arrow-start)" />
+            <text x="260" y="155" fill="#95a5a6">Original</text>
+
+            <!-- Rotated Vector -->
+            <line x1="150" y1="150" x2="220" y2="80" stroke="#2ecc71" stroke-width="3"
+                marker-end="url(#arrow-rotated)" />
+            <text x="230" y="75" fill="#2ecc71" font-weight="bold">Rotated</text>
+
+            <!-- Angle Arc -->
+            <path d="M 190 150 A 40 40 0 0 0 178 122" fill="none" stroke="#333" stroke-width="1" />
+            <text x="195" y="130" font-size="12">angle</text>
+        </svg>
+        <p><em>Figure 5: Rotating a vector changes its direction but keeps its length.</em></p>
+    </div>
+
+    <h4>Static vs Instance Methods</h4>
+    <div class="note">
+        <strong>Important distinction:</strong>
+        <ul>
+            <li><code>v1.add(v2)</code> — <strong>Modifies</strong> v1 directly (instance method).</li>
+            <li><code>Vector.add(v1, v2)</code> — Returns a <strong>new</strong> vector, leaving v1 and v2 untouched
+                (static method).</li>
+        </ul>
+        Use static methods when you need the original values preserved!
+    </div>
+
+    <!-- ==================== CHAPTER 3: BODY ==================== -->
+
+    <h2>Chapter 3: The Rigid Body Class (<code>body.js</code>)</h2>
+
+    <p>
+        The <code>Body</code> class is the <strong>blueprint for every physical object</strong> in our engine. Whether
+        it's a circle or a polygon,
+        they all share these fundamental physics properties.
+    </p>
+
+    <h3>All Properties Explained</h3>
+
+    <h4>Motion Properties</h4>
+    <ul>
+        <li><strong>Position (<code>pos</code>)</strong> — Where the object is right now. A Vector (x, y).</li>
+        <li><strong>Velocity (<code>vel</code>)</strong> — How fast and in what direction it's moving. A Vector.</li>
+        <li><strong>Acceleration (<code>acc</code>)</strong> — How the velocity is changing. A Vector.</li>
+        <li><strong>Angle (<code>angle</code>)</strong> — The current rotation of the object, in radians.</li>
+        <li><strong>Angular Velocity (<code>angVel</code>)</strong> — How fast it's spinning (radians per second).</li>
+    </ul>
+
+    <h4>Mass and Inertia</h4>
+    <ul>
+        <li><strong>Mass (<code>mass</code>)</strong> — How heavy the object is. Heavier = harder to push.</li>
+        <li><strong>Inverse Mass (<code>invMass</code>)</strong> — Simply <code>1 / mass</code>, precalculated.
+            <br>Why? Because in physics: <code>acceleration = force / mass</code>.
+            Division is expensive for computers to do every frame, so we convert it to
+            <code>acceleration = force * invMass</code> (multiplication is much faster).
+            <br>If mass is <strong>0</strong>, we set invMass to <strong>0</strong> too — this makes the object
+            <strong>immovable</strong> (like a wall or the ground).
+        </li>
+        <li><strong>Inertia (<code>inertia</code>)</strong> — Same concept as mass, but for <strong>rotation</strong>.
+            It determines how hard it is to spin the object.</li>
+        <li><strong>Inverse Inertia (<code>invInertia</code>)</strong> — <code>1 / inertia</code>, same optimization
+            trick.</li>
+    </ul>
+
+    <h4>Force and Torque</h4>
+    <ul>
+        <li><strong>Force (<code>force</code>)</strong> — The <strong>accumulated sum</strong> of all forces acting on
+            the body this frame. A Vector.
+            <br>Example: gravity pulls down (0, 9.8), wind pushes right (5, 0) → total force = (5, 9.8).
+        </li>
+        <li><strong>Torque (<code>torque</code>)</strong> — The <strong>accumulated</strong> rotational force. A single
+            number in 2D.
+            <br>Torque is what makes things <em>spin</em>. More on this below.
+        </li>
+    </ul>
+
+    <h4>Material Properties</h4>
+    <ul>
+        <li>
+            <strong>Restitution (<code>restitution</code>)</strong> — Controls <strong>how bouncy</strong> collisions
+            are.
+            <br>It's a value between <strong>0</strong> and <strong>1</strong>.
+        </li>
+    </ul>
+
+    <div class="diagram">
+        <svg width="400" height="150" viewBox="0 0 400 150">
+            <!-- Ground line -->
+            <line x1="10" y1="120" x2="390" y2="120" stroke="#333" stroke-width="2" />
+
+            <!-- e = 0 -->
+            <circle cx="60" cy="100" r="15" fill="#e74c3c" opacity="0.8" />
+            <line x1="60" y1="60" x2="60" y2="85" stroke="#e74c3c" stroke-width="2" stroke-dasharray="4,3" />
+            <text x="60" y="45" text-anchor="middle" font-size="11" fill="#e74c3c">↓ drops</text>
+            <text x="60" y="143" text-anchor="middle" font-size="12" font-weight="bold">e = 0</text>
+            <text x="60" y="155" text-anchor="middle" font-size="10" fill="#666">(dead stop)</text>
+
+            <!-- e = 0.5 -->
+            <circle cx="200" cy="100" r="15" fill="#f39c12" opacity="0.8" />
+            <line x1="200" y1="60" x2="200" y2="85" stroke="#f39c12" stroke-width="2" stroke-dasharray="4,3" />
+            <circle cx="200" cy="75" r="12" fill="#f39c12" opacity="0.3" />
+            <text x="200" y="45" text-anchor="middle" font-size="11" fill="#f39c12">↑ half bounce</text>
+            <text x="200" y="143" text-anchor="middle" font-size="12" font-weight="bold">e = 0.5</text>
+            <text x="200" y="155" text-anchor="middle" font-size="10" fill="#666">(half energy)</text>
+
+            <!-- e = 1 -->
+            <circle cx="340" cy="100" r="15" fill="#2ecc71" opacity="0.8" />
+            <line x1="340" y1="20" x2="340" y2="85" stroke="#2ecc71" stroke-width="2" stroke-dasharray="4,3" />
+            <circle cx="340" cy="30" r="12" fill="#2ecc71" opacity="0.3" />
+            <text x="340" y="15" text-anchor="middle" font-size="11" fill="#2ecc71">↑ full bounce</text>
+            <text x="340" y="143" text-anchor="middle" font-size="12" font-weight="bold">e = 1</text>
+            <text x="340" y="155" text-anchor="middle" font-size="10" fill="#666">(perfect bounce)</text>
+        </svg>
+        <p><em>Figure 4: Restitution (e) controls how much a ball bounces back after hitting the ground.</em></p>
+    </div>
+
+    <ul>
+        <li>
+            <strong>Friction (<code>friction</code>)</strong> — Controls <strong>how slippery</strong> surfaces are when
+            they slide against each other.
+            <br>Higher friction = objects slow down and grip more. Lower friction = objects slide like they're on ice.
+            <br>Think of rubber shoes on concrete (high friction) vs. socks on a wooden floor (low friction).
+        </li>
+    </ul>
+
+    <h3>Key Methods in Body</h3>
+
+    <h4><code>setStatic()</code> — Making Immovable Objects</h4>
+    <p>
+        Sets an object to be <strong>completely immovable</strong> — like a wall, the ground, or a platform.
+        It does this by setting mass, invMass, inertia, and invInertia all to <strong>0</strong>.
+        Since <code>acceleration = force * invMass</code>, and invMass is 0, the object will never accelerate no matter
+        how much force you apply.
+    </p>
+    <pre>
+setStatic() {
+    this.mass = 0;
+    this.invMass = 0;      // force * 0 = 0 acceleration
+    this.inertia = 0;
+    this.invInertia = 0;   // torque * 0 = 0 angular acceleration
+    this.vel.set(0, 0);    // stop any current motion
+    this.angVel = 0;       // stop any current spin
+}
+    </pre>
+
+    <h4><code>applyForce(force)</code> — Force at Center of Mass</h4>
+    <p>
+        Applies a force <strong>at the center of mass</strong> of the object. This only causes <strong>linear</strong>
+        motion (translation),
+        <strong>not</strong> rotation. Like pushing a box exactly in the middle — it slides but doesn't spin.
+    </p>
+    <pre>
+applyForce(force) {
+    this.force.add(force);  // adds to accumulated forces
+}
+    </pre>
+
+    <h4><code>applyForceAtPoint(force, point)</code> — Force Off-Center (Causes Rotation!)</h4>
+    <p>
+        This is the interesting one. When you apply a force <strong>away from the center of mass</strong>, it causes the
+        object to both
+        <strong>move AND spin</strong>. Think of pushing a door at the handle vs at the hinge — the handle makes it spin
+        easily!
+    </p>
+    <p>
+        The amount of spin (torque) is calculated using the <strong>cross product</strong>:
+        <br><code>torque = r × F</code>
+        <br>where <code>r</code> is the vector from the center of mass to the point where force is applied.
+    </p>
+
+    <div class="diagram">
+        <svg width="350" height="220" viewBox="0 0 350 220">
+            <defs>
+                <marker id="arr-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22" />
+                </marker>
+                <marker id="arr-red3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+                </marker>
+                <marker id="arr-green2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60" />
+                </marker>
+            </defs>
+            <!-- Box -->
+            <rect x="100" y="60" width="120" height="80" rx="5" fill="#ecf0f1" stroke="#333" stroke-width="2" />
+            <!-- Center -->
+            <circle cx="160" cy="100" r="5" fill="#e74c3c" />
+            <text x="130" y="115" font-size="11" fill="#e74c3c">Center of Mass</text>
+            <!-- Point of application -->
+            <circle cx="220" cy="60" r="4" fill="#e67e22" />
+            <!-- r vector -->
+            <line x1="160" y1="100" x2="218" y2="62" stroke="#27ae60" stroke-width="2" stroke-dasharray="5,3"
+                marker-end="url(#arr-green2)" />
+            <text x="175" y="72" font-size="12" fill="#27ae60" font-weight="bold">r</text>
+            <!-- Force vector -->
+            <line x1="220" y1="60" x2="295" y2="30" stroke="#e67e22" stroke-width="3" marker-end="url(#arr-orange)" />
+            <text x="260" y="25" font-size="14" fill="#e67e22" font-weight="bold">Force (F)</text>
+            <!-- Torque arc -->
+            <path d="M 140 80 A 40 40 0 0 1 180 80" stroke="#8e44ad" stroke-width="3" fill="none"
+                marker-end="url(#arr-green2)" />
+            <text x="135" y="170" font-size="13" fill="#8e44ad" font-weight="bold">Torque = r × F</text>
+            <text x="110" y="190" font-size="11" fill="#666">(causes the box to spin!)</text>
+        </svg>
+        <p><em>Figure 5: Force applied away from the center creates torque (rotation).</em></p>
+    </div>
+
+    <pre>
+applyForceAtPoint(force, point) {
+    this.force.add(force);                    // still affects linear motion
+    const r = Vector.sub(point, this.pos);    // vector from center to application point
+    this.torque += r.x * force.y - r.y * force.x;  // 2D cross product
+}
+    </pre>
+
+    <h4>The Integration Step — How Objects Actually Move</h4>
+    <p>
+        Every frame, we need to convert forces into motion. This is called <strong>integration</strong>.
+        We use a method called <strong>Semi-Implicit Euler</strong> (it's simple and works well enough):
+    </p>
+
+    <div class="note">
+        <h4 style="margin-top:0;">The Physics Update</h4>
+        <p><strong>Linear (moving):</strong></p>
+        <ol>
+            <li><code>acceleration = force × invMass</code></li>
+            <li><code>velocity = velocity + acceleration × dt</code></li>
+            <li><code>position = position + velocity × dt</code></li>
+        </ol>
+        <p><strong>Angular (spinning):</strong></p>
+        <ol>
+            <li><code>angularAcceleration = torque × invInertia</code></li>
+            <li><code>angVelocity = angVelocity + angularAcceleration × dt</code></li>
+            <li><code>angle = angle + angVelocity × dt</code></li>
+        </ol>
+        <p><strong><code>dt</code></strong> is the "delta time" — how much time has passed since the last frame (usually
+            ~0.016 seconds at 60fps).</p>
+    </div>
+
+    <pre>
+// Step 1: Forces → Velocity
+integrateVelocity(dt) {
+    if (this.invMass === 0) return;  // static objects don't move
+    this.vel.add(new Vector(
+        this.force.x * this.invMass * dt,
+        this.force.y * this.invMass * dt
+    ));
+    this.angVel += this.torque * this.invInertia * dt;
+}
+
+// Step 2: Velocity → Position
+integratePosition(dt) {
+    if (this.invMass === 0) return;
+    this.pos.add(Vector.mult(this.vel, dt));
+    this.angle += this.angVel * dt;
+}
+
+// Step 3: Reset forces for the next frame
+clearForces() {
+    this.force.set(0, 0);
+    this.torque = 0;
+}
+
+// All together:
+update(dt) {
+    if (this.invMass === 0) return;
+    this.integrateVelocity(dt);
+    this.integratePosition(dt);
+    this.clearForces();
+}
+    </pre>
+    <p>
+        <strong>Why clear forces?</strong> Because forces are applied <em>per frame</em>. Gravity gets re-applied every
+        frame.
+        If we didn't clear, forces would accumulate infinitely and the object would accelerate forever!
+    </p>
+
+    <!-- ==================== CHAPTER 4: SHAPES ==================== -->
+
+    <h2>Chapter 4: The Shapes (<code>circle.js</code> and <code>polygon.js</code>)</h2>
+
+    <p>
+        The <code>Body</code> class is just a blueprint — it doesn't have any shape. Now we create actual shapes that
+        <strong>extend</strong> (inherit from) Body.
+    </p>
+
+    <h3>The Circle Class</h3>
+    <p>
+        A circle is the simplest shape. It only needs one extra property: <strong><code>radius</code></strong>.
+    </p>
+
+    <h4>Circle Inertia</h4>
+    <p>
+        Every shape has a different formula for how hard it is to spin. For a solid circle (or cylinder), the formula
+        is:
+    </p>
+    <p style="text-align:center; font-size: 18px;">
+        <strong>I = ½ × m × r²</strong>
+    </p>
+    <p>
+        Where <strong>m</strong> is mass and <strong>r</strong> is radius. A bigger or heavier circle is harder to spin.
+    </p>
+
+    <div class="diagram">
+        <svg width="300" height="180" viewBox="0 0 300 180">
+            <defs>
+                <marker id="arr-dark" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+                </marker>
+            </defs>
+            <!-- Circle -->
+            <circle cx="150" cy="90" r="60" fill="#dfe6e9" stroke="#333" stroke-width="2" />
+            <!-- Center -->
+            <circle cx="150" cy="90" r="4" fill="#e74c3c" />
+            <!-- Radius line -->
+            <line x1="150" y1="90" x2="210" y2="90" stroke="#333" stroke-width="2" marker-end="url(#arr-dark)" />
+            <text x="170" y="82" font-size="14" font-weight="bold">r</text>
+            <!-- Rotation indicator -->
+            <line x1="150" y1="90" x2="210" y2="90" stroke="#e74c3c" stroke-width="1.5" />
+            <text x="215" y="95" font-size="11" fill="#666">rotation indicator line</text>
+            <!-- Label -->
+            <text x="150" y="170" text-anchor="middle" font-size="13" font-weight="bold">I = ½ × m × r²</text>
+        </svg>
+        <p><em>Figure 6: A circle with its radius line. The red line from center to edge shows the current rotation
+                angle.</em></p>
+    </div>
+
+    <pre>
+class Circle extends Body {
+    constructor(x, y, radius, mass = 1, material = {}) {
+        const inertia = 0.5 * mass * radius * radius;  // I = ½mr²
+        super(x, y, mass, inertia);
+
+        this.radius = radius;
+        this.type = "Circle";
+
+        // Optional material overrides
+        if (material.restitution !== undefined) this.restitution = material.restitution;
+        if (material.friction !== undefined) this.friction = material.friction;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.pos.x, this.pos.y);  // Move canvas origin to circle center
+        ctx.rotate(this.angle);                   // Rotate canvas by body's angle
+
+        // Draw the circle
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ccc";
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+
+        // Draw a line from center to edge to visualize rotation
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(this.radius, 0);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+    </pre>
+    <div class="note">
+        <strong>Why the line from center to edge?</strong> A spinning circle looks the same from every angle.
+        Without this indicator line, you'd never be able to tell if it's rotating! It's a debug aid — super helpful
+        during development.
+    </div>
+
+    <h3>The Polygon Class</h3>
+    <p>
+        A polygon is defined by a list of <strong>vertices</strong> (corner points). A rectangle has 4 vertices, a
+        triangle has 3,
+        a hexagon has 6, etc.
+    </p>
+
+    <h4>Local Space vs World Space</h4>
+    <p>
+        This is a <strong>crucial concept</strong>. The vertices of our polygon are stored in <strong>local
+            space</strong> —
+        relative to the body's center point (0, 0). This means a rectangle centered at origin might have vertices at:
+    </p>
+    <pre>
+vertices = [
+    new Vector(-30, -30),  // top-left
+    new Vector( 30, -30),  // top-right
+    new Vector( 30,  30),  // bottom-right
+    new Vector(-30,  30),  // bottom-left
+]
+    </pre>
+    <p>
+        But the polygon might actually be sitting at position (400, 300) in the world, rotated by 45°. So we need to
+        <strong>convert</strong>
+        from local space to world space when checking collisions or doing other calculations.
+    </p>
+
+    <div class="diagram">
+        <svg width="500" height="200" viewBox="0 0 500 200">
+            <!-- LOCAL SPACE -->
+            <text x="85" y="20" text-anchor="middle" font-size="14" font-weight="bold">Local Space</text>
+            <!-- Axes -->
+            <line x1="85" y1="30" x2="85" y2="170" stroke="#999" stroke-width="1" />
+            <line x1="20" y1="100" x2="150" y2="100" stroke="#999" stroke-width="1" />
+            <text x="88" y="40" font-size="10" fill="#999">y</text>
+            <text x="145" y="95" font-size="10" fill="#999">x</text>
+            <!-- Local rect -->
+            <rect x="55" y="70" width="60" height="60" fill="#dfe6e9" stroke="#333" stroke-width="2" />
+            <circle cx="85" cy="100" r="3" fill="#e74c3c" />
+            <text x="88" y="112" font-size="10" fill="#e74c3c">(0,0)</text>
+
+            <!-- ARROW -->
+            <text x="230" y="95" font-size="28" fill="#666">→</text>
+            <text x="190" y="115" font-size="11" fill="#666">rotate + translate</text>
+
+            <!-- WORLD SPACE -->
+            <text x="380" y="20" text-anchor="middle" font-size="14" font-weight="bold">World Space</text>
+            <!-- World rect (rotated) -->
+            <rect x="350" y="60" width="60" height="60" fill="#dfe6e9" stroke="#333" stroke-width="2"
+                transform="rotate(25, 380, 90)" />
+            <circle cx="380" cy="90" r="3" fill="#e74c3c" />
+            <text x="385" y="103" font-size="10" fill="#e74c3c">(400, 300)</text>
+        </svg>
+        <p><em>Figure 7: Vertices are stored at (0,0) in local space, then rotated and translated to their actual world
+                position.</em></p>
+    </div>
+
+    <h4>The <code>getWorldVertices()</code> Method</h4>
+    <p>This method converts local vertices to world coordinates by:</p>
+    <ol>
+        <li><strong>Copy</strong> each vertex (so we don't modify the originals!).</li>
+        <li><strong>Rotate</strong> it by the body's current angle.</li>
+        <li><strong>Add</strong> the body's position to move it into world space.</li>
+    </ol>
+    <pre>
+getWorldVertices() {
+    const worldVertices = [];
+    for (let i = 0; i < this.vertices.length; i++) {
+        const v = this.vertices[i].copy();  // 1. Copy
+        v.rotate(this.angle);                // 2. Rotate
+        v.add(this.pos);                     // 3. Translate
+        worldVertices.push(v);
+    }
+    return worldVertices;
+}
+    </pre>
+
+    <h4>Polygon Inertia</h4>
+    <p>
+        For a rectangle, the moment of inertia formula is:
+    </p>
+    <p style="text-align:center; font-size: 18px;">
+        <strong>I = (1/12) × m × (w² + h²)</strong>
+    </p>
+    <p>
+        Where <strong>w</strong> is the width and <strong>h</strong> is the height.
+        We calculate width and height from the bounding box of the vertices.
+    </p>
+
+    <pre>
+class Polygon extends Body {
+    constructor(x, y, vertices, mass = 1, material = {}) {
+        // Calculate bounding box to estimate inertia
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (let v of vertices) {
+            minX = Math.min(minX, v.x);
+            minY = Math.min(minY, v.y);
+            maxX = Math.max(maxX, v.x);
+            maxY = Math.max(maxY, v.y);
+        }
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const inertia = (1 / 12) * mass * (width * width + height * height);
+
+        super(x, y, mass, inertia);
+        this.vertices = vertices;
+        this.type = "Polygon";
+        // ... material overrides same as Circle ...
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.pos.x, this.pos.y);  // Move to position
+        ctx.rotate(this.angle);                   // Rotate
+
+        ctx.beginPath();
+        ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+        for (let i = 1; i < this.vertices.length; i++) {
+            ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "#aaa";
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+
+        // Red dot at center for debugging
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+    </pre>
+
+    <!-- ==================== CHAPTER 5: GAME LOOP ==================== -->
+
+    <h2>Chapter 5: Putting It All Together (<code>index.html</code> + <code>main.js</code>)</h2>
+
+    <h3>The HTML Setup (<code>index.html</code>)</h3>
+    <p>
+        We need a simple HTML page with a <code>&lt;canvas&gt;</code> element. The canvas is our "drawing board" —
+        everything gets rendered here. Scripts must be loaded in order since each depends on the previous one:
+    </p>
+    <pre>
+&lt;!DOCTYPE html&gt;
+&lt;body&gt;
+    &lt;canvas id="canvas"&gt;&lt;/canvas&gt;
+
+    &lt;!-- Order matters. Vector first, then Body, then shapes, then main --&gt;
+    &lt;script src="vector.js"&gt;&lt;/script&gt;
+    &lt;script src="body.js"&gt;&lt;/script&gt;
+    &lt;script src="circle.js"&gt;&lt;/script&gt;
+    &lt;script src="polygon.js"&gt;&lt;/script&gt;
+    &lt;script src="main.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+    </pre>
+
+    <h3>The Game Loop (<code>main.js</code>)</h3>
+    <p>
+        A physics engine works by running a <strong>loop</strong> approximately <strong>60 times per second</strong>.
+        Each iteration of this loop is called a <strong>"frame"</strong>. In each frame, we:
+    </p>
+    <ol>
+        <li><strong>Clear</strong> — Erase the previous frame from the canvas.</li>
+        <li><strong>Update</strong> — Run the physics: apply forces, integrate velocities, move positions.</li>
+        <li><strong>Draw</strong> — Paint every object at its new position.</li>
+        <li><strong>Repeat</strong> — Schedule the next frame.</li>
+    </ol>
+
+    <div class="diagram">
+        <svg width="400" height="120" viewBox="0 0 400 120">
+            <defs>
+                <marker id="arr-flow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#2c3e50" />
+                </marker>
+            </defs>
+            <!-- Boxes -->
+            <rect x="10" y="30" width="80" height="40" rx="8" fill="#e74c3c" stroke="#c0392b" stroke-width="2" />
+            <text x="50" y="55" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Clear</text>
+
+            <rect x="120" y="30" width="80" height="40" rx="8" fill="#f39c12" stroke="#d68910" stroke-width="2" />
+            <text x="160" y="55" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Update</text>
+
+            <rect x="230" y="30" width="80" height="40" rx="8" fill="#27ae60" stroke="#1e8449" stroke-width="2" />
+            <text x="270" y="55" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Draw</text>
+
+            <rect x="340" y="30" width="50" height="40" rx="8" fill="#2980b9" stroke="#2471a3" stroke-width="2" />
+            <text x="365" y="55" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Next</text>
+
+            <!-- Arrows -->
+            <line x1="92" y1="50" x2="118" y2="50" stroke="#2c3e50" stroke-width="2" marker-end="url(#arr-flow)" />
+            <line x1="202" y1="50" x2="228" y2="50" stroke="#2c3e50" stroke-width="2" marker-end="url(#arr-flow)" />
+            <line x1="312" y1="50" x2="338" y2="50" stroke="#2c3e50" stroke-width="2" marker-end="url(#arr-flow)" />
+
+            <!-- Loop back arrow -->
+            <path d="M 365 72 L 365 95 L 50 95 L 50 72" stroke="#2c3e50" stroke-width="2" fill="none"
+                marker-end="url(#arr-flow)" />
+            <text x="200" y="110" text-anchor="middle" font-size="11" fill="#666">≈ 60 times per second</text>
+        </svg>
+        <p><em>Figure 8: The game loop — the heartbeat of any physics engine or game.</em></p>
+    </div>
+
+    <pre>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 800;
+canvas.height = 600;
+
+// Create our objects
+const bodies = [];
+
+const circle1 = new Circle(200, 200, 30);
+circle1.vel.set(20, -10);  // Give it a push
+bodies.push(circle1);
+
+const circle2 = new Circle(400, 300, 50, 5);  // Heavier circle
+bodies.push(circle2);
+
+const box = new Polygon(600, 200, [
+    new Vector(-30, -30),
+    new Vector( 30, -30),
+    new Vector( 30,  30),
+    new Vector(-30,  30)
+]);
+box.angVel = 0.5;  // Start it spinning
+bodies.push(box);
+
+// A static ground (will never move)
+const ground = new Polygon(400, 550, [
+    new Vector(-400, -20),
+    new Vector( 400, -20),
+    new Vector( 400,  20),
+    new Vector(-400,  20)
+]);
+ground.setStatic();
+bodies.push(ground);
+
+// The Loop
+let lastTime = 0;
+function update(time) {
+    const dt = (time - lastTime) / 1000;  // Convert ms → seconds
+    lastTime = time;
+
+    ctx.clearRect(0, 0, 800, 600);  // 1. Clear
+
+    for (const body of bodies) {
+        body.update(dt || 0.016);    // 2. Update physics
+        body.draw(ctx);              // 3. Draw
+    }
+
+    requestAnimationFrame(update);   // 4. Schedule next frame
+}
+requestAnimationFrame(update);
+    </pre>
+
+
+    <h2>Try It Yourself</h2>
+    <ol>
+        <li>Click on "Code" section at bottom to see all the code files and look at the output.</li>
+    </ol>
+    <div class="chapter">
+        <p
+            style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 4px; border-left: 4px solid #3b82f6;">
+            <strong>Note:</strong> You might notice a file named <code>screen.js</code> in your code files. This is
+            a helper script that handles the responsive canvas resizing for you. You can completely ignore it and
+            focus on the physics code!
+        </p>
+    </div>
+    <div class="note">
+        <strong>What's missing?</strong> Right now objects will pass <strong>right through each other</strong> because
+        we haven't
+        implemented collision detection yet. That's the big challenge that I'll try to tackle and come back
+        with <strong>Part 2</strong>!
+    </div>
+
+    <hr>
+
+</body>
+
+</html>

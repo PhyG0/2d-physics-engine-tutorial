@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Engine Series</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f0f;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card-container {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .card {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            width: 200px;
+            border: 1px solid #333;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-color: #666;
+        }
+
+        .card a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: block;
+            height: 100%;
+        }
+
+        .card span {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Building a Physics Engine</h1>
+
+    <div class="card-container">
+        <div class="card">
+            <a href="part1/index.html">
+                Part 1
+                <span>The Basics</span>
+            </a>
+        </div>
+        <div class="card" style="opacity: 0.5; pointer-events: none;">
+            <a href="#">
+                Part 2
+                <span>Coming Soon</span>
+            </a>
+        </div>
+        <div class="card" style="opacity: 0.5; pointer-events: none;">
+            <a href="#">
+                Part 3
+                <span>Coming Soon</span>
+            </a>
+        </div>
+    </div>
+
+</body>
+
+</html>
