@@ -5,86 +5,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physics Engine Series</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-color: #09090b;
+            --card-bg: #18181b;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #27272a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f0f0f;
-            color: #fff;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        header {
+            margin-bottom: 3rem;
         }
 
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
         }
 
-        .card-container {
-            display: flex;
-            gap: 2rem;
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
         }
 
         .card {
-            background: #1e1e1e;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
             padding: 2rem;
-            border-radius: 12px;
-            text-align: center;
-            width: 200px;
-            border: 1px solid #333;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: block;
+            color: inherit;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            border-color: #666;
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
-        .card a {
-            color: #fff;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 1.2rem;
-            display: block;
-            height: 100%;
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
         }
 
-        .card span {
-            display: block;
-            margin-top: 0.5rem;
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .card-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .cta-button {
+            margin-top: 1.5rem;
+            display: inline-block;
+            background-color: var(--accent);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
             font-size: 0.9rem;
-            color: #888;
+            transition: background-color 0.2s;
+        }
+
+        .card:hover .cta-button {
+            background-color: var(--accent-hover);
+        }
+
+        footer {
+            margin-top: 4rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
         }
     </style>
 </head>
 
 <body>
 
-    <h1>Building a Physics Engine</h1>
+    <div class="container">
+        <header>
+            <h1>Physics Engine Series</h1>
+            <p class="subtitle">A journey into building a 2D physics engine from scratch.</p>
+        </header>
 
-    <div class="card-container">
-        <div class="card">
-            <a href="part1/index.html">
-                Part 1
-                <span>The Basics</span>
-            </a>
-        </div>
-        <div class="card" style="opacity: 0.5; pointer-events: none;">
-            <a href="#">
-                Part 2
-                <span>Coming Soon</span>
-            </a>
-        </div>
-        <div class="card" style="opacity: 0.5; pointer-events: none;">
-            <a href="#">
-                Part 3
-                <span>Coming Soon</span>
-            </a>
-        </div>
+        <a href="part1/index.html" class="card">
+            <div class="card-content">
+                <div class="card-title">Part 1: The Basics</div>
+                <p class="card-description">
+                    Set up the foundation with vector mathematics, basic body physics, and an interactive environment to
+                    visualize your code.
+                </p>
+                <div class="cta-button">Start Part 1</div>
+            </div>
+        </a>
+
+        <footer>
+            <p>&copy; 2026 Physics Engine Series</p>
+        </footer>
     </div>
 
 </body>
