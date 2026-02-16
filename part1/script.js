@@ -1,6 +1,6 @@
 // Initial file content
 const initialFiles = {
-  'screen.js': `class Screen {
+    'screen.js': `class Screen {
     // Use this class if you want a full-screen canvas that resizes automatically.
     constructor(width = 1920, height = 1080) {
         this.width = width;
@@ -35,31 +35,29 @@ const initialFiles = {
         this.canvasWrapper.className = 'canvas-wrapper';
         Object.assign(this.canvasWrapper.style, {
             flex: '1', position: 'relative', overflow: 'hidden', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', background: '#111' // Distinct background
+            alignItems: 'center', justifyContent: 'center', background: '#111'
         });
 
         this.canvas = document.createElement('canvas');
         this.canvas.className = 'screen-canvas';
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        this.canvas.style.border = "1px solid #333"; // Subtle border
+        // Initial setup - will be properly sized in _resize
+        this.canvas.style.border = "1px solid #333";
 
         Object.assign(this.canvas.style, {
             display: 'block', maxWidth: '100%', maxHeight: '100%',
-            objectFit: 'contain', // Keep aspect ratio
-            boxShadow: '0 0 20px rgba(0,0,0,0.5)' // Elevation
+            objectFit: 'contain',
+            boxShadow: '0 0 20px rgba(0,0,0,0.5)'
         });
 
         this.canvasWrapper.appendChild(this.canvas);
         this.container.appendChild(this.canvasWrapper);
     }
 
-    // Remove default margins and scrollbars from the body.
     _applyBodyStyles() {
         Object.assign(document.body.style, {
             margin: '0', padding: '0', overflow: 'hidden', background: '#000000',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            minHeight: '100vh', touchAction: 'none', userSelect: 'none', webkitUserSelect: 'none',
+            minHeight: '100vh', minHeight: '100dvh', touchAction: 'none', userSelect: 'none', webkitUserSelect: 'none',
         });
     }
 
@@ -67,29 +65,48 @@ const initialFiles = {
         let resizeTimeout;
         const handleResize = () => {
             clearTimeout(resizeTimeout);
-            // Wait a bit before resizing to avoid lag.
             resizeTimeout = setTimeout(() => this._resize(), 16);
         };
         window.addEventListener('resize', handleResize);
     }
 
     _resize() {
+        // Handle High DPI
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Logical size (CSS pixels)
+        this.canvas.style.width = this.width + 'px';
+        this.canvas.style.height = this.height + 'px';
+        
+        // Physical size (Actual pixels)
+        this.canvas.width = this.width * dpr;
+        this.canvas.height = this.height * dpr;
+
+        // Scale the context to match
+        const ctx = this.canvas.getContext('2d');
+        if (ctx) ctx.scale(dpr, dpr);
+
         const event = new CustomEvent('screen-resize', { detail: this.getCanvasDimensions() });
         this.canvas.dispatchEvent(event);
     }
 
     getContext(type = '2d', options = {}) {
-        return this.canvas.getContext(type, { alpha: false, desynchronized: true, ...options });
+        const ctx = this.canvas.getContext(type, { alpha: false, desynchronized: true, ...options });
+        // Ensure scale is set initially if context is already created
+        const dpr = window.devicePixelRatio || 1;
+        ctx.scale(dpr, dpr);
+        return ctx;
     }
 
     getCanvasDimensions() {
         return {
-            width: this.canvas.width, height: this.canvas.height,
+            width: this.width, height: this.height,
             displayWidth: this.canvas.offsetWidth, displayHeight: this.canvas.offsetHeight,
+            dpr: window.devicePixelRatio || 1
         };
     }
 }`,
-  'index.html': `<!DOCTYPE html>
+    'index.html': `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -99,7 +116,7 @@ const initialFiles = {
 <body>
 </body>
 </html>`,
-  'style.css': `body {
+    'style.css': `body {
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -112,7 +129,7 @@ canvas {
     margin: 0;
     border: none;
 }`,
-  'vector.js': `class Vector {
+    'vector.js': `class Vector {
     // Basic vector class: holds x and y coordinates.
     // Think of it as an arrow pointing from (0,0) to (x,y).
     constructor(x = 0, y = 0) {
@@ -361,7 +378,7 @@ canvas {
         return Vector.fromAngle(Math.random() * Math.PI * 2);
     }
 }`,
-  'body.js': `class Body {
+    'body.js': `class Body {
     static bodyCount = 0;
 
     constructor(x, y, mass = 1, inertia = 1000) {
@@ -449,7 +466,7 @@ canvas {
         this.clearForces();
     }
 }`,
-  'circle.js': `class Circle extends Body {
+    'circle.js': `class Circle extends Body {
     // A circle is just a point with a radius.
     // We extend 'Body' so it gets physics properties like velocity and position.
     constructor(x, y, radius, mass = 1, material = {}) {
@@ -503,7 +520,7 @@ canvas {
         ctx.restore(); // Undo the translation/rotation for the next object.
     }
 }`,
-  'polygon.js': `class Polygon extends Body {
+    'polygon.js': `class Polygon extends Body {
     // Vertices are the corners of the polygon, relative to its center (0,0).
     constructor(x, y, vertices, mass = 1, material = {}) {
         
@@ -571,7 +588,7 @@ canvas {
         ctx.restore();
     }
 }`,
-  'main.js': `
+    'main.js': `
 // Initialize Screen for responsive canvas
 const screen = new Screen(window.innerWidth, window.innerHeight);
 const ctx = screen.getContext(); // 'ctx' is like our paintbrush.
@@ -719,111 +736,111 @@ const resetBtn = document.getElementById('reset-btn');
 
 // Initialize CodeMirror
 const editor = CodeMirror(editorContainer, {
-  value: files[activeFile],
-  mode: 'javascript',
-  theme: 'dracula',
-  lineNumbers: true,
-  tabSize: 2,
-  lineWrapping: true,
-  autoCloseTags: true,
-  autoCloseBrackets: true
+    value: files[activeFile],
+    mode: 'javascript',
+    theme: 'dracula',
+    lineNumbers: true,
+    tabSize: 2,
+    lineWrapping: true,
+    autoCloseTags: true,
+    autoCloseBrackets: true
 });
 
 // Sync changes back to state
 editor.on('change', () => {
-  files[activeFile] = editor.getValue();
+    files[activeFile] = editor.getValue();
 });
 
 // Functions
 function getFileMode(filename) {
-  if (filename.endsWith('.html')) return 'htmlmixed';
-  if (filename.endsWith('.css')) return 'css';
-  if (filename.endsWith('.js')) return 'javascript';
-  return 'text/plain';
+    if (filename.endsWith('.html')) return 'htmlmixed';
+    if (filename.endsWith('.css')) return 'css';
+    if (filename.endsWith('.js')) return 'javascript';
+    return 'text/plain';
 }
 
 function renderTabs() {
-  tabBar.innerHTML = '';
-  // Defined order for tabs
-  const order = ['index.html', 'style.css', 'vector.js', 'body.js', 'circle.js', 'polygon.js', 'main.js'];
-  // Merge with any new files unique keys if we had dynamic file creation
-  const keys = Object.keys(files);
-  const sortedKeys = order.filter(k => keys.includes(k)).concat(keys.filter(k => !order.includes(k)));
+    tabBar.innerHTML = '';
+    // Defined order for tabs
+    const order = ['index.html', 'style.css', 'vector.js', 'body.js', 'circle.js', 'polygon.js', 'main.js'];
+    // Merge with any new files unique keys if we had dynamic file creation
+    const keys = Object.keys(files);
+    const sortedKeys = order.filter(k => keys.includes(k)).concat(keys.filter(k => !order.includes(k)));
 
-  sortedKeys.forEach(filename => {
-    const tab = document.createElement('div');
-    tab.className = `tab ${filename === activeFile ? 'active' : ''}`;
-    tab.textContent = filename;
-    tab.onclick = () => switchFile(filename);
-    tabBar.appendChild(tab);
-  });
+    sortedKeys.forEach(filename => {
+        const tab = document.createElement('div');
+        tab.className = `tab ${filename === activeFile ? 'active' : ''}`;
+        tab.textContent = filename;
+        tab.onclick = () => switchFile(filename);
+        tabBar.appendChild(tab);
+    });
 }
 
 function switchFile(filename) {
-  activeFile = filename;
-  editor.setValue(files[filename]);
-  editor.setOption('mode', getFileMode(filename));
-  renderTabs();
+    activeFile = filename;
+    editor.setValue(files[filename]);
+    editor.setOption('mode', getFileMode(filename));
+    renderTabs();
 }
 
 function updatePreview() {
-  const htmlContent = files['index.html'];
+    const htmlContent = files['index.html'];
 
-  // Create a new document to inject content
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, 'text/html');
+    // Create a new document to inject content
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
 
-  // Inject CSS
-  const styleTag = doc.createElement('style');
-  // Combine all CSS files
-  const cssContent = Object.keys(files)
-    .filter(f => f.endsWith('.css'))
-    .map(f => files[f])
-    .join('\n');
-  styleTag.textContent = cssContent;
-  doc.head.appendChild(styleTag);
+    // Inject CSS
+    const styleTag = doc.createElement('style');
+    // Combine all CSS files
+    const cssContent = Object.keys(files)
+        .filter(f => f.endsWith('.css'))
+        .map(f => files[f])
+        .join('\n');
+    styleTag.textContent = cssContent;
+    doc.head.appendChild(styleTag);
 
-  // Inject JS
-  // Strict order required for dependencies
-  const jsOrder = ['vector.js', 'body.js', 'circle.js', 'polygon.js', 'screen.js', 'main.js'];
-  const jsFiles = Object.keys(files).filter(f => f.endsWith('.js'));
+    // Inject JS
+    // Strict order required for dependencies
+    const jsOrder = ['vector.js', 'body.js', 'circle.js', 'polygon.js', 'screen.js', 'main.js'];
+    const jsFiles = Object.keys(files).filter(f => f.endsWith('.js'));
 
-  // Sort files based on jsOrder, put unknowns last
-  const sortedJsFiles = jsOrder.filter(f => jsFiles.includes(f))
-    .concat(jsFiles.filter(f => !jsOrder.includes(f)));
+    // Sort files based on jsOrder, put unknowns last
+    const sortedJsFiles = jsOrder.filter(f => jsFiles.includes(f))
+        .concat(jsFiles.filter(f => !jsOrder.includes(f)));
 
-  // Create a single script block with try-catch
-  const scriptTag = doc.createElement('script');
-  const combinedScript = sortedJsFiles.map(f => {
-    return `// File: ${f}\n${files[f]}`;
-  }).join('\n\n');
+    // Create a single script block with try-catch
+    const scriptTag = doc.createElement('script');
+    const combinedScript = sortedJsFiles.map(f => {
+        return `// File: ${f}\n${files[f]}`;
+    }).join('\n\n');
 
-  scriptTag.textContent = `
+    scriptTag.textContent = `
     try {
         ${combinedScript}
     } catch (e) {
         console.error("Runtime Error:", e);
     }
     `;
-  doc.body.appendChild(scriptTag);
+    doc.body.appendChild(scriptTag);
 
-  // Set iframe content
-  const blob = new Blob([doc.documentElement.outerHTML], { type: 'text/html' });
-  previewFrame.src = URL.createObjectURL(blob);
+    // Set iframe content
+    const blob = new Blob([doc.documentElement.outerHTML], { type: 'text/html' });
+    previewFrame.src = URL.createObjectURL(blob);
 }
 
 function resetProject() {
-  if (confirm('Reset all code to default?')) {
-    files = { ...initialFiles };
-    switchFile('main.js'); // Switch to main file
-    updatePreview();
-  }
+    if (confirm('Reset all code to default?')) {
+        files = { ...initialFiles };
+        switchFile('main.js'); // Switch to main file
+        updatePreview();
+    }
 }
 
 // Event Listeners
 runBtn.addEventListener('click', () => {
-  // updatePreview() is now handled by switchView
-  switchView('view-preview');
+    // updatePreview() is now handled by switchView
+    switchView('view-preview');
 });
 resetBtn.addEventListener('click', resetProject);
 
@@ -833,79 +850,87 @@ const views = document.querySelectorAll('.pane');
 
 // Store scroll positions
 const scrollPositions = {
-  'view-tutorial': 0,
-  'view-code': { left: 0, top: 0 },
-  'view-preview': 0
+    'view-tutorial': 0,
+    'view-code': { left: 0, top: 0 },
+    'view-preview': 0
 };
 
 function switchView(viewId) {
-  // 1. Save scroll position of current active view
-  const currentActive = document.querySelector('.pane.active');
-  if (currentActive) {
-    if (currentActive.id === 'view-code') {
-      if (typeof editor !== 'undefined') {
-        const info = editor.getScrollInfo();
-        scrollPositions['view-code'] = { left: info.left, top: info.top };
-      }
-    } else if (currentActive.id === 'view-tutorial') {
-      // access the iframe
-      const iframe = currentActive.querySelector('iframe');
-      if (iframe && iframe.contentWindow) {
-        scrollPositions['view-tutorial'] = iframe.contentWindow.scrollY;
-      }
-    } else {
-      scrollPositions[currentActive.id] = currentActive.scrollTop;
-    }
-  }
-
-  // Update Views
-  views.forEach(view => {
-    if (view.id === viewId) {
-      view.classList.add('active');
-
-      // 2. Restore scroll position for new active view
-      setTimeout(() => {
-        if (viewId === 'view-code') {
-          if (typeof editor !== 'undefined') {
-            editor.refresh();
-            const pos = scrollPositions['view-code'] || { left: 0, top: 0 };
-            editor.scrollTo(pos.left, pos.top);
-          }
-        } else if (viewId === 'view-tutorial') {
-          const iframe = view.querySelector('iframe');
-          if (iframe && iframe.contentWindow) {
-            iframe.contentWindow.scrollTo(0, scrollPositions['view-tutorial'] || 0);
-          }
+    // 1. Save scroll position of current active view
+    const currentActive = document.querySelector('.pane.active');
+    if (currentActive) {
+        if (currentActive.id === 'view-code') {
+            if (typeof editor !== 'undefined') {
+                const info = editor.getScrollInfo();
+                scrollPositions['view-code'] = { left: info.left, top: info.top };
+            }
+        } else if (currentActive.id === 'view-tutorial') {
+            // access the iframe
+            const iframe = currentActive.querySelector('iframe');
+            try {
+                if (iframe && iframe.contentWindow) {
+                    scrollPositions['view-tutorial'] = iframe.contentWindow.scrollY;
+                }
+            } catch (e) {
+                console.warn("Could not save tutorial scroll position", e);
+            }
         } else {
-          view.scrollTop = scrollPositions[viewId] || 0;
+            scrollPositions[currentActive.id] = currentActive.scrollTop;
         }
-      }, 10);
-
-    } else {
-      view.classList.remove('active');
     }
-  });
 
-  // Update Nav Buttons
-  navItems.forEach(item => {
-    if (item.dataset.target === viewId) {
-      item.classList.add('active');
-    } else {
-      item.classList.remove('active');
+    // Update Views
+    views.forEach(view => {
+        if (view.id === viewId) {
+            view.classList.add('active');
+
+            // 2. Restore scroll position for new active view
+            setTimeout(() => {
+                if (viewId === 'view-code') {
+                    if (typeof editor !== 'undefined') {
+                        editor.refresh();
+                        const pos = scrollPositions['view-code'] || { left: 0, top: 0 };
+                        editor.scrollTo(pos.left, pos.top);
+                    }
+                } else if (viewId === 'view-tutorial') {
+                    const iframe = view.querySelector('iframe');
+                    try {
+                        if (iframe && iframe.contentWindow) {
+                            iframe.contentWindow.scrollTo(0, scrollPositions['view-tutorial'] || 0);
+                        }
+                    } catch (e) {
+                        console.warn("Could not restore tutorial scroll position", e);
+                    }
+                } else {
+                    view.scrollTop = scrollPositions[viewId] || 0;
+                }
+            }, 10);
+
+        } else {
+            view.classList.remove('active');
+        }
+    });
+
+    // Update Nav Buttons
+    navItems.forEach(item => {
+        if (item.dataset.target === viewId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // Auto-run/refresh preview when entering preview tab
+    if (viewId === 'view-preview') {
+        updatePreview();
     }
-  });
-
-  // Auto-run/refresh preview when entering preview tab
-  if (viewId === 'view-preview') {
-    updatePreview();
-  }
 }
 
 
 navItems.forEach(item => {
-  item.addEventListener('click', () => {
-    switchView(item.dataset.target);
-  });
+    item.addEventListener('click', () => {
+        switchView(item.dataset.target);
+    });
 });
 
 // Initialization
