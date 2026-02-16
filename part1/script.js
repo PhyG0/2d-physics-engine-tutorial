@@ -35,29 +35,31 @@ const initialFiles = {
         this.canvasWrapper.className = 'canvas-wrapper';
         Object.assign(this.canvasWrapper.style, {
             flex: '1', position: 'relative', overflow: 'hidden', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', background: '#111'
+            alignItems: 'center', justifyContent: 'center', background: '#111' // Distinct background
         });
 
         this.canvas = document.createElement('canvas');
         this.canvas.className = 'screen-canvas';
-        // Initial setup - will be properly sized in _resize
-        this.canvas.style.border = "1px solid #333";
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.canvas.style.border = "1px solid #333"; // Subtle border
 
         Object.assign(this.canvas.style, {
             display: 'block', maxWidth: '100%', maxHeight: '100%',
-            objectFit: 'contain',
-            boxShadow: '0 0 20px rgba(0,0,0,0.5)'
+            objectFit: 'contain', // Keep aspect ratio
+            boxShadow: '0 0 20px rgba(0,0,0,0.5)' // Elevation
         });
 
         this.canvasWrapper.appendChild(this.canvas);
         this.container.appendChild(this.canvasWrapper);
     }
 
+    // Remove default margins and scrollbars from the body.
     _applyBodyStyles() {
         Object.assign(document.body.style, {
             margin: '0', padding: '0', overflow: 'hidden', background: '#000000',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            minHeight: '100vh', minHeight: '100dvh', touchAction: 'none', userSelect: 'none', webkitUserSelect: 'none',
+            minHeight: '100vh', touchAction: 'none', userSelect: 'none', webkitUserSelect: 'none',
         });
     }
 
@@ -65,44 +67,25 @@ const initialFiles = {
         let resizeTimeout;
         const handleResize = () => {
             clearTimeout(resizeTimeout);
+            // Wait a bit before resizing to avoid lag.
             resizeTimeout = setTimeout(() => this._resize(), 16);
         };
         window.addEventListener('resize', handleResize);
     }
 
     _resize() {
-        // Handle High DPI
-        const dpr = window.devicePixelRatio || 1;
-        
-        // Logical size (CSS pixels)
-        this.canvas.style.width = this.width + 'px';
-        this.canvas.style.height = this.height + 'px';
-        
-        // Physical size (Actual pixels)
-        this.canvas.width = this.width * dpr;
-        this.canvas.height = this.height * dpr;
-
-        // Scale the context to match
-        const ctx = this.canvas.getContext('2d');
-        if (ctx) ctx.scale(dpr, dpr);
-
         const event = new CustomEvent('screen-resize', { detail: this.getCanvasDimensions() });
         this.canvas.dispatchEvent(event);
     }
 
     getContext(type = '2d', options = {}) {
-        const ctx = this.canvas.getContext(type, { alpha: false, desynchronized: true, ...options });
-        // Ensure scale is set initially if context is already created
-        const dpr = window.devicePixelRatio || 1;
-        ctx.scale(dpr, dpr);
-        return ctx;
+        return this.canvas.getContext(type, { alpha: false, desynchronized: true, ...options });
     }
 
     getCanvasDimensions() {
         return {
-            width: this.width, height: this.height,
+            width: this.canvas.width, height: this.canvas.height,
             displayWidth: this.canvas.offsetWidth, displayHeight: this.canvas.offsetHeight,
-            dpr: window.devicePixelRatio || 1
         };
     }
 }`,
@@ -867,12 +850,8 @@ function switchView(viewId) {
         } else if (currentActive.id === 'view-tutorial') {
             // access the iframe
             const iframe = currentActive.querySelector('iframe');
-            try {
-                if (iframe && iframe.contentWindow) {
-                    scrollPositions['view-tutorial'] = iframe.contentWindow.scrollY;
-                }
-            } catch (e) {
-                console.warn("Could not save tutorial scroll position", e);
+            if (iframe && iframe.contentWindow) {
+                scrollPositions['view-tutorial'] = iframe.contentWindow.scrollY;
             }
         } else {
             scrollPositions[currentActive.id] = currentActive.scrollTop;
@@ -894,12 +873,8 @@ function switchView(viewId) {
                     }
                 } else if (viewId === 'view-tutorial') {
                     const iframe = view.querySelector('iframe');
-                    try {
-                        if (iframe && iframe.contentWindow) {
-                            iframe.contentWindow.scrollTo(0, scrollPositions['view-tutorial'] || 0);
-                        }
-                    } catch (e) {
-                        console.warn("Could not restore tutorial scroll position", e);
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.scrollTo(0, scrollPositions['view-tutorial'] || 0);
                     }
                 } else {
                     view.scrollTop = scrollPositions[viewId] || 0;
