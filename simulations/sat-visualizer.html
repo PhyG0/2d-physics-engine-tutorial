@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAT — Separating Axis Theorem</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+    :root {
+      --bg: #0a0a0f;
+      --panel: #12121a;
+      --border: #1e1e2e;
+      --accent: #64ffda;
+      --accent2: #ff6b9d;
+      --accent3: #ffd166;
+      --green: #a8ff78;
+      --muted: #4a4a6a;
+      --text: #c9d1d9;
+      --dim: #6e7681;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    header span {
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    /* Main Container */
+    .main {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 1100px;
+      flex: 1;
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    /* Top Toolbar for Canvas Controls */
+    .toolbar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Canvas */
+    .canvas-wrap {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 500px;
+      width: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Bottom Grid for Panels */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .card,
+    .step-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      height: 100%;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.05rem 1.2rem;
+    }
+
+    .sec {
+      font-size: .57rem;
+      letter-spacing: .18em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: .5rem;
+    }
+
+    .shape-row {
+      display: flex;
+      gap: .45rem;
+      flex-wrap: wrap;
+      margin-bottom: .35rem;
+    }
+
+    .shape-row label {
+      font-size: .61rem;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: .28rem;
+    }
+
+    .shape-row input {
+      accent-color: var(--accent);
+    }
+
+    .hint {
+      font-size: .59rem;
+      color: var(--muted);
+      margin-bottom: .7rem;
+    }
+
+    .ctrl {
+      display: flex;
+      gap: .45rem;
+      flex-wrap: wrap;
+      margin-bottom: .6rem;
+    }
+
+    button {
+      font-family: 'Space Mono', monospace;
+      font-size: .67rem;
+      padding: .42rem .85rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      letter-spacing: .04em;
+      transition: all .15s;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #0a0a0f;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    button.primary:hover {
+      opacity: .85;
+      color: #0a0a0f;
+    }
+
+    button:disabled {
+      opacity: .25;
+      pointer-events: none;
+    }
+
+    button.active {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .spd {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      font-size: .6rem;
+      color: var(--muted);
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+
+    .step-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.05rem 1.2rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .3s;
+    }
+
+    .step-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: background .3s;
+    }
+
+    .step-card.danger::before {
+      background: var(--accent2);
+    }
+
+    .step-card.warn::before {
+      background: var(--accent3);
+    }
+
+    .step-card.green::before {
+      background: var(--green);
+    }
+
+    .snum {
+      font-size: .57rem;
+      letter-spacing: .18em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: .38rem;
+    }
+
+    .stitle {
+      font-size: .8rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: .4rem;
+    }
+
+    .sdesc {
+      font-size: .68rem;
+      line-height: 1.78;
+      color: var(--dim);
+    }
+
+    .sdesc em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .sdesc .neg {
+      color: var(--accent2);
+    }
+
+    .sdesc .pos {
+      color: var(--accent);
+    }
+
+    .sdesc .hi {
+      color: var(--accent3);
+    }
+
+    .mbox {
+      background: #080810;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .5rem .75rem;
+      font-size: .64rem;
+      color: var(--accent3);
+      margin-top: .5rem;
+      line-height: 1.88;
+      white-space: pre;
+      min-height: 2rem;
+    }
+
+    .prog-bar-bg {
+      background: var(--border);
+      border-radius: 99px;
+      height: 3px;
+      width: 100%;
+      overflow: hidden;
+      margin-top: .38rem;
+    }
+
+    .prog-bar-fill {
+      background: var(--accent);
+      height: 100%;
+      border-radius: 99px;
+      transition: width .22s ease;
+    }
+
+    .prog-lbl {
+      font-size: .58rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      margin-top: .28rem;
+    }
+
+    .leg-item {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .63rem;
+      color: var(--dim);
+      line-height: 2.1;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .lsw {
+      width: 17px;
+      height: 2px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Separating Axis Theorem</h1>
+    <span>Interactive Collision Detection Tutorial</span>
+  </header>
+  <div class="main">
+    <!-- Top Toolbar: Play Controls & Speed -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <div class="ctrl" style="margin:0;">
+          <button id="btnPrev" disabled>← Prev</button>
+          <button id="btnNext" class="primary">Next →</button>
+          <button id="btnAuto">▶ Auto</button>
+          <button id="btnReset">↺</button>
+          <button id="btnMute" title="Toggle narration">🔊</button>
+        </div>
+      </div>
+      <div class="toolbar-group" style="flex:1;max-width:300px;">
+        <div class="spd" style="width:100%;">
+          <span>Speed</span>
+          <input type="range" id="spd" min="0" max="3000" value="400" step="100">
+          <span id="spdLbl">0.4s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full Width Canvas -->
+    <div class="canvas-wrap"><canvas id="c"></canvas></div>
+
+    <!-- Bottom Grid for Options/Info -->
+    <div class="info-grid">
+
+      <!-- Step Details Panel -->
+      <div class="step-card" id="stepCard" style="grid-column: 1 / -1;">
+        <div class="snum" id="sNum">—</div>
+        <div class="stitle" id="sTitle">Welcome</div>
+        <div class="sdesc" id="sDesc">Press <em>Next</em> to begin.</div>
+        <div class="mbox" id="mBox"></div>
+      </div>
+
+      <!-- Shapes Config -->
+      <div class="card">
+        <div class="sec">Shapes</div>
+        <div class="shape-row">
+          <label><input type="radio" name="sA" value="triangle" checked> Tri A</label>
+          <label><input type="radio" name="sA" value="square"> Sq A</label>
+          <label><input type="radio" name="sA" value="pentagon"> Pent A</label>
+        </div>
+        <div class="shape-row">
+          <label><input type="radio" name="sB" value="triangle" checked> Tri B</label>
+          <label><input type="radio" name="sB" value="square"> Sq B</label>
+          <label><input type="radio" name="sB" value="pentagon"> Pent B</label>
+        </div>
+        <p class="hint" style="margin-top:0.8rem;">⟡ Drag shapes · ← → keys navigate</p>
+      </div>
+
+      <!-- Progress -->
+      <div class="card">
+        <div class="sec">Progress</div>
+        <div class="prog-bar-bg">
+          <div class="prog-bar-fill" id="pFill" style="width:0%"></div>
+        </div>
+        <div class="prog-lbl"><span id="pL">Step 1</span><span id="pR">of —</span></div>
+      </div>
+
+      <!-- Narration Settings -->
+      <div class="card">
+        <div class="sec">🎙️ Narration</div>
+        <select id="ttsVoice" style="width:100%;background:#080810;color:#c9d1d9;border:1px solid #1e1e2e;
+      border-radius:4px;padding:.35rem .5rem;font-family:'Space Mono',monospace;font-size:.6rem;margin-bottom:.55rem;">
+          <option value="">Default voice</option>
+        </select>
+        <div class="spd" style="margin-bottom:.4rem;">
+          <span>Rate</span>
+          <input type="range" id="ttsRate" min="0.5" max="2.0" step="0.1" value="1.0">
+          <span id="ttsRateLbl">1.0×</span>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="card">
+        <div class="sec">Legend</div>
+        <div class="leg-item">
+          <div class="dot" style="background:#64ffda"></div>Shape A
+        </div>
+        <div class="leg-item">
+          <div class="dot" style="background:#ff6b9d"></div>Shape B
+        </div>
+        <div class="leg-item">
+          <div class="dot" style="background:#ffd166"></div>Active e / v
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#a8ff78"></div>Normal n̂
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#64ffda"></div>Outside (>0)
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#ff6b9d"></div>Inside (<0)< /div>
+        </div>
+
+      </div>
+    </div>
+    <script>
+      // ── Canvas ────────────────────────────────────────────────
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+      const wrap = canvas.parentElement;
+      function resize() { canvas.width = wrap.clientWidth; canvas.height = wrap.clientHeight || 520; }
+      resize();
+      window.addEventListener('resize', () => { resize(); renderFrame(); });
+
+      // ── Math ──────────────────────────────────────────────────
+      const v = (x, y) => ({ x, y });
+      const sub = (a, b) => v(a.x - b.x, a.y - b.y);
+      const dot = (a, b) => a.x * b.x + a.y * b.y;
+      const lenV = a => Math.sqrt(a.x * a.x + a.y * a.y);
+      const norm = a => { const l = lenV(a) || 1; return v(a.x / l, a.y / l); }
+      const perp = a => v(-a.y, a.x);
+      const lerpN = (a, b, t) => a + (b - a) * t;
+      const ease = t => t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+      function centroid(pts) { let cx = 0, cy = 0; pts.forEach(p => { cx += p.x; cy += p.y; }); return v(cx / pts.length, cy / pts.length); }
+
+      function outwardNormal(pts, ei) {
+        const a = pts[ei], b = pts[(ei + 1) % pts.length];
+        const edge = sub(b, a), mid = v((a.x + b.x) / 2, (a.y + b.y) / 2), c = centroid(pts);
+        let n = norm(perp(edge));
+        if (dot(sub(mid, c), n) < 0) n = v(-n.x, -n.y);
+        return n;
+      }
+
+      const transP = (pts, dx, dy) => pts.map(p => v(p.x + dx, p.y + dy));
+
+      // ── Shapes ────────────────────────────────────────────────
+      let typeA = 'triangle', typeB = 'triangle', shapeA, shapeB;
+      function makeShape(type, cx, cy, r) {
+        const pts = [];
+        if (type === 'triangle') { for (let i = 0; i < 3; i++) { const a = Math.PI / 2 + i * 2 * Math.PI / 3; pts.push(v(cx + r * Math.cos(a), cy + r * Math.sin(a))); } }
+        else if (type === 'square') { for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; pts.push(v(cx + r * Math.cos(a), cy + r * Math.sin(a))); } }
+        else if (type === 'pentagon') { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; pts.push(v(cx + r * Math.cos(a), cy + r * Math.sin(a))); } }
+        return pts;
+      }
+      function initShapes() {
+        const W = canvas.width, H = canvas.height, r = Math.min(W, H) * .14;
+        shapeA = makeShape(typeA, W * .32, H * .5, r);
+        shapeB = makeShape(typeB, W * .68, H * .5, r);
+      }
+
+      // ── Steps ─────────────────────────────────────────────────
+      // Types: intro | edge-focus | edge-normal | halfspace
+      //        vertex-pick | vertex-vector | edge-summary | separated | collision
+      let steps = [], cur = 0;
+
+      // penetrationHUD: tracks live best-per-shape to draw on canvas
+      // bestA = {minDot, edgeIdx, normal, locked} — locked=true after all A edges done
+      // bestB = same for B
+      // We pre-compute the full per-shape results so we can show them during B's turns too
+      let precomputedA = [], precomputedB = [];
+
+      function buildSteps() {
+        steps = [];
+        steps.push({ type: 'intro' });
+        const defs = [
+          { pts: shapeA, other: shapeB, name: 'A', otherName: 'B', si: 0 },
+          { pts: shapeB, other: shapeA, name: 'B', otherName: 'A', si: 1 }
+        ];
+
+        // Precompute ALL edge mins for both shapes regardless of early exit
+        precomputedA = []; precomputedB = [];
+        for (let si = 0; si < 2; si++) {
+          const { pts, other } = defs[si];
+          const arr = si === 0 ? precomputedA : precomputedB;
+          for (let ei = 0; ei < pts.length; ei++) {
+            const eS = pts[ei], nrm = outwardNormal(pts, ei);
+            const minD = Math.min(...other.map(p => dot(sub(p, eS), nrm)));
+            arr.push({ ei, minDot: minD, normal: nrm });
+          }
+        }
+
+        let foundSep = false, allMins = [];
+        // Running best trackers (updated as we complete each edge-summary)
+        // bestA/bestB: null | {minDot, ei, normal, locked}
+        let bestA = null, bestB = null;
+
+        for (let si = 0; si < defs.length && !foundSep; si++) {
+          const { pts, other, name, otherName } = defs[si];
+          for (let ei = 0; ei < pts.length && !foundSep; ei++) {
+            const eS = pts[ei], eE = pts[(ei + 1) % pts.length], nrm = outwardNormal(pts, ei);
+            const dps = other.map((p, vi) => ({ pt: p, vi, d: dot(sub(p, eS), nrm) }));
+            const allOut = dps.every(dp => dp.d > 0);
+            const minD = Math.min(...dps.map(dp => dp.d));
+            allMins.push({ minDot: minD, normal: nrm, si, ei });
+
+            // snapshot HUD state BEFORE this edge summary updates it
+            const hudSnap = () => ({ bestA: bestA ? { ...bestA } : null, bestB: bestB ? { ...bestB } : null });
+
+            const base = { type: '', si, ei, eS, eE, nrm, pts, other, name, otherName, dps };
+            const h0 = hudSnap();
+            steps.push({ ...base, type: 'edge-focus', ...h0 });
+            steps.push({ ...base, type: 'edge-normal', ...h0 });
+            steps.push({ ...base, type: 'halfspace', ...h0 });
+            dps.forEach((_, idx) => {
+              steps.push({ ...base, type: 'vertex-pick', vi: idx, revealed: dps.slice(0, idx), ...h0 });
+              steps.push({ ...base, type: 'vertex-vector', vi: idx, revealed: dps.slice(0, idx + 1), ...h0 });
+            });
+
+            // After all vertices for this edge: update running best for this shape
+            if (si === 0) {
+              if (bestA === null || minD > bestA.minDot) bestA = { minDot: minD, ei, normal: nrm, locked: false };
+            } else {
+              if (bestB === null || minD > bestB.minDot) bestB = { minDot: minD, ei, normal: nrm, locked: false };
+            }
+            const h1 = hudSnap();
+            steps.push({ ...base, type: 'edge-summary', allOut, minD, ...h1 });
+
+            if (allOut) { steps.push({ ...base, type: 'separated', allOut, minD, ...h1 }); foundSep = true; }
+          }
+          // Lock shape's HUD after all its edges are done
+          if (si === 0 && bestA) bestA.locked = true;
+          if (si === 1 && bestB) bestB.locked = true;
+        }
+
+        if (!foundSep) {
+          const best = allMins.reduce((a, b) => a.minDot > b.minDot ? a : b);
+          // Final locked bests for collision step
+          const finalA = bestA ? { ...bestA, locked: true } : null;
+          const finalB = bestB ? { ...bestB, locked: true } : null;
+          steps.push({ type: 'collision', best, allMins, bestA: finalA, bestB: finalB });
+        }
+      }
+
+      // ── Animation engine ──────────────────────────────────────
+      let animT = 1, animRAF = null;
+      function startAnim(ms) {
+        animT = 0;
+        const start = performance.now(), dur = ms || 400;
+        cancelAnimationFrame(animRAF);
+        function tick(now) {
+          animT = Math.min(1, (now - start) / dur);
+          renderFrame();
+          if (animT < 1) animRAF = requestAnimationFrame(tick);
+        }
+        animRAF = requestAnimationFrame(tick);
+      }
+      function snapAnim() { animT = 1; cancelAnimationFrame(animRAF); renderFrame(); }
+
+      // ── Draw primitives ───────────────────────────────────────
+      function clear() {
+        ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(255,255,255,.02)'; ctx.lineWidth = 1;
+        const g = 40;
+        for (let x = 0; x < canvas.width; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+        for (let y = 0; y < canvas.height; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+      }
+
+      function dPoly(pts, fill, stroke, lw = 2, alpha = 1) {
+        ctx.save(); ctx.globalAlpha = alpha; ctx.beginPath();
+        pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+        ctx.closePath();
+        if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+        ctx.restore();
+      }
+
+      // t=0..1 animates arrow drawing
+      function dArrow(x1, y1, x2, y2, color, lw = 2, hs = 10, alpha = 1, t = 1) {
+        const et = ease(Math.min(t, 1));
+        const tx = lerpN(x1, x2, et), ty = lerpN(y1, y2, et);
+        ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.fillStyle = color;
+        ctx.lineWidth = lw; ctx.lineCap = 'round';
+        const dx = tx - x1, dy = ty - y1, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 1) { ctx.restore(); return; }
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(tx, ty); ctx.stroke();
+        if (t > .82) {
+          const ha = (t - .82) / .18, ux = dx / d, uy = dy / d;
+          ctx.globalAlpha = alpha * ha;
+          ctx.beginPath(); ctx.moveTo(tx, ty);
+          ctx.lineTo(tx - hs * ux + hs * .38 * (-uy), ty - hs * uy + hs * .38 * ux);
+          ctx.lineTo(tx - hs * ux - hs * .38 * (-uy), ty - hs * uy - hs * .38 * ux);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function dDot(x, y, r, color, alpha = 1) {
+        ctx.save(); ctx.globalAlpha = alpha;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.fill(); ctx.restore();
+      }
+
+      function dLabel(text, x, y, color = '#fff', sz = 11, align = 'center') {
+        ctx.save(); ctx.font = `${sz}px 'Space Mono',monospace`;
+        ctx.textAlign = align; ctx.textBaseline = 'middle';
+        const m = ctx.measureText(text), pad = 4;
+        const tx = align === 'left' ? x : align === 'right' ? x - m.width : x - m.width / 2;
+        ctx.fillStyle = 'rgba(6,6,12,.9)';
+        ctx.fillRect(tx - pad, y - sz / 2 - pad, m.width + pad * 2, sz + pad * 2);
+        ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
+      }
+
+      function fillHalf(nrm, eS, color, side, alpha = .10) {
+        const W = canvas.width, H = canvas.height, refD = dot(eS, nrm);
+        const corners = [v(0, 0), v(W, 0), v(W, H), v(0, H)];
+        const kept = corners.filter(c => (dot(c, nrm) - refD) * side >= 0);
+        const isects = [];
+        for (let i = 0; i < 4; i++) {
+          const a = corners[i], b = corners[(i + 1) % 4];
+          const da = dot(a, nrm) - refD, db = dot(b, nrm) - refD;
+          if ((da >= 0) != (db >= 0)) { const t2 = da / (da - db); isects.push(v(a.x + t2 * (b.x - a.x), a.y + t2 * (b.y - a.y))); }
+        }
+        const all = [...kept, ...isects]; if (all.length < 2) return;
+        const ccx = all.reduce((s, p) => s + p.x, 0) / all.length, ccy = all.reduce((s, p) => s + p.y, 0) / all.length;
+        all.sort((a, b) => Math.atan2(a.y - ccy, a.x - ccx) - Math.atan2(b.y - ccy, b.x - ccx));
+        ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color;
+        ctx.beginPath(); all.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+
+      function dDivLine(nrm, eS, alpha = .22) {
+        const dir = v(nrm.y, -nrm.x);
+        ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${alpha})`; ctx.lineWidth = 1.5; ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(eS.x + dir.x * 2500, eS.y + dir.y * 2500);
+        ctx.lineTo(eS.x - dir.x * 2500, eS.y - dir.y * 2500);
+        ctx.stroke(); ctx.restore();
+      }
+
+      function dEdgeLabels(pts, color, activeEi = -1) {
+        const c = centroid(pts);
+        for (let i = 0; i < pts.length; i++) {
+          const a = pts[i], b = pts[(i + 1) % pts.length];
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+          // outward normal direction for offset
+          const edge = sub(b, a);
+          let n = norm(perp(edge));
+          if (dot(sub(v(mx, my), c), n) < 0) n = v(-n.x, -n.y);
+          const offset = 18;
+          const lx = mx + n.x * offset, ly = my + n.y * offset;
+          const isActive = (i === activeEi);
+          const alpha = isActive ? 1 : 0.45;
+          const sz = isActive ? 10 : 8.5;
+          const col = isActive ? '#ffd166' : color;
+          ctx.save(); ctx.globalAlpha = alpha;
+          dLabel(`e${i + 1}`, lx, ly, col, sz);
+          ctx.restore();
+        }
+      }
+
+      function dShapes(activeSi = -1, overlap = false, activeEi = -1) {
+        const aF = activeSi === 0 ? 'rgba(100,255,218,.14)' : 'rgba(100,255,218,.06)';
+        const bF = activeSi === 1 ? 'rgba(255,107,157,.14)' : 'rgba(255,107,157,.06)';
+        dPoly(shapeA, aF, '#64ffda', activeSi === 0 ? 2.5 : 1.5);
+        dPoly(shapeB, bF, '#ff6b9d', activeSi === 1 ? 2.5 : 1.5);
+        if (overlap) { dPoly(shapeA, 'rgba(255,107,157,.22)', null); dPoly(shapeB, 'rgba(100,255,218,.22)', null); }
+        shapeA.forEach(p => dDot(p.x, p.y, 4, '#64ffda'));
+        shapeB.forEach(p => dDot(p.x, p.y, 4, '#ff6b9d'));
+        const cA = centroid(shapeA), cB = centroid(shapeB);
+        dLabel('A', cA.x, cA.y, '#64ffda', 12); dLabel('B', cB.x, cB.y, '#ff6b9d', 12);
+        // Edge number labels — active edge highlighted, others dimmed
+        dEdgeLabels(shapeA, '#64ffda', activeSi === 0 ? activeEi : -1);
+        dEdgeLabels(shapeB, '#ff6b9d', activeSi === 1 ? activeEi : -1);
+      }
+
+      function dEdge(eS, eE, glow = false) {
+        ctx.save(); if (glow) { ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 16; }
+        ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(eS.x, eS.y); ctx.lineTo(eE.x, eE.y); ctx.stroke(); ctx.restore();
+        dDot(eS.x, eS.y, 6, '#ffd166'); dDot(eE.x, eE.y, 6, '#ffd166');
+      }
+
+      function dNormal(eS, eE, nrm, t = 1) {
+        const mid = v((eS.x + eE.x) / 2, (eS.y + eE.y) / 2), L = 64;
+        dArrow(mid.x, mid.y, mid.x + nrm.x * L, mid.y + nrm.y * L, '#a8ff78', 2.5, 11, 1, t);
+        if (t > .88) dLabel('n̂', mid.x + nrm.x * (L + 17), mid.y + nrm.y * (L + 17), '#a8ff78', 11);
+      }
+
+      function dHSLabels(eS, nrm, alpha = 1) {
+        ctx.save(); ctx.globalAlpha = alpha;
+        dLabel('OUTSIDE', eS.x + nrm.x * 95, eS.y + nrm.y * 95, '#64ffda', 9);
+        dLabel('INSIDE', eS.x - nrm.x * 95, eS.y - nrm.y * 95, '#ff6b9d', 9);
+        ctx.restore();
+      }
+
+      function dRevealedVectors(eS, revealed) {
+        revealed.forEach(dp => {
+          const col = dp.d >= 0 ? '#64ffda' : '#ff6b9d';
+          dArrow(eS.x, eS.y, dp.pt.x, dp.pt.y, col, 1.5, 8, .55);
+          dDot(dp.pt.x, dp.pt.y, 5, col);
+          dLabel(`${dp.d >= 0 ? '+' : ''}${dp.d.toFixed(0)}`, dp.pt.x, dp.pt.y - 15, col, 9);
+        });
+      }
+
+      // ── Penetration HUD panels ────────────────────────────────
+      // Draws the top-left (Shape A) and top-right (Shape B) live trackers
+      function drawHUD(step) {
+        if (!step || step.type === 'intro') return;
+        const bA = step.bestA, bB = step.bestB;
+        const W = canvas.width;
+        // Only draw panels that have data
+        if (bA) drawHUDPanel(bA, 'A', '#64ffda', 14, 14, false, step);
+        if (bB) drawHUDPanel(bB, 'B', '#ff6b9d', W - 14, 14, true, step);
+
+        // On collision step: draw the comparison bridge between the two panels
+        if (step.type === 'collision' && bA && bB) {
+          drawHUDComparison(bA, bB, step);
+        }
+      }
+
+      function drawHUDPanel(best, name, color, x, y, rightAlign, step) {
+        ctx.save();
+        const isFinal = step.type === 'collision';
+        const isWinner = isFinal && best.minDot >= (name === 'A' ? step.bestB : step.bestA)?.minDot;
+        const pad = 10, lineH = 17;
+        const lines = [
+          `Shape ${name} — best edge`,
+          `Edge ${best.ei + 1}:  min = ${best.minDot.toFixed(2)}`,
+          best.locked ? (isFinal ? '✓ locked in' : '✓ all edges done') : '…scanning…',
+        ];
+        if (isFinal) lines.push(isWinner ? '← USE THIS (shallowest)' : '     (deeper, skip)');
+
+        ctx.font = `700 10px 'Space Mono',monospace`;
+        const maxW = lines.reduce((mx, l) => Math.max(mx, ctx.measureText(l).width), 0);
+        const boxW = maxW + pad * 2 + 4;
+        const boxH = lines.length * lineH + pad * 2;
+        const bx = rightAlign ? x - boxW : x;
+
+        // Glow border if winner
+        if (isWinner) { ctx.shadowColor = color; ctx.shadowBlur = 14; }
+        // Panel bg
+        ctx.fillStyle = 'rgba(8,8,18,0.92)';
+        ctx.strokeStyle = isWinner ? color : (best.locked ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)');
+        ctx.lineWidth = isWinner ? 1.5 : 1;
+        roundRect(ctx, bx, y, boxW, boxH, 6);
+        ctx.fill(); ctx.stroke();
+
+        // Left accent bar
+        ctx.fillStyle = color;
+        ctx.fillRect(bx, y, 3, boxH);
+
+        // Title line
+        ctx.shadowBlur = 0;
+        ctx.font = `700 9.5px 'Space Mono',monospace`;
+        ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+        ctx.fillStyle = color;
+        ctx.fillText(lines[0], bx + pad, y + pad + lineH * 0.5);
+
+        // Value line — bigger, bright
+        ctx.font = `700 11px 'Space Mono',monospace`;
+        const valCol = best.minDot >= 0 ? '#64ffda' : '#ff6b9d';
+        ctx.fillStyle = valCol;
+        ctx.fillText(lines[1], bx + pad, y + pad + lineH * 1.55);
+
+        // Status line
+        ctx.font = `9px 'Space Mono',monospace`;
+        ctx.fillStyle = best.locked ? 'rgba(255,255,255,0.55)' : '#ffd166';
+        ctx.fillText(lines[2], bx + pad, y + pad + lineH * 2.55);
+
+        // Winner tag
+        if (isFinal) {
+          ctx.font = `700 9px 'Space Mono',monospace`;
+          ctx.fillStyle = isWinner ? color : 'rgba(255,255,255,0.25)';
+          ctx.fillText(lines[3], bx + pad, y + pad + lineH * 3.55);
+        }
+
+        ctx.restore();
+      }
+
+      function drawHUDComparison(bA, bB, step) {
+        // Draw a small "vs" bridge + arrow to the winner at centre top
+        const W = canvas.width;
+        const winner = bA.minDot >= bB.minDot ? 'A' : 'B';
+        const winVal = Math.max(bA.minDot, bB.minDot);
+        const winColor = winner === 'A' ? '#64ffda' : '#ff6b9d';
+
+        ctx.save();
+        ctx.font = `700 10px 'Space Mono',monospace`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+        const msg = `MTV = max(${bA.minDot.toFixed(1)}, ${bB.minDot.toFixed(1)}) = ${winVal.toFixed(1)}  →  Shape ${winner}'s edge`;
+        const mw = ctx.measureText(msg).width;
+        ctx.fillStyle = 'rgba(8,8,18,0.92)';
+        ctx.strokeStyle = winColor; ctx.lineWidth = 1.5;
+        ctx.shadowColor = winColor; ctx.shadowBlur = 10;
+        roundRect(ctx, W / 2 - mw / 2 - 14, 8, mw + 28, 24, 5);
+        ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = winColor;
+        ctx.fillText(msg, W / 2, 20);
+        ctx.restore();
+      }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
+      }
+
+      // ── Main render ───────────────────────────────────────────
+      let pulseT = 0;
+      function renderFrame() {
+        clear();
+        if (!shapeA || !shapeB) return;
+        const step = steps[cur];
+        if (!step) { dShapes(); return; }
+        const t = ease(Math.min(animT, 1));
+
+        if (step.type === 'intro') {
+          dShapes();
+          dLabel('Two convex polygons — will they collide?', canvas.width / 2, 38, '#fff', 12);
+          dLabel('SAT tests one edge normal at a time to find a separating axis', canvas.width / 2, 60, '#6e7681', 9.5);
+          return;
+        }
+
+        const { eS, eE, nrm, si, ei, dps } = step;
+
+        if (step.type === 'edge-focus') {
+          dShapes(si, -1, ei); dEdge(eS, eE, true);
+          drawHUD(step); return;
+        }
+
+        if (step.type === 'edge-normal') {
+          dShapes(si, -1, ei); dEdge(eS, eE); dNormal(eS, eE, nrm, t);
+          drawHUD(step); return;
+        }
+
+        if (step.type === 'halfspace') {
+          fillHalf(nrm, eS, '#64ffda', +1, t * .10);
+          fillHalf(nrm, eS, '#ff6b9d', -1, t * .10);
+          dDivLine(nrm, eS, t * .22);
+          dShapes(si, -1, ei); dEdge(eS, eE); dNormal(eS, eE, nrm);
+          if (t > .55) dHSLabels(eS, nrm, (t - .55) / .45);
+          drawHUD(step); return;
+        }
+
+        if (step.type === 'vertex-pick') {
+          fillHalf(nrm, eS, '#64ffda', +1, .10);
+          fillHalf(nrm, eS, '#ff6b9d', -1, .10);
+          dDivLine(nrm, eS);
+          dShapes(si, -1, ei); dEdge(eS, eE); dNormal(eS, eE, nrm); dHSLabels(eS, nrm);
+          dRevealedVectors(eS, step.revealed);
+          // pulsing highlight on next vertex
+          pulseT += .05;
+          const pulse = .5 + .5 * Math.sin(pulseT * 3.5);
+          const vp = dps[step.vi].pt;
+          dDot(vp.x, vp.y, 9 + pulse * 4, '#ffd166', .8);
+          dDot(vp.x, vp.y, 5, '#ffd166');
+          dLabel(`V${step.vi + 1}`, vp.x, vp.y - 20, '#ffd166', 9);
+          drawHUD(step);
+          requestAnimationFrame(() => { if (steps[cur] && steps[cur].type === 'vertex-pick') renderFrame(); });
+          return;
+        }
+
+        if (step.type === 'vertex-vector') {
+          fillHalf(nrm, eS, '#64ffda', +1, .10);
+          fillHalf(nrm, eS, '#ff6b9d', -1, .10);
+          dDivLine(nrm, eS);
+          dShapes(si, -1, ei); dEdge(eS, eE); dNormal(eS, eE, nrm); dHSLabels(eS, nrm);
+          // previously revealed (all except the current one)
+          dRevealedVectors(eS, step.revealed.slice(0, -1));
+          // animate current
+          const dp = step.revealed[step.revealed.length - 1];
+          const col = dp.d >= 0 ? '#64ffda' : '#ff6b9d';
+          dArrow(eS.x, eS.y, dp.pt.x, dp.pt.y, col, 2.8, 12, 1, t);
+          dDot(dp.pt.x, dp.pt.y, 8, col, Math.min(t * 2, 1));
+          if (t > .7) {
+            const la = (t - .7) / .3;
+            ctx.save(); ctx.globalAlpha = la;
+            dLabel(`${dp.d >= 0 ? '+' : ''}${dp.d.toFixed(1)}`, dp.pt.x, dp.pt.y - 16, col, 10);
+            dLabel(dp.d >= 0 ? 'outside' : 'inside', dp.pt.x, dp.pt.y - 31, col, 8.5);
+            ctx.restore();
+          }
+          drawHUD(step); return;
+        }
+
+        if (step.type === 'edge-summary') {
+          fillHalf(nrm, eS, '#64ffda', +1, .10);
+          fillHalf(nrm, eS, '#ff6b9d', -1, .10);
+          dDivLine(nrm, eS);
+          dShapes(si, -1, ei); dEdge(eS, eE); dNormal(eS, eE, nrm); dHSLabels(eS, nrm);
+          dRevealedVectors(eS, dps);
+          const msg = step.allOut ? `min = ${step.minD.toFixed(1)} > 0 → ALL outside!` : `min = ${step.minD.toFixed(1)} < 0 → some inside, next edge...`;
+          const mc = step.allOut ? '#64ffda' : '#ff6b9d';
+          dLabel(msg, canvas.width / 2, canvas.height - 26, mc, 11);
+          drawHUD(step); return;
+        }
+
+        if (step.type === 'separated') {
+          fillHalf(nrm, eS, '#64ffda', +1, .16);
+          fillHalf(nrm, eS, '#ff6b9d', -1, .06);
+          dDivLine(nrm, eS, .38);
+          dShapes(si, -1, ei); dEdge(eS, eE, true); dNormal(eS, eE, nrm);
+          dps.forEach(dp => {
+            dArrow(eS.x, eS.y, dp.pt.x, dp.pt.y, '#64ffda', 1.5, 8, .6);
+            dDot(dp.pt.x, dp.pt.y, 5, '#64ffda');
+            dLabel(`+${dp.d.toFixed(0)}`, dp.pt.x, dp.pt.y - 15, '#64ffda', 9);
+          });
+          ctx.save();
+          ctx.font = "bold 13px 'Space Mono',monospace"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const msg = '✓  Separating axis found — NO COLLISION';
+          const mw = ctx.measureText(msg).width;
+          ctx.fillStyle = 'rgba(6,6,12,.94)'; ctx.fillRect(canvas.width / 2 - mw / 2 - 14, canvas.height - 46, mw + 28, 30);
+          ctx.fillStyle = '#64ffda'; ctx.fillText(msg, canvas.width / 2, canvas.height - 31); ctx.restore();
+          drawHUD(step); return;
+        }
+
+        if (step.type === 'collision') {
+          dShapes(-1, true);
+          const { best } = step, cx = canvas.width / 2, cy = canvas.height / 2;
+          dArrow(cx - best.normal.x * 60, cy - best.normal.y * 60, cx + best.normal.x * 60, cy + best.normal.y * 60, '#ffd166', 3.5, 14);
+          dLabel('MTV', cx + best.normal.x * 80, cy + best.normal.y * 80, '#ffd166', 10);
+          ctx.save();
+          ctx.font = "bold 13px 'Space Mono',monospace"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'rgba(6,6,12,.92)'; ctx.fillRect(canvas.width / 2 - 265, canvas.height - 66, 530, 54);
+          ctx.fillStyle = '#ff6b9d'; ctx.fillText('✗  No separating axis found — COLLISION', canvas.width / 2, canvas.height - 51);
+          ctx.fillStyle = '#ffd166'; ctx.font = "10.5px 'Space Mono',monospace";
+          ctx.fillText(`Penetration ≈ ${Math.abs(best.minDot).toFixed(1)}px   |   MTV: (${best.normal.x.toFixed(2)}, ${best.normal.y.toFixed(2)})`, canvas.width / 2, canvas.height - 33);
+          ctx.restore();
+          drawHUD(step); return;
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  🎙️  TEXT-TO-SPEECH NARRATION
+      //  Edit the strings below to change what is spoken at each step.
+      //  Placeholders: {name} {otherName} {ei} {vi} {dot} {minD} {totalVerts} {bestVal} {bestEi}
+      //  Set any key to "" to stay silent on that step.
+      // ═══════════════════════════════════════════════════════════
+      const NARRATION = {
+
+        intro:
+          "Welcome to the Separating Axis Theorem tutorial. " +
+          "We have two convex shapes on screen. Our goal is simple: find out whether they are touching or overlapping. " +
+          "The Separating Axis Theorem says: if you can find even one line that fits between the two shapes with no overlap, they are NOT colliding. " +
+          "We test candidate lines by looking at each edge of each shape, one at a time. Let's begin.",
+
+        'edge-focus':
+          "We are now looking at edge {ei} of shape {name}, highlighted in yellow. " +
+          "Each edge gives us a candidate direction to test. " +
+          "Our job is to find out whether this edge's direction can serve as a wall between the two shapes.",
+
+        'edge-normal':
+          "From edge {ei} we compute its outward normal, shown by the green arrow. " +
+          "The outward normal is simply the direction that points directly away from shape {name}, perpendicular to the edge. " +
+          "Think of it as the direction the edge is 'facing'. " +
+          "This is the axis we will use to measure where shape {otherName}'s vertices sit.",
+
+        'halfspace':
+          "The outward normal splits all of space into two half-planes. " +
+          "The teal region is the OUTSIDE — the side the edge is facing towards. " +
+          "The pink region is the INSIDE — the side behind the edge, inside shape {name}. " +
+          "Here is the key idea: we will now measure the dot product of each vertex of shape {otherName} against this normal. " +
+          "A positive result means that vertex is in the outside region. A negative result means it is in the inside region. " +
+          "We collect ALL of these values first, then we decide.",
+
+        'vertex-pick':
+          "Vertex {vi} of shape {otherName} is highlighted, ready to be measured. " +
+          "We draw a vector from a point on the edge all the way to this vertex. " +
+          "Then we take the dot product of that vector with the outward normal. " +
+          "The sign of the result tells us which half-plane this vertex is in.",
+
+        'vertex-vector-outside':
+          "Vertex {vi} gives a dot product of {dot} — that is positive. " +
+          "This vertex is in the outside region. We record this value and move on. " +
+          "Remember, we are just collecting measurements right now — we do not draw any conclusions until all vertices are done.",
+
+        'vertex-vector-inside':
+          "Vertex {vi} gives a dot product of {dot} — that is negative. " +
+          "This vertex is in the inside region, behind edge {ei}. " +
+          "Again, we are just collecting measurements. We will decide what this edge means once all vertices are tested.",
+
+        'vertex-vector-inside-last-all-negative':
+          "Vertex {vi} gives a dot product of {dot} — negative. " +
+          "That was the last vertex of shape {otherName}. " +
+          "Every single vertex came back negative, meaning every vertex of shape {otherName} is fully on the inside of edge {ei}. " +
+          "Now we can look at the minimum dot product to make our decision for this edge.",
+
+        'edge-summary-separated':
+          "All {totalVerts} dot products for edge {ei} are in. The minimum value is {minD}, which is positive. " +
+          "A positive minimum means every single vertex of shape {otherName} is on the outside of edge {ei}. " +
+          "This is a separating axis! The two shapes are on opposite sides of this line. " +
+          "We can stop immediately — the shapes are NOT colliding.",
+
+        'edge-summary-not-separated':
+          "All dot products for edge {ei} are in. The minimum value is {minD}, which is negative. " +
+          "Because the minimum is negative, at least one vertex of shape {otherName} is on the inside of edge {ei}. " +
+          "That means this edge does NOT give us a separating axis. " +
+          "We move on to try the next edge.",
+
+        'edge-summary-all-negative':
+          "All dot products for edge {ei} are in. Every single one is negative — the minimum is {minD}. " +
+          "Every vertex of shape {otherName} sits on the inside of edge {ei}. " +
+          "This edge cannot separate the shapes. We move on to the next edge.",
+
+        'edge-summary-best-so-far':
+          "Now we note the minimum dot product for edge {ei}, which was {minD}. " +
+          "The best minimum we have seen across shape {name}'s edges so far is {bestVal}, on edge {bestEi}. " +
+          "We keep edge {bestEi} as our current best — " +
+          "it represents the shallowest penetration depth from shape {name}'s perspective.",
+
+        'edge-summary-best-updated':
+          "Edge {ei} produced the best minimum yet for shape {name}: {bestVal}. " +
+          "This is closer to zero than any previous edge, meaning it represents the shallowest penetration so far. " +
+          "We set edge {ei} aside as the new leading candidate.",
+
+        'separated':
+          "We found a separating axis on edge {ei} of shape {name}. " +
+          "All vertices of shape {otherName} have positive dot products, so they all sit outside this edge. " +
+          "By the Separating Axis Theorem, if even one separating axis exists, the shapes cannot be colliding. " +
+          "We are done — no collision.",
+
+        'collision':
+          "We have tested every edge of both shapes, and not a single one gave us a separating axis. " +
+          "The Separating Axis Theorem tells us that if no separating axis exists at all, the shapes must be overlapping. " +
+          "The shapes ARE colliding. " +
+          "To find out how to push them apart, we look at the minimum translation vector, or M T V. " +
+          "The MTV comes from the edge whose minimum dot product was closest to zero — the shallowest penetration. " +
+          "Pushing the shapes apart by that amount along that direction resolves the collision.",
+
+      };
+
+      // ── TTS Engine ────────────────────────────────────────────
+      let ttsEnabled = true;
+
+      // speak() returns a Promise that resolves when the utterance finishes (or immediately if muted)
+      function speak(text) {
+        return new Promise(resolve => {
+          if (!ttsEnabled || !text || !window.speechSynthesis) { resolve(); return; }
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.rate = parseFloat(document.getElementById('ttsRate')?.value || 1.0);
+          utter.pitch = parseFloat(document.getElementById('ttsPitch')?.value || 1.0);
+          const voiceSel = document.getElementById('ttsVoice');
+          if (voiceSel && voiceSel.value) {
+            const voices = window.speechSynthesis.getVoices();
+            const found = voices.find(v => v.name === voiceSel.value);
+            if (found) utter.voice = found;
+          }
+          utter.onend = () => resolve();
+          utter.onerror = () => resolve(); // don't block on error
+          window.speechSynthesis.speak(utter);
+        });
+      }
+
+      // Build the narration text for the current step, plus an optional
+      // follow-up sentence about the running best (for edge-summary steps)
+      function getNarrationParts(step) {
+        // returns { main: string, followUp: string|null }
+        const narration = getNarration(step);
+        let followUp = null;
+
+        if (step && step.type === 'edge-summary' && !step.allOut) {
+          const fill = (tmpl, vars) => tmpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+          // Determine the running best for this shape at this point
+          const best = step.si === 0 ? step.bestA : step.bestB;
+          if (best) {
+            const isNewBest = best.ei === step.ei; // this edge just became the best
+            const key = isNewBest ? 'edge-summary-best-updated' : 'edge-summary-best-so-far';
+            followUp = fill(NARRATION[key], {
+              name: step.name || '',
+              ei: step.ei + 1,
+              bestVal: best.minDot.toFixed(2),
+              bestEi: best.ei + 1,
+            });
+          }
+        }
+
+        return { main: narration, followUp };
+      }
+
+      function getNarration(step) {
+        if (!step) return '';
+        const fill = (tmpl, vars) => tmpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+
+        if (step.type === 'intro') return NARRATION.intro;
+
+        const vars = {
+          name: step.name || '',
+          otherName: step.otherName || '',
+          ei: step.ei != null ? step.ei + 1 : '',
+          vi: step.vi != null ? step.vi + 1 : '',
+          totalVerts: step.dps ? step.dps.length : '',
+        };
+
+        if (step.type === 'edge-focus') return fill(NARRATION['edge-focus'], vars);
+        if (step.type === 'edge-normal') return fill(NARRATION['edge-normal'], vars);
+        if (step.type === 'halfspace') return fill(NARRATION['halfspace'], vars);
+        if (step.type === 'vertex-pick') return fill(NARRATION['vertex-pick'], vars);
+
+        if (step.type === 'vertex-vector') {
+          const dp = step.revealed[step.revealed.length - 1];
+          const out = dp.d >= 0;
+          const dotStr = (dp.d >= 0 ? '+' : '') + dp.d.toFixed(2);
+          const allVerts = step.dps ? step.dps.length : 0;
+          const isLast = step.vi === allVerts - 1;
+          const allNegativeSoFar = step.revealed.every(r => r.d < 0);
+
+          let key;
+          if (out) {
+            key = 'vertex-vector-outside';
+          } else if (!out && isLast && allNegativeSoFar) {
+            // Last vertex AND every single one (including this one) is negative
+            key = 'vertex-vector-inside-last-all-negative';
+          } else {
+            key = 'vertex-vector-inside';
+          }
+          return fill(NARRATION[key], { ...vars, dot: dotStr });
+        }
+
+        if (step.type === 'edge-summary') {
+          if (step.allOut) {
+            return fill(NARRATION['edge-summary-separated'], { ...vars, minD: step.minD.toFixed(2) });
+          }
+          // Check if ALL dots were negative (not just some)
+          const allNeg = step.dps && step.dps.every(dp => dp.d < 0);
+          const key = allNeg ? 'edge-summary-all-negative' : 'edge-summary-not-separated';
+          return fill(NARRATION[key], { ...vars, minD: step.minD.toFixed(2) });
+        }
+
+        if (step.type === 'separated') return fill(NARRATION['separated'], vars);
+        if (step.type === 'collision') return NARRATION['collision'];
+        return '';
+      }
+
+      // Populate voice dropdown once voices load
+      function populateVoices() {
+        const sel = document.getElementById('ttsVoice');
+        if (!sel) return;
+        const voices = window.speechSynthesis.getVoices();
+        sel.innerHTML = '<option value="">Default voice</option>';
+        // Preferred voice order — first match wins
+        const preferred = [
+          'Google UK English Male',
+          'Google UK English Female',
+          'Microsoft Hazel',
+          'Karen',
+        ];
+        let defaultSet = false;
+        voices.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.name;
+          opt.textContent = `${v.name} (${v.lang})`;
+          sel.appendChild(opt);
+        });
+        // Set preferred default
+        for (const name of preferred) {
+          const opt = [...sel.options].find(o => o.value === name);
+          if (opt) { opt.selected = true; defaultSet = true; break; }
+        }
+        // Fallback: first en-GB voice
+        if (!defaultSet) {
+          const gbVoice = voices.find(v => v.lang === 'en-GB');
+          if (gbVoice) {
+            const opt = [...sel.options].find(o => o.value === gbVoice.name);
+            if (opt) opt.selected = true;
+          }
+        }
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = populateVoices;
+        populateVoices();
+      }
+
+      // Mute toggle
+      document.getElementById('btnMute').onclick = () => {
+        ttsEnabled = !ttsEnabled;
+        document.getElementById('btnMute').textContent = ttsEnabled ? '🔊' : '🔇';
+        if (!ttsEnabled) window.speechSynthesis?.cancel();
+      };
+
+      // Rate slider label
+      document.getElementById('ttsRate').oninput = function () {
+        document.getElementById('ttsRateLbl').textContent = parseFloat(this.value).toFixed(1) + '×';
+      };
+
+      // ── UI ────────────────────────────────────────────────────
+      function getUI(step) {
+        if (!step) return { title: '', desc: '', math: '', cls: '' };
+
+        if (step.type === 'intro') return {
+          title: 'Separating Axis Theorem',
+          desc: 'If we can find <em>even one line</em> that separates two shapes with no overlap, they are <em>NOT colliding</em>. ' +
+            'SAT tests each edge normal as a candidate. We collect <em>all</em> dot products per edge, then check the minimum — ' +
+            'if the minimum is positive, every vertex is outside, and we have our separating axis.',
+          math: '¬overlap(A,B) ⟺ ∃ axis where min(dots) > 0',
+          cls: ''
+        };
+
+        const { name, otherName, ei, dps, si } = step;
+
+        if (step.type === 'edge-focus') return {
+          title: `Shape ${name} — Testing Edge ${ei + 1} of ${step.pts.length}`,
+          desc: `The <span class="hi">yellow edge</span> is our candidate. We will compute its outward normal, ` +
+            `then measure every vertex of shape <span class="neg">${otherName}</span> against it. ` +
+            `Only after collecting <em>all</em> dot products will we know if this edge separates the shapes.`,
+          math: `edgeVec = V${ei + 1} − V${ei}`,
+          cls: 'warn'
+        };
+
+        if (step.type === 'edge-normal') return {
+          title: 'Outward Normal n̂',
+          desc: `The green arrow is the <em>outward normal</em> — perpendicular to edge ${ei + 1} and pointing away from shape ${name}. ` +
+            `Think of it as the direction this edge is "facing outward". ` +
+            `We project every vertex of <span class="neg">${otherName}</span> onto this direction using the dot product.`,
+          math: `n̂ = perp(edgeVec).normalize()\n  → faces outward from shape ${name}`,
+          cls: ''
+        };
+
+        if (step.type === 'halfspace') return {
+          title: 'Two Half-Planes',
+          desc: `n̂ divides space into <em>OUTSIDE</em> <span class="pos">(teal)</span> and <em>INSIDE</em> <span class="neg">(pink)</span>. ` +
+            `We now compute <code>dot(vertex − edgePoint, n̂)</code> for each vertex of <span class="neg">${otherName}</span>. ` +
+            `We collect <em>all results first</em> — the minimum of these tells us whether the edge separates.`,
+          math: `dot > 0  →  vertex is OUTSIDE (good)\ndot < 0  →  vertex is INSIDE\nmin(all dots) > 0  →  separating axis!`,
+          cls: ''
+        };
+
+        if (step.type === 'vertex-pick') {
+          return {
+            title: `Measuring Vertex ${step.vi + 1} of Shape ${otherName}`,
+            desc: `Vertex <span class="hi">V${step.vi + 1}</span> is next. We draw a vector from the edge point to this vertex ` +
+              `and compute the dot product with n̂. This gives a signed distance — <em>positive</em> means outside, <em>negative</em> means inside. ` +
+              `We are just gathering data — no verdict yet.`,
+            math: `vec = V${step.vi + 1} − edgePoint\ndot(vec, n̂) = ?`,
+            cls: 'warn'
+          };
+        }
+
+        if (step.type === 'vertex-vector') {
+          const dp = step.revealed[step.revealed.length - 1];
+          const out = dp.d >= 0;
+          const remaining = dps.length - step.revealed.length;
+          return {
+            title: `V${step.vi + 1} → dot = ${dp.d >= 0 ? '+' : ''}${dp.d.toFixed(2)}`,
+            desc: `dot = <span class="${out ? 'pos' : 'neg'}">${dp.d >= 0 ? '+' : ''}${dp.d.toFixed(2)}</span> — ` +
+              `this vertex is in the <span class="${out ? 'pos' : 'neg'}">${out ? 'OUTSIDE' : 'INSIDE'}</span> region. ` +
+              (remaining > 0
+                ? `<em>${remaining} vertex${remaining > 1 ? 'es' : ''} still to measure.</em> We keep collecting.`
+                : `That is the last vertex. <em>Now we look at the minimum to decide.</em>`),
+            math: `dot = ${dp.d >= 0 ? '+' : ''}${dp.d.toFixed(4)}\n${out ? '> 0  vertex is outside' : '< 0  vertex is inside'}\n(no conclusion yet — collect all first)`,
+            cls: ''
+          };
+        }
+
+        if (step.type === 'edge-summary') {
+          const pos = dps.filter(d => d.d >= 0).length;
+          const neg = dps.filter(d => d.d < 0).length;
+          const minVal = step.minD.toFixed(2);
+          return {
+            title: `Edge ${ei + 1} — Verdict`,
+            desc: `All dot products collected: <span class="pos">${pos} positive</span>, <span class="neg">${neg} negative</span>. ` +
+              `<strong>Minimum = <span class="${step.allOut ? 'pos' : 'neg'}">${minVal}</span></strong>. ` +
+              (step.allOut
+                ? `min &gt; 0 means <em>every</em> vertex of ${otherName} is outside. <em>Separating axis found!</em>`
+                : `min &lt; 0 means at least one vertex is inside. <span class="neg">This edge fails — try the next one.</span>`),
+            math: `min dot = ${minVal}\n${step.allOut ? '> 0  →  ALL outside  →  SEPARATING AXIS ✓' : '≤ 0  →  some inside  →  not a separator, continue'}`,
+            cls: step.allOut ? 'green' : 'danger'
+          };
+        }
+
+        if (step.type === 'separated') return {
+          title: '✓ Separating Axis Found — No Collision',
+          desc: `The minimum dot product across all vertices of <span class="neg">${otherName}</span> against edge ${ei + 1} is <em>positive</em>. ` +
+            `Every vertex is outside. This edge is a separating axis. ` +
+            `By SAT, if even one separating axis exists, <em>the shapes are not colliding</em>. We stop here.`,
+          math: `min(dots) > 0  →  all outside\n∃ separating axis  →  NO COLLISION ✓`,
+          cls: 'green'
+        };
+
+        if (step.type === 'collision') {
+          const { best } = step;
+          return {
+            title: '✗ No Separating Axis — Collision',
+            desc: `Every edge of both shapes was tested, and <em>every minimum dot product was negative or zero</em>. ` +
+              `No separating axis exists. The shapes are <span class="neg">colliding</span>. ` +
+              `The <span class="hi">MTV</span> is the axis whose minimum was <em>closest to zero</em> (least penetration) — the max of all minimums.`,
+            math: `MTV axis: (${best.normal.x.toFixed(2)}, ${best.normal.y.toFixed(2)})\nDepth ≈ ${Math.abs(best.minDot).toFixed(2)}px\n= max of all per-edge minimums`,
+            cls: 'danger'
+          };
+        }
+
+        return { title: '', desc: '', math: '', cls: '' };
+      }
+
+      function updateUI() {
+        const step = steps[cur];
+        const info = getUI(step);
+        document.getElementById('sNum').textContent = `Step ${cur + 1} / ${steps.length}`;
+        document.getElementById('sTitle').textContent = info.title;
+        document.getElementById('sDesc').innerHTML = info.desc;
+        document.getElementById('mBox').textContent = info.math;
+        document.getElementById('stepCard').className = 'step-card' + (info.cls ? ' ' + info.cls : '');
+        document.getElementById('btnPrev').disabled = cur === 0;
+        document.getElementById('btnNext').disabled = cur === steps.length - 1;
+        const pct = steps.length > 1 ? cur / (steps.length - 1) * 100 : 0;
+        document.getElementById('pFill').style.width = pct + '%';
+        document.getElementById('pL').textContent = `Step ${cur + 1}`;
+        document.getElementById('pR').textContent = `of ${steps.length}`;
+      }
+
+      // ── Navigation ────────────────────────────────────────────
+      function goTo(idx, anim = true) {
+        cur = Math.max(0, Math.min(steps.length - 1, idx));
+        updateUI();
+        const s = steps[cur];
+        if (anim && s && (s.type === 'vertex-vector' || s.type === 'edge-normal')) startAnim(460);
+        else if (anim && s && (s.type === 'halfspace' || s.type === 'edge-focus')) startAnim(360);
+        else snapAnim();
+        // Fire-and-forget narration for manual navigation
+        const { main, followUp } = getNarrationParts(s);
+        speak(main).then(() => { if (followUp) speak(followUp); });
+      }
+
+      function refresh() {
+        stopAuto();
+        window.speechSynthesis?.cancel();
+        initShapes(); buildSteps(); cur = 0; updateUI(); snapAnim();
+      }
+
+      // ── Buttons ───────────────────────────────────────────────
+      document.getElementById('btnNext').onclick = () => goTo(cur + 1);
+      document.getElementById('btnPrev').onclick = () => goTo(cur - 1);
+      document.getElementById('btnReset').onclick = refresh;
+
+      let isAuto = false, autoT = null;
+      function stopAuto() {
+        isAuto = false;
+        clearTimeout(autoT);
+        window.speechSynthesis?.cancel();
+        document.getElementById('btnAuto').textContent = '▶ Auto';
+        document.getElementById('btnAuto').classList.remove('active');
+      }
+
+      document.getElementById('btnAuto').onclick = () => {
+        if (isAuto) { stopAuto(); return; }
+        isAuto = true;
+        document.getElementById('btnAuto').textContent = '■ Stop';
+        document.getElementById('btnAuto').classList.add('active');
+
+        async function tick() {
+          if (!isAuto) return;
+          if (cur >= steps.length - 1) { stopAuto(); return; }
+
+          // Advance to next step
+          cur = Math.min(steps.length - 1, cur + 1);
+          updateUI();
+          const s = steps[cur];
+          if (s.type === 'vertex-vector' || s.type === 'edge-normal') startAnim(460);
+          else if (s.type === 'halfspace' || s.type === 'edge-focus') startAnim(360);
+          else snapAnim();
+
+          // Speak main narration, await it fully
+          const { main, followUp } = getNarrationParts(s);
+          await speak(main);
+          if (!isAuto) return;
+
+          // Speak follow-up (running best) if present, await that too
+          if (followUp) {
+            await speak(followUp);
+            if (!isAuto) return;
+          }
+
+          // Small pause between steps, then next
+          autoT = setTimeout(tick, parseInt(document.getElementById('spd').value));
+        }
+
+        // Kick off with a short delay so the button state renders first
+        autoT = setTimeout(tick, 300);
+      };
+      document.getElementById('spd').oninput = function () { document.getElementById('spdLbl').textContent = (this.value / 1000).toFixed(1) + 's'; };
+
+      // ── Shape selectors ───────────────────────────────────────
+      document.querySelectorAll('input[name=sA]').forEach(r => r.onchange = function () { typeA = this.value; refresh(); });
+      document.querySelectorAll('input[name=sB]').forEach(r => r.onchange = function () { typeB = this.value; refresh(); });
+
+      // ── Keyboard ──────────────────────────────────────────────
+      document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(cur + 1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(cur - 1); }
+      });
+
+      // ── Drag ──────────────────────────────────────────────────
+      let dragging = null, dragStart = null, snapA2, snapB2;
+      function mpos(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) }; }
+      canvas.addEventListener('mousedown', e => {
+        const { x, y } = mpos(e);
+        const cA = centroid(shapeA), cB = centroid(shapeB);
+        const dA = Math.hypot(x - cA.x, y - cA.y), dB = Math.hypot(x - cB.x, y - cB.y);
+        if (dA < 75 || dB < 75) { dragging = dA < dB ? 'A' : 'B'; dragStart = { x, y }; snapA2 = shapeA.map(p => ({ ...p })); snapB2 = shapeB.map(p => ({ ...p })); }
+      });
+      canvas.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const { x, y } = mpos(e);
+        const dx = x - dragStart.x, dy = y - dragStart.y;
+        if (dragging === 'A') shapeA = transP(snapA2, dx, dy); else shapeB = transP(snapB2, dx, dy);
+        buildSteps(); cur = Math.min(cur, steps.length - 1); updateUI(); snapAnim();
+      });
+      canvas.addEventListener('mouseup', () => { dragging = null; });
+      canvas.addEventListener('mouseleave', () => { dragging = null; });
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+      canvas.addEventListener('touchmove', e => { e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+      canvas.addEventListener('touchend', () => { canvas.dispatchEvent(new MouseEvent('mouseup')); });
+
+      // ── Init ──────────────────────────────────────────────────
+      refresh();
+    </script>
+</body>
+
+</html>

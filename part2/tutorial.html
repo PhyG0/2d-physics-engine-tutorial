@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Engine - Part 2: Collision Detection</title>
+    <!-- Highlight.js -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            document.querySelectorAll('pre').forEach((el) => {
+                // If the pre doesn't have a code child, wrap its content in one
+                if (!el.querySelector('code')) {
+                    const code = document.createElement('code');
+                    code.className = 'language-javascript';
+                    code.innerHTML = el.innerHTML;
+                    el.innerHTML = '';
+                    el.appendChild(code);
+                }
+            });
+            hljs.highlightAll();
+        });
+    </script>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --text: #cccccc;
+            --text-heading: #ffffff;
+            --accent: #3794ff;
+            --code-bg: #2d2d2d;
+            --note-bg: #252526;
+            --note-border: #3794ff;
+            --border: #3e3e42;
+        }
+
+        body {
+            font-family: 'Segoe UI', Inter, system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0 auto;
+            padding: 15px;
+            background-color: var(--bg);
+            max-width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 30px;
+                max-width: 800px;
+            }
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            color: var(--text-heading);
+            margin-top: 1.5em;
+        }
+
+        h1 {
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h2 {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            color: #ff9d9d;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        .note {
+            background-color: var(--note-bg);
+            border-left: 4px solid var(--note-border);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        strong {
+            color: #fff;
+        }
+
+        .diagram {
+            text-align: center;
+            margin: 30px 0;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        ul,
+        ol {
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        img,
+        svg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .concept-box {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .concept-box h3 {
+            margin-top: 0;
+            color: var(--accent);
+        }
+
+        .theory-practice {
+            display: grid;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        @media (min-width: 768px) {
+            .theory-practice {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .theory-practice>div {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .theory-practice h4 {
+            margin-top: 0;
+            color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Physics Engine - Part 2: Collision Detection</h1>
+
+    <p>Welcome to Part 2 of our physics engine tutorial! In this chapter, we'll dive deep into one of the most
+        fascinating aspects of game physics: <strong>collision detection</strong>. By the end of this tutorial, you'll
+        understand how games know when objects touch, overlap, or collide with each other.</p>
+
+    <div class="note">
+        <strong>Prerequisites:</strong> This tutorial assumes you have a basic understanding of vectors and 2D math and
+        building on concepts like position, velocity, and basic geometry.
+        If you need to refresh or learn about these concepts, you can go to <a target="_blank"
+            href="https://www.weblercodes.com/Courses/physics-engine-1">Part 1</a> first.
+    </div>
+
+    <h2>What is a Collision?</h2>
+
+    <p>Imagine you're playing a game where a ball bounces around the screen. How does the game know when the ball hits a
+        wall or another object? That's where collision detection comes in.</p>
+
+    <div class="concept-box">
+        <h3>Collision: The Fundamental Concept</h3>
+        <p>A <strong>collision</strong> occurs when two objects in space overlap or touch each other. In 2D physics
+            engines, we need to detect these collisions and gather information about them so we can respond
+            appropriately (like making objects bounce off each other).</p>
+    </div>
+
+    <div class="diagram">
+        <svg width="600" height="250" viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg">
+            <!-- No Collision -->
+            <text x="100" y="20" fill="#ffffff" font-size="14" text-anchor="middle">No Collision</text>
+            <circle cx="60" cy="80" r="30" fill="none" stroke="#3794ff" stroke-width="2" />
+            <circle cx="140" cy="80" r="30" fill="none" stroke="#3794ff" stroke-width="2" />
+            <text x="100" y="140" fill="#00ff88" font-size="12" text-anchor="middle">Separated</text>
+
+            <!-- Touching -->
+            <text x="300" y="20" fill="#ffffff" font-size="14" text-anchor="middle">Just Touching</text>
+            <circle cx="270" cy="80" r="30" fill="none" stroke="#ffaa00" stroke-width="2" />
+            <circle cx="330" cy="80" r="30" fill="none" stroke="#ffaa00" stroke-width="2" />
+            <circle cx="300" cy="80" r="3" fill="#ff3333" />
+            <text x="300" y="140" fill="#ffaa00" font-size="12" text-anchor="middle">Contact Point</text>
+
+            <!-- Overlapping -->
+            <text x="500" y="20" fill="#ffffff" font-size="14" text-anchor="middle">Overlapping</text>
+            <circle cx="475" cy="80" r="30" fill="rgba(255, 50, 50, 0.3)" stroke="#ff3333" stroke-width="2" />
+            <circle cx="525" cy="80" r="30" fill="rgba(255, 50, 50, 0.3)" stroke="#ff3333" stroke-width="2" />
+            <line x1="500" y1="80" x2="520" y2="80" stroke="#00ff88" stroke-width="2" />
+            <text x="500" y="140" fill="#ff3333" font-size="12" text-anchor="middle">Penetration Depth</text>
+        </svg>
+    </div>
+
+    <p>When we detect a collision, we need to answer several questions:</p>
+    <ul>
+        <li><strong>Are they colliding?</strong> A simple yes or no.</li>
+        <li><strong>Where are they touching?</strong> The contact point(s).</li>
+        <li><strong>How deep is the overlap?</strong> The penetration depth.</li>
+        <li><strong>In what direction should they separate?</strong> The collision normal.</li>
+    </ul>
+
+    <h2>What is a Manifold?</h2>
+
+    <p>All this collision information needs to be stored somewhere. That's where the <strong>Manifold</strong> comes in.
+        Think of it as a "collision report" that contains everything we need to know about a collision.</p>
+
+    <div class="concept-box">
+        <h3>Manifold: The Collision Data Structure</h3>
+        <p>A <strong>Manifold</strong> is a container that holds all the details about a collision between two
+            bodies.</p>
+    </div>
+
+    <p>Let's look at the Manifold class:</p>
+
+    <pre>
+class Manifold {
+    constructor(bodyA, bodyB, normal, penetration, contacts) {
+        this.bodyA = bodyA;           // First colliding body
+        this.bodyB = bodyB;           // Second colliding body
+        this.normal = normal;         // Direction to push bodies apart
+        this.penetration = penetration; // How deep they overlap
+        this.contacts = contacts || []; // Where they touch
+    }
+}</pre>
+
+    <div class="theory-practice">
+        <div>
+            <h4>Theory</h4>
+            <p><strong>Normal Vector:</strong> Points from bodyA toward bodyB, showing the direction to separate them.
+            </p>
+            <p><strong>Penetration:</strong> A scalar value showing how far the bodies have overlapped.</p>
+            <p><strong>Contacts:</strong> An array of points where the surfaces touch.</p>
+        </div>
+        <div>
+            <h4>In Practice</h4>
+            <p>When two circles collide, the normal points from one center to the other, penetration is how much their
+                radii overlap, and there's typically one contact point.</p>
+            <p>For polygons, there can be multiple contact points (like when a box rests on the ground).</p>
+        </div>
+    </div>
+
+    <div class="diagram">
+        <svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- Two overlapping circles -->
+            <circle cx="250" cy="100" r="50" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff" stroke-width="2" />
+            <circle cx="350" cy="100" r="50" fill="rgba(255, 148, 55, 0.3)" stroke="#ff9437" stroke-width="2" />
+
+            <!-- Normal vector -->
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#ff3333" />
+                </marker>
+            </defs>
+            <line x1="300" y1="100" x2="380" y2="100" stroke="#ff3333" stroke-width="3" marker-end="url(#arrowhead)" />
+            <text x="340" y="85" fill="#ff3333" font-size="12" text-anchor="middle">Normal</text>
+
+            <!-- Contact point -->
+            <circle cx="300" cy="100" r="4" fill="#00ff88" />
+            <text x="300" y="130" fill="#00ff88" font-size="12" text-anchor="middle">Contact</text>
+
+            <!-- Penetration -->
+            <line x1="250" y1="140" x2="350" y2="140" stroke="#ffaa00" stroke-width="2" stroke-dasharray="5,5" />
+            <line x1="250" y1="135" x2="250" y2="145" stroke="#ffaa00" stroke-width="2" />
+            <line x1="350" y1="135" x2="350" y2="145" stroke="#ffaa00" stroke-width="2" />
+            <text x="300" y="165" fill="#ffaa00" font-size="12" text-anchor="middle">Distance = 100</text>
+            <text x="300" y="180" fill="#ffffff" font-size="11" text-anchor="middle">Penetration = 100 - (50 + 50) = 0
+                (just touching)</text>
+
+            <!-- Labels -->
+            <text x="250" y="50" fill="#3794ff" font-size="14" text-anchor="middle">Body A</text>
+            <text x="350" y="50" fill="#ff9437" font-size="14" text-anchor="middle">Body B</text>
+        </svg>
+    </div>
+
+    <h2>The Collision Detection Dispatcher</h2>
+
+    <p>Before we dive into specific collision algorithms, let's look at how our system decides which algorithm to use.
+        The <code>findCollision</code> method is like a traffic controller that routes collision checks to the right
+        algorithm based on the shape types.</p>
+
+    <pre>
+static findCollision(bodyA, bodyB) {
+    if (bodyA.type === "Circle" && bodyB.type === "Circle") {
+        return Collisions.circleVsCircle(bodyA, bodyB);
+    }
+    if (bodyA.type === "Polygon" && bodyB.type === "Polygon") {
+        return Collisions.polygonVsPolygon(bodyA, bodyB);
+    }
+    if (bodyA.type === "Circle" && bodyB.type === "Polygon") {
+        return Collisions.circleVsPolygon(bodyA, bodyB);
+    }
+    if (bodyA.type === "Polygon" && bodyB.type === "Circle") {
+        const m = Collisions.circleVsPolygon(bodyB, bodyA);
+        if (m) {
+            m.normal.mult(-1);
+            [m.bodyA, m.bodyB] = [m.bodyB, m.bodyA];
+        }
+        return m;
+    }
+    return null;
+}</pre>
+
+    <div class="note">
+        <strong>Clever Trick:</strong>
+        <p>Why write the same collision code twice? A collision between a Circle (A) and a Polygon (B) is the same as a
+            Polygon (B) and a Circle (A) — just from a different perspective!</p>
+        <p>Instead of writing a new `polygonVsCircle` function, we just:</p>
+        <ol>
+            <li>Swap the inputs: call `circleVsPolygon(B, A)` instead.</li>
+            <li>Get the result (which has a normal pointing from Circle → Polygon).</li>
+            <li><strong>Flip the normal:</strong> Negating the vector makes it point from Polygon → Circle.</li>
+        </ol>
+        <div class="diagram" style="margin-top:15px; background:#2a2a2a; padding:15px; border-radius:8px;">
+            <svg width="500" height="180" viewBox="0 0 500 180">
+                <!-- Scenario 1: Circle vs Polygon -->
+                <text x="120" y="20" fill="#fff" text-anchor="middle" font-size="12">1. Circle vs Polygon</text>
+                <circle cx="80" cy="80" r="30" fill="none" stroke="#3794ff" stroke-width="2" />
+                <rect x="130" y="50" width="60" height="60" fill="none" stroke="#ff9437" stroke-width="2" />
+                <!-- Normal -->
+                <line x1="80" y1="80" x2="160" y2="80" stroke="#00ff88" stroke-width="2"
+                    marker-end="url(#arrow-green)" />
+                <text x="120" y="100" fill="#00ff88" font-size="10" text-anchor="middle">Normal A → B</text>
+
+                <!-- Arrow -->
+                <path d="M 230 80 L 270 80" stroke="#666" stroke-width="2" marker-end="url(#arrow-gray)" />
+
+                <!-- Scenario 2: Polygon vs Circle -->
+                <text x="380" y="20" fill="#fff" text-anchor="middle" font-size="12">2. Polygon vs Circle
+                    (Swapped)</text>
+                <rect x="310" y="50" width="60" height="60" fill="none" stroke="#ff9437" stroke-width="2" />
+                <circle cx="420" cy="80" r="30" fill="none" stroke="#3794ff" stroke-width="2" />
+                <!-- Internal Normal (Circle->Poly) -->
+                <line x1="420" y1="60" x2="340" y2="60" stroke="#ff3333" stroke-width="1" stroke-dasharray="3,3"
+                    marker-end="url(#arrow-red)" />
+                <text x="380" y="55" fill="#ff3333" font-size="10" text-anchor="middle">Internal: Circle → Poly</text>
+                <!-- Final Normal (Flipped) -->
+                <line x1="340" y1="100" x2="420" y2="100" stroke="#00ff88" stroke-width="2"
+                    marker-end="url(#arrow-green)" />
+                <text x="380" y="115" fill="#00ff88" font-size="10" text-anchor="middle">Flipped: Poly → Circle</text>
+
+                <defs>
+                    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#00ff88" />
+                    </marker>
+                    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#ff3333" />
+                    </marker>
+                    <marker id="arrow-gray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+    </div>
+
+    <h2>Circle vs Circle: The Simplest Case</h2>
+
+    <p>Circle-circle collision is the easiest to understand and implement. Two circles collide when the distance between
+        their centers is less than the sum of their radii.</p>
+
+    <div class="diagram">
+        <svg width="600" height="280" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+            <!-- Left: No collision -->
+            <g transform="translate(0, 0)">
+                <text x="150" y="20" fill="#ffffff" font-size="14" text-anchor="middle">No Collision</text>
+                <circle cx="80" cy="120" r="40" fill="none" stroke="#3794ff" stroke-width="2" />
+                <circle cx="220" cy="120" r="40" fill="none" stroke="#ff9437" stroke-width="2" />
+                <line x1="80" y1="120" x2="220" y2="120" stroke="#ffffff" stroke-width="1" stroke-dasharray="3,3" />
+                <text x="150" y="115" fill="#ffffff" font-size="11" text-anchor="middle">distance = 140</text>
+                <text x="150" y="170" fill="#00ff88" font-size="11" text-anchor="middle">140 > (40 + 40)</text>
+                <text x="150" y="185" fill="#00ff88" font-size="11" text-anchor="middle">✓ No Collision</text>
+            </g>
+
+            <!-- Right: Collision -->
+            <g transform="translate(300, 0)">
+                <text x="150" y="20" fill="#ffffff" font-size="14" text-anchor="middle">Collision!</text>
+                <circle cx="110" cy="120" r="40" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff" stroke-width="2" />
+                <circle cx="190" cy="120" r="40" fill="rgba(255, 148, 55, 0.3)" stroke="#ff9437" stroke-width="2" />
+                <line x1="110" y1="120" x2="190" y2="120" stroke="#ffffff" stroke-width="1" stroke-dasharray="3,3" />
+                <text x="150" y="115" fill="#ffffff" font-size="11" text-anchor="middle">distance = 80</text>
+
+                <!-- Normal arrow -->
+                <line x1="150" y1="120" x2="200" y2="120" stroke="#ff3333" stroke-width="2"
+                    marker-end="url(#arrowhead)" />
+                <text x="175" y="110" fill="#ff3333" font-size="10" text-anchor="middle">normal</text>
+
+                <!-- Contact point -->
+                <circle cx="150" cy="120" r="3" fill="#00ff88" />
+                <text x="150" y="145" fill="#00ff88" font-size="10" text-anchor="middle">contact</text>
+
+                <text x="150" y="170" fill="#ff3333" font-size="11" text-anchor="middle">80 < (40 + 40)</text>
+                        <text x="150" y="185" fill="#ff3333" font-size="11" text-anchor="middle">penetration = 0</text>
+                        <text x="150" y="200" fill="#ff3333" font-size="11" text-anchor="middle">80 - (40 + 40) =
+                            0</text>
+            </g>
+        </svg>
+    </div>
+
+    <p>Let's break down the code step by step:</p>
+
+    <pre>
+static circleVsCircle(a, b) {
+    // Step 1: Calculate the vector from circle A to circle B
+    const diff = Vector.sub(b.pos, a.pos);
+    
+    // Step 2: Get the distance between centers
+    const dist = diff.mag();
+    
+    // Step 3: Calculate the sum of radii
+    const rSum = a.radius + b.radius;
+    
+    // Step 4: If distance >= sum of radii, they're not colliding
+    if (dist >= rSum) return null;
+    
+    // Step 5: Calculate the collision normal
+    // (handle the edge case where circles have the same position)
+    const normal = dist > 0 ? diff.copy().div(dist) : new Vector(1, 0);
+    
+    // Step 6: Calculate penetration depth
+    const pen = rSum - dist;
+    
+    // Step 7: Calculate contact point
+    // Start at A's center, move along normal by (A's radius - half penetration)
+    const contact = a.pos.copy().add(normal.copy().mult(a.radius - pen / 2));
+    
+    // Step 8: Create and return the manifold
+    return new Manifold(a, b, normal, pen, [contact]);
+}</pre>
+
+    <div class="theory-practice">
+        <div>
+            <h4>The Math</h4>
+            <p><strong>Distance Formula:</strong> The magnitude of the difference vector gives us the distance between
+                centers.</p>
+            <p><strong>Collision Condition:</strong> distance < radius₁ + radius₂</p>
+                    <p><strong>Normal Direction:</strong> The difference vector normalized points from A to B.</p>
+        </div>
+        <div>
+            <h4>Why It Works</h4>
+            <p>If two circles just touch, the distance between centers equals the sum of radii.</p>
+            <p>If they overlap, the distance is less than the sum of radii, and the difference tells us the penetration.
+            </p>
+            <p>The contact point is where their surfaces would touch if we pulled them apart slightly.</p>
+        </div>
+    </div>
+
+    <div class="note">
+        <strong>Edge Case Alert!</strong> When <code>dist = 0</code>, the circles are at exactly the same position. We
+        can't normalize a zero-length vector, so we use a default normal of (1, 0). This prevents division by zero
+        errors.
+    </div>
+
+    <h2>The Separating Axis Theorem (SAT)</h2>
+
+    <p>Now we enter the realm of polygon collision detection. For this, we need a powerful mathematical tool called the
+        <strong>Separating Axis Theorem</strong>.
+    </p>
+
+    <div class="concept-box">
+        <h3>The Core Idea of SAT</h3>
+        <p>Imagine you have two shapes and a very bright light source. If you can position the light so that the shadows
+            (projections) of the two shapes don't overlap, then the shapes themselves don't collide. If you can't find
+            such a position (after checking all possible angles), the shapes must be colliding.</p>
+    </div>
+
+    <div class="diagram">
+        <svg width="600" height="350" viewBox="0 0 600 350" xmlns="http://www.w3.org/2000/svg">
+            <!-- Separated shapes -->
+            <g transform="translate(0, 0)">
+                <text x="150" y="20" fill="#ffffff" font-size="14" text-anchor="middle">Separating Axis Found</text>
+
+                <!-- Two rectangles -->
+                <rect x="40" y="50" width="60" height="40" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff"
+                    stroke-width="2" />
+                <rect x="180" y="50" width="60" height="40" fill="rgba(255, 148, 55, 0.3)" stroke="#ff9437"
+                    stroke-width="2" />
+
+                <!-- Axis -->
+                <line x1="0" y1="140" x2="300" y2="140" stroke="#ffffff" stroke-width="1" stroke-dasharray="5,5" />
+                <text x="150" y="135" fill="#ffffff" font-size="11" text-anchor="middle">Test Axis</text>
+
+                <!-- Projections -->
+                <line x1="40" y1="140" x2="100" y2="140" stroke="#3794ff" stroke-width="4" />
+                <line x1="180" y1="140" x2="240" y2="140" stroke="#ff9437" stroke-width="4" />
+
+                <!-- Gap -->
+                <line x1="100" y1="150" x2="180" y2="150" stroke="#00ff88" stroke-width="2" />
+                <text x="140" y="165" fill="#00ff88" font-size="11" text-anchor="middle">Gap!</text>
+
+                <text x="150" y="190" fill="#00ff88" font-size="12" text-anchor="middle">✓ Not Colliding</text>
+            </g>
+
+            <!-- Overlapping shapes -->
+            <g transform="translate(300, 0)">
+                <text x="150" y="20" fill="#ffffff" font-size="14" text-anchor="middle">All Axes Overlap</text>
+
+                <!-- Two overlapping rectangles -->
+                <rect x="80" y="50" width="60" height="40" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff"
+                    stroke-width="2" />
+                <rect x="120" y="50" width="60" height="40" fill="rgba(255, 148, 55, 0.3)" stroke="#ff9437"
+                    stroke-width="2" />
+
+                <!-- Axis -->
+                <line x1="0" y1="140" x2="300" y2="140" stroke="#ffffff" stroke-width="1" stroke-dasharray="5,5" />
+                <text x="150" y="135" fill="#ffffff" font-size="11" text-anchor="middle">Test Axis</text>
+
+                <!-- Projections -->
+                <line x1="80" y1="140" x2="140" y2="140" stroke="#3794ff" stroke-width="4" />
+                <line x1="120" y1="140" x2="180" y2="140" stroke="#ff9437" stroke-width="4" />
+
+                <!-- Overlap -->
+                <line x1="120" y1="150" x2="140" y2="150" stroke="#ff3333" stroke-width="3" />
+                <text x="130" y="165" fill="#ff3333" font-size="11" text-anchor="middle">Overlap</text>
+
+                <text x="150" y="190" fill="#ff3333" font-size="12" text-anchor="middle">✗ Check More Axes...</text>
+            </g>
+
+            <!-- Visual explanation -->
+            <g transform="translate(0, 220)">
+                <text x="300" y="0" fill="#ffffff" font-size="13" text-anchor="middle" font-weight="bold">SAT in
+                    Action</text>
+                <text x="300" y="20" fill="#cccccc" font-size="11" text-anchor="middle">We project both shapes onto each
+                    edge's perpendicular (normal)</text>
+                <text x="300" y="35" fill="#cccccc" font-size="11" text-anchor="middle">If projections overlap on ALL
+                    axes → Collision</text>
+                <text x="300" y="50" fill="#cccccc" font-size="11" text-anchor="middle">If projections separate on ANY
+                    axis → No Collision</text>
+            </g>
+        </svg>
+    </div>
+
+    <h3>How SAT Works & Finding Minimum Separation</h3>
+
+    <p>For convex polygons, we only need to test along specific axes: the perpendicular to each edge (called the edge's
+        <strong>normal</strong>). Here's why:
+    </p>
+
+    <ol>
+        <li>Take each edge of both polygons</li>
+        <li>Get the perpendicular vector to that edge (rotate 90 degrees)</li>
+        <li>Project both polygons onto that perpendicular axis</li>
+        <li>Check if the projections overlap</li>
+        <li>If they don't overlap on any axis, the polygons don't collide</li>
+        <li>If they overlap on all axes, they are colliding, and the axis with the smallest overlap tells us the best
+            separation direction</li>
+    </ol>
+
+    <div class="diagram">
+        <svg width="600" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+            <text x="300" y="20" fill="#ffffff" font-size="14" text-anchor="middle" font-weight="bold">Edge Normal
+                Calculation</text>
+
+            <!-- Triangle -->
+            <polygon points="150,80 250,80 200,160" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff" stroke-width="2" />
+
+            <!-- One edge highlighted -->
+            <line x1="150" y1="80" x2="250" y2="80" stroke="#ffaa00" stroke-width="3" />
+            <text x="200" y="70" fill="#ffaa00" font-size="12" text-anchor="middle">Edge</text>
+
+            <!-- Edge vector -->
+            <line x1="170" y1="95" x2="230" y2="95" stroke="#00ff88" stroke-width="2" marker-end="url(#arrowhead2)" />
+            <defs>
+                <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#00ff88" />
+                </marker>
+                <marker id="arrowhead3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#ff3333" />
+                </marker>
+            </defs>
+            <text x="200" y="110" fill="#00ff88" font-size="11" text-anchor="middle">edge = v2 - v1</text>
+
+            <!-- Normal vector -->
+            <line x1="200" y1="80" x2="200" y2="20" stroke="#ff3333" stroke-width="2" marker-end="url(#arrowhead3)" />
+            <text x="215" y="50" fill="#ff3333" font-size="11">normal</text>
+
+            <!-- Code explanation -->
+            <g transform="translate(320, 60)">
+                <rect x="0" y="0" width="260" height="140" fill="#2d2d2d" stroke="#3794ff" stroke-width="1" rx="5" />
+                <text x="10" y="25" fill="#ffffff" font-size="12" font-family="monospace">// Get edge vector</text>
+                <text x="10" y="45" fill="#cccccc" font-size="12" font-family="monospace">edge = v2 - v1</text>
+                <text x="10" y="65" fill="#ffffff" font-size="12" font-family="monospace"></text>
+                <text x="10" y="85" fill="#ffffff" font-size="12" font-family="monospace">// Rotate 90° CCW:</text>
+                <text x="10" y="105" fill="#00ff88" font-size="12" font-family="monospace">normal.x = edge.y</text>
+                <text x="10" y="125" fill="#00ff88" font-size="12" font-family="monospace">normal.y = -edge.x</text>
+            </g>
+
+            <text x="300" y="230" fill="#cccccc" font-size="11" text-anchor="middle">If edge points right (1, 0), normal
+                points up (0, -1)</text>
+            <text x="300" y="245" fill="#cccccc" font-size="11" text-anchor="middle">The normal is perpendicular to the
+                edge, pointing outward</text>
+        </svg>
+    </div>
+
+    <div class="note" style="border-left-color: #ffd166;">
+        <h4 style="margin-top:0; color:#ffd166;">Interactive SAT Simulator</h4>
+        <p>
+            To truly understand this algorithm, explore the simulation below.
+            You can drag the shapes, change their types, and step through the algorithm edge by edge.
+        </p>
+        <p>
+            <a href="../simulations/sat-visualizer.html" target="_blank">Open Simulator Fullscreen ⤢</a>
+        </p>
+
+        <iframe src="../simulations/sat-visualizer.html" width="100%" height="600"
+            style="border:0; border-radius:8px; margin-top:15px; background:#0a0a0f;"></iframe>
+
+        <p style="margin-top:10px; font-size:0.9em; color:#aaa;">
+            <em>Note: The code below uses the same variable names as the simulator to help you connect the dots.</em>
+        </p>
+    </div>
+
+    <p>This function implements the core loop you see in the simulator:</p>
+
+    <pre>
+static findMinSeparation(vertsA, vertsB) {
+    let bestSeparation = -Infinity;
+    let bestEdgeIndex = -1;
+    let bestNormal = null;
+
+    // Loop through every edge of Polygon A
+    for (let i = 0; i < vertsA.length; i++) {
+        const edgeStart = vertsA[i];
+        const edgeEnd = vertsA[(i + 1) % vertsA.length];
+        
+        // 1. Get the Edge Vector
+        const edgeVector = Vector.sub(edgeEnd, edgeStart);
+        
+        // 2. Get the Outward Normal (perpendicular to edge)
+        // This splits the world into "Outside" (front) and "Inside" (back)
+        const edgeNormal = new Vector(edgeVector.y, -edgeVector.x).normalize();
+
+        // 3. Find the Minimum Separation for this axis
+        let minSeparation = Infinity;
+        for (const vertex of vertsB) {
+            // Project the vertex onto the normal (relative to edgeStart)
+            const projection = Vector.sub(vertex, edgeStart).dot(edgeNormal);
+            if (projection < minSeparation) minSeparation = projection;
+        }
+
+        // 4. Track the Best Separation (The "Least Deep" Penetration)
+        // If minSeparation is positive, it means ALL vertices are "Outside".
+        // We found a separating axis!
+        if (minSeparation > bestSeparation) {
+            bestSeparation = minSeparation;
+            bestNormal = edgeNormal;
+            bestEdgeIndex = i;
+        }
+    }
+    
+    return {
+        separation: bestSeparation, // > 0 means separated, < 0 means overlapping
+        normal: bestNormal,
+        edgeIndex: bestEdgeIndex
+    };
+}</pre>
+
+    <div class="theory-practice">
+        <div>
+            <h4>Simulator Connection</h4>
+            <p><strong>Outward Normal:</strong> The green arrow in the simulator. It points to the "Outside".</p>
+            <p><strong>Projection:</strong> The dot product check. Positive = Outside (Green), Negative = Inside (Pink).
+            </p>
+        </div>
+        <div>
+            <h4>The Decision</h4>
+            <p>If <code>minSeparation > 0</code>, <strong>all</strong> vertices are outside. We found a gap! Return
+                immediately (in the caller).</p>
+            <p>If <code>minSeparation < 0</code>, we are overlapping. We keep track of the <em>closest to zero</em>
+                (least negative) separation because that's the shortest way out.</p>
+        </div>
+    </div>
+
+    <h2>Polygon vs. Polygon Collision</h2>
+
+    <p>
+        When two polygons collide, we need to know more than just "yes, they are touching." We need to find the
+        <em>exact points of contact</em> so the physics engine knows how to push them apart correctly. This function
+        does it all in one pipeline:
+    </p>
+
+    <pre>
+static polygonVsPolygon(a, b) {
+    // Get all vertices in world space (accounting for position and rotation)
+    const vertsA = a.getWorldVertices();
+    const vertsB = b.getWorldVertices();
+
+    // Test all axes from polygon A
+    const resA = Collisions.findMinSeparation(vertsA, vertsB);
+    if (resA.separation > 0) return null; // Found separating axis!
+
+    // Test all axes from polygon B
+    const resB = Collisions.findMinSeparation(vertsB, vertsA);
+    if (resB.separation > 0) return null; // Found separating axis!
+
+    // If we get here, they're colliding.
+    // Pick which polygon's edge is the "reference" (the one with least penetration).
+    let ref, refVerts, incVerts, flip;
+    if (resA.separation > resB.separation) {
+        // A's edge penetrates less — use it as reference
+        ref = resA;
+        refVerts = vertsA;
+        incVerts = vertsB;
+        flip = false;
+    } else {
+        // B's edge penetrates less — use it as reference
+        ref = resB;
+        refVerts = vertsB;
+        incVerts = vertsA;
+        flip = true;
+    }
+
+    // Get the two vertices that form the reference edge
+    const i = ref.edgeIndex;
+    const refV1 = refVerts[i];
+    const refV2 = refVerts[(i + 1) % refVerts.length];
+    const refNormal = ref.normal;
+
+    // Find the incident edge (the edge on the other polygon most "facing" the collision)
+    const incEdge = Collisions.findIncidentEdge(incVerts, refNormal);
+
+    // Clip the incident edge against the reference edge's side planes
+    let contacts = Collisions.clipEdge(refV1, refV2, refNormal, incEdge);
+
+    // Make sure the normal always points from B → A
+    let normal = refNormal.copy();
+    if (flip) normal.mult(-1);
+
+    // Fallback: if clipping gave us nothing, find the deepest penetrating vertex manually
+    if (contacts.length === 0) {
+        const refDist = refNormal.dot(refV1);
+        let deepest = null, deepestD = 0;
+        for (let v of incVerts) {
+            const d = v.dot(refNormal) - refDist;
+            if (d < deepestD) { deepestD = d; deepest = v; }
+        }
+        if (deepest) contacts = [deepest.copy()];
+        else return null;
+    }
+
+    const pen = Math.abs(ref.separation);
+    return new Manifold(a, b, normal, pen, contacts);
+}</pre>
+
+    <div class="note">
+        <strong>Big Picture:</strong> The function has two jobs — first decide <em>if</em> the polygons are colliding
+        (using SAT), then figure out <em>where</em> they are colliding (using edge clipping). Read on to see each step
+        in detail.
+    </div>
+
+    <h3>The 4-Step Pipeline</h3>
+
+    <p>Here's the road map. Every line in <code>polygonVsPolygon</code> belongs to one of these four steps:</p>
+
+    <ol>
+        <li><strong>SAT Check:</strong> Are they even colliding? If yes, what direction should we push them apart?</li>
+        <li><strong>Pick Reference &amp; Incident Edges:</strong> Which edge is being "hit" and which edge is "hitting"?
+        </li>
+        <li><strong>Clip the Incident Edge:</strong> Trim the hitting edge so it only spans the width of the hit edge.
+        </li>
+        <li><strong>Filter Contact Points:</strong> Keep only the clipped points that are actually inside the other
+            polygon.</li>
+    </ol>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Step 1: SAT Check — Are They Colliding?</h4>
+
+    <p>
+        SAT (Separating Axis Theorem) says: <em>if you can find any axis where the two shapes don't overlap, they
+            aren't colliding.</em> We check every edge normal from both polygons. The moment we find a gap, we bail out
+        early with <code>null</code>.
+    </p>
+
+    <p>
+        If <strong>every</strong> axis shows overlap, the shapes are colliding. We then pick the axis with the
+        <em>least</em> overlap — that's the direction we'll push them apart, and the edge that produced it becomes our
+        <strong>reference edge</strong>.
+    </p>
+
+    <!-- Step 1 diagram -->
+    <div class="diagram">
+        <svg width="620" height="260" viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ff4466" />
+                </marker>
+                <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#00ff88" />
+                </marker>
+            </defs>
+
+            <!-- LEFT: No collision (gap exists) -->
+            <text x="155" y="22" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">No Collision —
+                Gap Found</text>
+            <rect x="40" y="60" width="90" height="70" rx="4" fill="rgba(55,148,255,0.25)" stroke="#3794ff"
+                stroke-width="2" />
+            <rect x="175" y="55" width="90" height="70" rx="4" fill="rgba(255,148,55,0.25)" stroke="#ff9437"
+                stroke-width="2" />
+            <!-- Gap indicator -->
+            <line x1="130" y1="95" x2="175" y2="95" stroke="#ff4466" stroke-width="2" stroke-dasharray="5,3" />
+            <text x="152" y="88" fill="#ff4466" font-size="11" text-anchor="middle">gap!</text>
+            <!-- Projection axis -->
+            <line x1="30" y1="155" x2="290" y2="155" stroke="#666" stroke-width="1" stroke-dasharray="3,3" />
+            <text x="155" y="172" fill="#888" font-size="11" text-anchor="middle">→ One axis shows separation → return
+                null</text>
+            <!-- projections -->
+            <line x1="40" y1="148" x2="130" y2="148" stroke="#3794ff" stroke-width="4" stroke-linecap="round" />
+            <line x1="175" y1="148" x2="265" y2="148" stroke="#ff9437" stroke-width="4" stroke-linecap="round" />
+
+            <!-- Divider -->
+            <line x1="310" y1="20" x2="310" y2="230" stroke="#444" stroke-width="1" stroke-dasharray="4,4" />
+
+            <!-- RIGHT: Collision (all axes overlap) -->
+            <text x="465" y="22" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">Collision — All
+                Axes Overlap</text>
+            <rect x="350" y="55" width="90" height="75" rx="4" fill="rgba(55,148,255,0.25)" stroke="#3794ff"
+                stroke-width="2" />
+            <rect x="405" y="45" width="90" height="75" rx="4" fill="rgba(255,148,55,0.25)" stroke="#ff9437"
+                stroke-width="2" />
+            <!-- Overlap bracket -->
+            <line x1="405" y1="148" x2="440" y2="148" stroke="#00ff88" stroke-width="5" stroke-linecap="round" />
+            <text x="422" y="143" fill="#00ff88" font-size="10" text-anchor="middle">overlap</text>
+            <!-- projection axis -->
+            <line x1="330" y1="155" x2="590" y2="155" stroke="#666" stroke-width="1" stroke-dasharray="3,3" />
+            <text x="465" y="172" fill="#888" font-size="11" text-anchor="middle">→ All axes overlap → they're
+                colliding!</text>
+            <!-- projections -->
+            <line x1="350" y1="148" x2="440" y2="148" stroke="#3794ff" stroke-width="4" stroke-linecap="round" />
+            <line x1="405" y1="148" x2="495" y2="148" stroke="#ff9437" stroke-width="4" stroke-linecap="round" />
+
+            <!-- Normal arrow on right diagram -->
+            <line x1="422" y1="90" x2="422" y2="42" stroke="#ff4466" stroke-width="2" marker-end="url(#arr)" />
+            <text x="435" y="68" fill="#ff4466" font-size="11">normal</text>
+            <text x="430" y="80" fill="#ff4466" font-size="10">(least overlap)</text>
+        </svg>
+    </div>
+
+    <p>Here's exactly which lines of <code>polygonVsPolygon</code> do this:</p>
+
+    <pre>
+const vertsA = a.getWorldVertices();
+const vertsB = b.getWorldVertices();
+
+// Test all edge normals from A's edges
+const resA = Collisions.findMinSeparation(vertsA, vertsB);
+if (resA.separation > 0) return null; // Gap found → not colliding
+
+// Test all edge normals from B's edges
+const resB = Collisions.findMinSeparation(vertsB, vertsA);
+if (resB.separation > 0) return null; // Gap found → not colliding
+
+// Both tests passed — they ARE colliding.
+// The result with the LEAST penetration (closest to 0) wins: its edge
+// becomes the reference edge and its normal becomes the collision normal.
+let ref, refVerts, incVerts, flip;
+if (resA.separation > resB.separation) {
+    ref = resA;       // A has less penetration
+    refVerts = vertsA;
+    incVerts = vertsB;
+    flip = false;
+} else {
+    ref = resB;       // B has less penetration
+    refVerts = vertsB;
+    incVerts = vertsA;
+    flip = true;
+}
+
+// Extract the two endpoints and normal of the winning reference edge
+const i = ref.edgeIndex;
+const refV1 = refVerts[i];
+const refV2 = refVerts[(i + 1) % refVerts.length];
+const refNormal = ref.normal;</pre>
+
+    <div class="note">
+        <strong>Why the least penetration?</strong> The axis with the smallest overlap is the most "efficient" direction
+        to separate the shapes — it requires the least movement, which means more realistic physics.
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Step 2: Pick the Reference &amp; Incident Edges</h4>
+
+    <p>
+        Now that we know <em>which</em> polygon owns the collision normal, we label the two colliding edges:
+    </p>
+    <ul>
+        <li><strong>Reference Edge</strong> — the edge on the polygon that produced the collision normal. Think of it
+            as the "floor" or "wall" that is being hit.</li>
+        <li><strong>Incident Edge</strong> — the edge on the <em>other</em> polygon that is most directly facing the
+            reference normal (i.e. most anti-parallel to it). Think of it as the "corner" doing the hitting.</li>
+    </ul>
+
+    <!-- Step 2 diagram -->
+    <div class="diagram">
+        <svg width="620" height="240" viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrB" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ff4466" />
+                </marker>
+            </defs>
+            <text x="310" y="22" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">Step 2 —
+                Reference Edge vs. Incident Edge</text>
+
+            <!-- Polygon A (blue, bottom) -->
+            <polygon points="120,100 380,100 380,190 120,190" fill="rgba(55,148,255,0.2)" stroke="#3794ff"
+                stroke-width="1.5" />
+            <text x="155" y="165" fill="#3794ff" font-size="12">Polygon A</text>
+
+            <!-- Polygon B (orange, top-right, overlapping) -->
+            <polygon points="280,50 500,70 480,145 260,125" fill="rgba(255,148,55,0.2)" stroke="#ff9437"
+                stroke-width="1.5" />
+            <text x="430" y="100" fill="#ff9437" font-size="12">Polygon B</text>
+
+            <!-- Reference edge (top of A) — highlighted green -->
+            <line x1="120" y1="100" x2="380" y2="100" stroke="#00ff88" stroke-width="5" stroke-linecap="round" />
+            <text x="250" y="88" fill="#00ff88" font-size="13" font-weight="bold" text-anchor="middle">Reference
+                Edge</text>
+
+            <!-- Reference normal arrow -->
+            <line x1="250" y1="100" x2="250" y2="52" stroke="#ff4466" stroke-width="2" marker-end="url(#arrB)" />
+            <text x="262" y="75" fill="#ff4466" font-size="11">refNormal</text>
+
+            <!-- Incident edge (bottom of B) — highlighted yellow -->
+            <line x1="480" y1="145" x2="260" y2="125" stroke="#ffaa00" stroke-width="5" stroke-linecap="round" />
+            <text x="390" y="170" fill="#ffaa00" font-size="13" font-weight="bold" text-anchor="middle">Incident
+                Edge</text>
+
+            <!-- Labels for edge vertices -->
+            <circle cx="120" cy="100" r="4" fill="#00ff88" />
+            <text x="107" y="96" fill="#00ff88" font-size="10">refV1</text>
+            <circle cx="380" cy="100" r="4" fill="#00ff88" />
+            <text x="383" y="96" fill="#00ff88" font-size="10">refV2</text>
+
+            <circle cx="480" cy="145" r="4" fill="#ffaa00" />
+            <text x="484" y="143" fill="#ffaa00" font-size="10">v1</text>
+            <circle cx="260" cy="125" r="4" fill="#ffaa00" />
+            <text x="240" y="122" fill="#ffaa00" font-size="10">v2</text>
+
+            <!-- Overlap zone shading -->
+            <polygon points="280,100 380,100 380,125 280,125" fill="rgba(255,255,255,0.08)" stroke="none" />
+            <text x="330" y="117" fill="#aaa" font-size="10" text-anchor="middle">overlap zone</text>
+        </svg>
+    </div>
+
+    <p>To find the incident edge we loop over every edge of the <em>other</em> polygon and pick the one whose outward
+        normal is most opposite to <code>refNormal</code> (smallest dot product):</p>
+
+    <pre>
+static findIncidentEdge(incVerts, refNormal) {
+    let minDot = Infinity;
+    let index = 0;
+    for (let i = 0; i < incVerts.length; i++) {
+        const v1 = incVerts[i];
+        const v2 = incVerts[(i + 1) % incVerts.length];
+        const edge = Vector.sub(v2, v1);
+        const normal = new Vector(edge.y, -edge.x).normalize(); // outward normal of this edge
+        const d = normal.dot(refNormal);
+        if (d < minDot) { minDot = d; index = i; } // most anti-parallel wins
+    }
+    return { v1: incVerts[index], v2: incVerts[(index + 1) % incVerts.length] };
+}</pre>
+
+    <p>Back in <code>polygonVsPolygon</code>, this is called right after we extract the reference edge:</p>
+
+    <pre>
+// (refV1, refV2, refNormal already set from Step 1)
+const incEdge = Collisions.findIncidentEdge(incVerts, refNormal);</pre>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Step 3: Clip the Incident Edge</h4>
+
+    <p>
+        The incident edge is usually longer than the contact zone — parts of it stick out past the ends of the
+        reference edge. We clip it so only the portion that "spans" the reference edge survives. This is done in two
+        passes using <code>clipSegment</code>:
+    </p>
+    <ol>
+        <li>Clip against the <strong>left side-plane</strong> of the reference edge (discard anything to the left of
+            <code>refV1</code>).
+        </li>
+        <li>Clip against the <strong>right side-plane</strong> (discard anything to the right of <code>refV2</code>).
+        </li>
+    </ol>
+    <p>After both clips, any surviving points that are <em>behind</em> (penetrating past) the reference edge are our
+        contact points.</p>
+
+    <!-- Step 3 diagram -->
+    <div class="diagram">
+        <svg width="620" height="210" viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+            <text x="310" y="20" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">Step 3 — Clipping
+                the Incident Edge in 3 Passes</text>
+
+            <!-- === PANEL 1: clip left === -->
+            <text x="103" y="45" fill="#ccc" font-size="11" text-anchor="middle">① Clip left side</text>
+            <!-- ref edge -->
+            <line x1="55" y1="100" x2="160" y2="100" stroke="#00ff88" stroke-width="3" stroke-linecap="round" />
+            <text x="107" y="116" fill="#00ff88" font-size="10" text-anchor="middle">ref edge</text>
+            <!-- left plane -->
+            <line x1="55" y1="55" x2="55" y2="145" stroke="#ff4466" stroke-width="1.5" stroke-dasharray="4,3" />
+            <text x="42" y="52" fill="#ff4466" font-size="9">left</text>
+            <!-- right plane -->
+            <line x1="160" y1="55" x2="160" y2="145" stroke="#888" stroke-width="1" stroke-dasharray="4,3" />
+            <!-- incident edge original (faded) -->
+            <line x1="30" y1="70" x2="155" y2="130" stroke="#ffaa00" stroke-width="2" stroke-dasharray="4,3"
+                opacity="0.4" />
+            <!-- incident edge clipped left -->
+            <line x1="55" y1="83" x2="155" y2="130" stroke="#ffaa00" stroke-width="3" stroke-linecap="round" />
+            <circle cx="55" cy="83" r="4" fill="#ff4466" />
+            <text x="62" y="79" fill="#ff4466" font-size="9">new pt</text>
+
+            <!-- Divider -->
+            <line x1="210" y1="40" x2="210" y2="185" stroke="#333" stroke-width="1" />
+
+            <!-- === PANEL 2: clip right === -->
+            <text x="315" y="45" fill="#ccc" font-size="11" text-anchor="middle">② Clip right side</text>
+            <!-- ref edge -->
+            <line x1="265" y1="100" x2="370" y2="100" stroke="#00ff88" stroke-width="3" stroke-linecap="round" />
+            <text x="317" y="116" fill="#00ff88" font-size="10" text-anchor="middle">ref edge</text>
+            <!-- left plane (grey, already done) -->
+            <line x1="265" y1="55" x2="265" y2="145" stroke="#888" stroke-width="1" stroke-dasharray="4,3" />
+            <!-- right plane -->
+            <line x1="370" y1="55" x2="370" y2="145" stroke="#ff4466" stroke-width="1.5" stroke-dasharray="4,3" />
+            <text x="375" y="52" fill="#ff4466" font-size="9">right</text>
+            <!-- incident edge after left clip (faded) -->
+            <line x1="265" y1="83" x2="365" y2="130" stroke="#ffaa00" stroke-width="2" stroke-dasharray="4,3"
+                opacity="0.4" />
+            <!-- incident edge clipped right -->
+            <line x1="265" y1="83" x2="348" y2="121" stroke="#ffaa00" stroke-width="3" stroke-linecap="round" />
+            <circle cx="348" cy="121" r="4" fill="#ff4466" />
+            <text x="353" y="118" fill="#ff4466" font-size="9">new pt</text>
+
+            <!-- Divider -->
+            <line x1="420" y1="40" x2="420" y2="185" stroke="#333" stroke-width="1" />
+
+            <!-- === PANEL 3: depth filter === -->
+            <text x="525" y="45" fill="#ccc" font-size="11" text-anchor="middle">③ Keep below ref edge</text>
+            <!-- ref edge -->
+            <line x1="465" y1="100" x2="580" y2="100" stroke="#00ff88" stroke-width="3" stroke-linecap="round" />
+            <text x="522" y="93" fill="#00ff88" font-size="10" text-anchor="middle">ref edge</text>
+            <!-- clipped segment -->
+            <line x1="475" y1="83" x2="558" y2="121" stroke="#ffaa00" stroke-width="2" stroke-dasharray="3,3"
+                opacity="0.4" />
+            <!-- above ref — rejected -->
+            <circle cx="475" cy="83" r="5" fill="none" stroke="#ff4466" stroke-width="2" />
+            <line x1="471" y1="79" x2="479" y2="87" stroke="#ff4466" stroke-width="2" />
+            <line x1="479" y1="79" x2="471" y2="87" stroke="#ff4466" stroke-width="2" />
+            <text x="476" y="73" fill="#ff4466" font-size="9" text-anchor="middle">rejected</text>
+            <!-- below ref — kept -->
+            <circle cx="558" cy="121" r="5" fill="#00ff88" />
+            <text x="558" y="138" fill="#00ff88" font-size="9" text-anchor="middle">contact!</text>
+        </svg>
+    </div>
+
+    <!-- Interactive Clipping Simulator -->
+    <div class="note" style="border-left-color: #ffd166;">
+        <h4 style="margin-top:0; color:#ffd166;">Interactive Edge Clipping Simulator</h4>
+        <p>
+            To truly understand this algorithm, explore the simulation below.
+            You can drag the vertices to see how the clipping algorithm reacts to different configurations.
+        </p>
+        <p>
+            <a href="../simulations/clipping-tutorial.html" target="_blank">Open Simulator Fullscreen ⤢</a>
+        </p>
+
+        <iframe src="../simulations/clipping-tutorial.html" width="100%" height="600"
+            style="border:0; border-radius:8px; margin-top:15px; background:#0b0d12;"></iframe>
+    </div>
+
+    <p>Here is the clipping code, directly called from <code>polygonVsPolygon</code>:</p>
+
+    <pre>
+// In polygonVsPolygon:
+let contacts = Collisions.clipEdge(refV1, refV2, refNormal, incEdge);
+
+// ─────────────────────────────────────────────────────────────
+static clipEdge(refV1, refV2, refNormal, incEdge) {
+    // The tangent runs along the reference edge (left → right)
+    const tangent = Vector.sub(refV2, refV1).normalize();
+
+    // Pass 1: clip against the LEFT side-plane at refV1
+    let cp = Collisions.clipSegment([incEdge.v1, incEdge.v2], refV1, tangent);
+    if (cp.length < 2) return []; // entire segment was clipped away
+
+    // Pass 2: clip against the RIGHT side-plane at refV2 (normal flipped)
+    cp = Collisions.clipSegment(cp, refV2, tangent.copy().mult(-1));
+    if (cp.length < 2) return [];
+
+    // Pass 3: keep only points that are ON or BEHIND the reference edge
+    // (dot product ≤ 0 means the point is inside / penetrating)
+    const refDist = refNormal.dot(refV1);
+    const contacts = [];
+    for (let p of cp) {
+        const d = p.dot(refNormal) - refDist;
+        if (d <= 0) contacts.push(p);
+    }
+    return contacts;
+}</pre>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Step 4: The Clip Segment Helper</h4>
+
+    <p>
+        <code>clipSegment</code> does one clip against a single infinite plane defined by a point and a normal. A point
+        is "inside" (kept) if it is on the positive side of the plane (dot product ≥ 0). If the segment crosses the
+        plane, we compute the exact crossing point and add it too.
+    </p>
+
+    <pre>
+static clipSegment(points, planePoint, planeNormal) {
+    const out = [];
+    // Signed distance from each endpoint to the plane
+    const dist = p => Vector.sub(p, planePoint).dot(planeNormal);
+    const d0 = dist(points[0]);
+    const d1 = dist(points[1]);
+
+    if (d0 >= 0) out.push(points[0]); // point 0 is inside — keep it
+    if (d1 >= 0) out.push(points[1]); // point 1 is inside — keep it
+
+    // If the segment crosses the plane, compute the intersection point
+    if ((d0 > 0 && d1 < 0) || (d0 < 0 && d1 > 0)) {
+        const t = d0 / (d0 - d1);                        // how far along [0→1] the crossing is
+        out.push(Vector.lerp(points[0], points[1], t));   // interpolate to find the exact point
+    }
+
+    return out;
+}</pre>
+
+    <!-- clipSegment micro-diagram -->
+    <div class="diagram">
+        <svg width="620" height="175" viewBox="0 0 620 175" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrW" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L7,3 z" fill="#aaa" />
+                </marker>
+            </defs>
+            <text x="310" y="20" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">How clipSegment
+                Works</text>
+
+            <!-- Plane line -->
+            <line x1="220" y1="40" x2="220" y2="155" stroke="#ff4466" stroke-width="2" stroke-dasharray="5,3" />
+            <text x="220" y="33" fill="#ff4466" font-size="11" text-anchor="middle">clip plane</text>
+            <text x="145" y="155" fill="#888" font-size="10" text-anchor="middle">outside (d &lt; 0)</text>
+            <text x="390" y="155" fill="#888" font-size="10" text-anchor="middle">inside (d ≥ 0)</text>
+
+            <!-- Case 1: both inside -->
+            <text x="400" y="58" fill="#ccc" font-size="10">Case: both inside → keep both</text>
+            <circle cx="240" cy="70" r="5" fill="#00ff88" />
+            <circle cx="500" cy="70" r="5" fill="#00ff88" />
+            <line x1="240" y1="70" x2="500" y2="70" stroke="#00ff88" stroke-width="2" />
+            <text x="240" y="62" fill="#00ff88" font-size="9" text-anchor="middle">p0 ✓</text>
+            <text x="500" y="62" fill="#00ff88" font-size="9" text-anchor="middle">p1 ✓</text>
+
+            <!-- Case 2: one outside, one inside → intersection -->
+            <text x="400" y="105" fill="#ccc" font-size="10">Case: one outside → compute intersection</text>
+            <circle cx="100" cy="118" r="5" fill="#ff4466" />
+            <circle cx="440" cy="118" r="5" fill="#00ff88" />
+            <line x1="100" y1="118" x2="440" y2="118" stroke="#888" stroke-width="1.5" stroke-dasharray="4,3" />
+            <circle cx="220" cy="118" r="5" fill="#ffffff" />
+            <line x1="220" y1="118" x2="440" y2="118" stroke="#00ff88" stroke-width="2.5" />
+            <text x="100" y="110" fill="#ff4466" font-size="9" text-anchor="middle">p0 ✗</text>
+            <text x="440" y="110" fill="#00ff88" font-size="9" text-anchor="middle">p1 ✓</text>
+            <text x="220" y="110" fill="#ffffff" font-size="9" text-anchor="middle">lerp(t)</text>
+        </svg>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Finishing Up: Normal Direction &amp; Fallback</h4>
+
+    <p>
+        After clipping, there are two small things left in <code>polygonVsPolygon</code>:
+    </p>
+
+    <pre>
+// If we chose B as the reference, the normal currently points the wrong way.
+// flip=true means we swapped A and B, so reverse the normal so it always
+// points from body B toward body A (the convention the rest of the engine expects).
+let normal = refNormal.copy();
+if (flip) normal.mult(-1);
+
+// Rare fallback: clipping can sometimes produce zero contact points
+// (e.g. a vertex-vertex graze). In that case, just use the deepest vertex.
+if (contacts.length === 0) {
+    const refDist = refNormal.dot(refV1);
+    let deepest = null, deepestD = 0;
+    for (let v of incVerts) {
+        const d = v.dot(refNormal) - refDist;
+        if (d < deepestD) { deepestD = d; deepest = v; }
+    }
+    if (deepest) contacts = [deepest.copy()];
+    else return null;
+}
+
+// pen = how deeply they overlap along the normal
+const pen = Math.abs(ref.separation);
+return new Manifold(a, b, normal, pen, contacts);</pre>
+
+
+    <!-- Edge Case Fallback Explanation -->
+    <h3>Why the Edge Case Occurs</h3>
+    <p>In a perfect world, if two polygons overlap, the clipping of the "incident edge" against the "reference edge"
+        planes should yield 1 or 2 contact points. However, clipping can fail if:</p>
+    <ul>
+        <li><strong>Numerical Precision:</strong> Small rounding errors in dot product calculations cause the clipping
+            planes to "miss" the incident edge.</li>
+        <li><strong>Degenerate Geometry:</strong> Very thin triangles or overlapping vertices.</li>
+        <li><strong>Extreme Penetration:</strong> If one polygon is entirely inside another, the clipping logic (which
+            focuses on edges) might struggle.</li>
+    </ul>
+
+    <h3>Step-by-Step Breakdown of the Logic</h3>
+    <ol>
+        <li><strong>The Trigger</strong>
+            <pre>if (contacts.length === 0) { ... }</pre>
+            If <code>clipEdge</code> failed to find any points where the incident edge is "behind" the reference edge,
+            the engine enters this backup mode.
+        </li>
+        <li><strong>Defining the Reference Plane</strong>
+            <pre>const refDist = refNormal.dot(refV1);</pre>
+            This calculates the "offset" of the reference edge from the origin along the collision normal.
+            Mathematically, this defines the infinite line (plane) that the reference edge sits on.
+        </li>
+        <li><strong>Searching for the "Deepest" Point</strong>
+            The code then iterates through every vertex of the incident polygon to find which one has penetrated the
+            reference polygon the most.
+            <pre>let deepest = null, deepestD = 0;
+for (let v of incVerts) {
+    const d = v.dot(refNormal) - refDist; // Distance from the reference line
+    if (d < lowestD) { 
+        lowestD = d; 
+        deepest = v; 
+    }
+}</pre>
+            <p><code>v.dot(refNormal) - refDist</code>: This calculates the signed distance of vertex v from the
+                reference edge.</p>
+            <ul>
+                <li><strong>Negative Values:</strong> Since the normal points out of the reference shape, a negative
+                    value indicates the vertex is inside the shape.</li>
+                <li><strong>Finding the Minimum:</strong> It looks for the most negative value (the deepest
+                    penetration).</li>
+            </ul>
+        </li>
+        <li><strong>The Fallback Result</strong>
+            <pre>if (deepest) contacts = [deepest.copy()];
+else return null;</pre>
+            If a point was found inside the reference shape, it is manually added as the sole contact point. If even
+            this fails (meaning no vertices are actually inside), it returns null because no collision is occurring.
+        </li>
+    </ol>
+
+    <div class="diagram" style="margin: 2rem 0;">
+        <svg width="600" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#666" />
+                </marker>
+            </defs>
+
+            <!-- A: Start -->
+            <rect x="250" y="10" width="100" height="30" rx="4" fill="#333" stroke="#666" />
+            <text x="300" y="30" fill="#fff" font-size="12" text-anchor="middle">Start Clipping</text>
+
+            <line x1="300" y1="40" x2="300" y2="60" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)" />
+
+            <!-- B: Clip Success? -->
+            <polygon points="300,60 360,90 300,120 240,90" fill="#222" stroke="#ffaa00" />
+            <text x="300" y="94" fill="#ffaa00" font-size="11" text-anchor="middle">Clip success?</text>
+
+            <!-- B -> C (Yes) -->
+            <line x1="360" y1="90" x2="420" y2="90" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)" />
+            <text x="390" y="85" fill="#00ff88" font-size="10" text-anchor="middle">Yes</text>
+            <rect x="420" y="75" width="100" height="30" rx="4" fill="#003300" stroke="#00ff88" />
+            <text x="470" y="94" fill="#00ff88" font-size="11" text-anchor="middle">Return Contacts</text>
+
+            <!-- B -> D (No) -->
+            <line x1="300" y1="120" x2="300" y2="150" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)" />
+            <text x="315" y="140" fill="#ff4466" font-size="10">No (0 points)</text>
+
+            <!-- D: Fallback Mode -->
+            <rect x="230" y="150" width="140" height="30" rx="4" fill="#330000" stroke="#ff4466" />
+            <text x="300" y="169" fill="#ff4466" font-size="11" text-anchor="middle">Enter Fallback Mode</text>
+
+            <line x1="300" y1="180" x2="300" y2="210" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)" />
+
+            <!-- E: Iterate Vertices -->
+            <rect x="200" y="210" width="200" height="30" rx="4" fill="#222" stroke="#666" />
+            <text x="300" y="229" fill="#fff" font-size="11" text-anchor="middle">Find deepest incident vertex</text>
+
+            <line x1="300" y1="240" x2="300" y2="260" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)" />
+
+            <!-- I: Return Result -->
+            <rect x="230" y="260" width="140" height="30" rx="4" fill="#222" stroke="#888" />
+            <text x="300" y="279" fill="#fff" font-size="11" text-anchor="middle">Return Deepest / Null</text>
+        </svg>
+        <p style="text-align: center; color: #888; font-size: 0.9rem; margin-top: 0.5rem;">Logic flow for the Edge Case
+            Fallback</p>
+    </div>
+
+    <h2>Circle vs. Polygon Collision</h2>
+
+    <p>
+        This collision type is a hybrid — it borrows SAT from polygon-polygon detection, but needs one extra trick to
+        handle corners correctly. Let's look at the full function first, then break it apart.
+    </p>
+
+    <pre>
+static circleVsPolygon(circle, polygon) {
+    const verts = polygon.getWorldVertices();
+    let minOverlap = Infinity;
+    let bestAxis = null;
+
+    // ── Part 1: Test every polygon edge normal ──────────────────────────
+    for (let i = 0; i < verts.length; i++) {
+        const v1 = verts[i];
+        const v2 = verts[(i + 1) % verts.length];
+        const edge = Vector.sub(v2, v1);
+        const axis = new Vector(edge.y, -edge.x).normalize();
+
+        const pPoly   = Collisions.projectVerts(verts, axis);
+        const cProj   = circle.pos.dot(axis);
+        const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };
+
+        if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;
+
+        const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);
+        if (overlap < minOverlap) { minOverlap = overlap; bestAxis = axis; }
+    }
+
+    // ── Part 2: Test axis from closest vertex → circle center ───────────
+    let closestVert = verts[0];
+    let closestDist = Vector.sub(circle.pos, verts[0]).magSq();
+    for (let i = 1; i < verts.length; i++) {
+        const d = Vector.sub(circle.pos, verts[i]).magSq();
+        if (d < closestDist) { closestDist = d; closestVert = verts[i]; }
+    }
+
+    const vertAxis = Vector.sub(closestVert, circle.pos);
+    if (vertAxis.magSq() > 0.0001) {
+        vertAxis.normalize();
+        const pPoly   = Collisions.projectVerts(verts, vertAxis);
+        const cProj   = circle.pos.dot(vertAxis);
+        const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };
+
+        if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;
+
+        const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);
+        if (overlap < minOverlap) { minOverlap = overlap; bestAxis = vertAxis; }
+    }
+
+    // ── Part 3: Fix normal direction & compute contact point ────────────
+    if (Vector.sub(polygon.pos, circle.pos).dot(bestAxis) < 0)
+        bestAxis.mult(-1);
+
+    const contact = circle.pos.copy().add(bestAxis.copy().mult(circle.radius));
+    return new Manifold(circle, polygon, bestAxis, minOverlap, [contact]);
+}</pre>
+
+    <div class="note">
+        <strong>The Plan:</strong> We test SAT axes in two rounds. Round 1 — edge normals (same as polygon-polygon).
+        Round 2 — one special axis toward the closest corner. The axis with the least overlap becomes the collision
+        normal.
+    </div>
+
+    <h3>Why Two Rounds of Axes?</h3>
+
+    <p>
+        With two polygons, testing every edge normal is enough. But a circle has no edges — it's a smooth curve. The
+        tricky case is when the circle hits a <em>corner</em> of the polygon. In that situation, none of the edge
+        normals point toward the circle's center, so SAT would incorrectly say "no collision."
+    </p>
+
+    <!-- Why vertex axis diagram -->
+    <div class="diagram">
+        <svg width="620" height="240" viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ff4466" />
+                </marker>
+                <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#00ff88" />
+                </marker>
+                <marker id="arrY" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ffaa00" />
+                </marker>
+            </defs>
+
+            <!-- LEFT panel: edge normals miss the corner hit -->
+            <text x="155" y="20" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">Edge normals miss
+                corner hits</text>
+            <polygon points="60,80 250,80 250,190 60,190" fill="rgba(55,148,255,0.2)" stroke="#3794ff"
+                stroke-width="1.5" />
+            <!-- circle near corner -->
+            <circle cx="285" cy="58" r="32" fill="rgba(255,148,55,0.2)" stroke="#ff9437" stroke-width="1.5" />
+            <!-- edge normal (up) — doesn't point toward circle -->
+            <line x1="155" y1="80" x2="155" y2="42" stroke="#00ff88" stroke-width="2" marker-end="url(#arrG)" />
+            <text x="175" y="63" fill="#00ff88" font-size="10">top normal</text>
+            <!-- edge normal (right) — doesn't point toward circle -->
+            <line x1="250" y1="135" x2="290" y2="135" stroke="#00ff88" stroke-width="2" marker-end="url(#arrG)" />
+            <text x="265" y="153" fill="#00ff88" font-size="10">right normal</text>
+            <!-- corner highlight -->
+            <circle cx="250" cy="80" r="5" fill="#ff4466" />
+            <!-- X marks — neither axis captures it -->
+            <text x="155" y="215" fill="#ff4466" font-size="11" text-anchor="middle">✗ Edge normals don't see the
+                corner!</text>
+
+            <!-- Divider -->
+            <line x1="310" y1="15" x2="310" y2="225" stroke="#333" stroke-width="1" stroke-dasharray="4,4" />
+
+            <!-- RIGHT panel: vertex axis saves it -->
+            <text x="465" y="20" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">Vertex axis catches
+                it</text>
+            <polygon points="320,80 510,80 510,190 320,190" fill="rgba(55,148,255,0.2)" stroke="#3794ff"
+                stroke-width="1.5" />
+            <!-- circle near corner -->
+            <circle cx="545" cy="58" r="32" fill="rgba(255,148,55,0.2)" stroke="#ff9437" stroke-width="1.5" />
+            <!-- closest vertex -->
+            <circle cx="510" cy="80" r="5" fill="#ffaa00" />
+            <text x="515" y="75" fill="#ffaa00" font-size="10">closest vertex</text>
+            <!-- vertex → circle center axis -->
+            <line x1="510" y1="80" x2="545" y2="58" stroke="#ffaa00" stroke-width="2.5" marker-end="url(#arrY)" />
+            <text x="548" y="82" fill="#ffaa00" font-size="10">vertex axis</text>
+            <!-- circle center dot -->
+            <circle cx="545" cy="58" r="3" fill="#fff" />
+            <text x="465" y="215" fill="#00ff88" font-size="11" text-anchor="middle">✓ Vertex axis points right at the
+                circle!</text>
+        </svg>
+    </div>
+
+    <h3>The 3-Part Breakdown</h3>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Part 1: Test Every Polygon Edge Normal</h4>
+
+    <p>
+        For each edge of the polygon, we compute its outward normal and use it as a SAT axis. Then we project both
+        shapes onto that axis and check for a gap. If any gap is found, we return <code>null</code> immediately.
+        Otherwise we track the axis with the <em>smallest</em> overlap.
+    </p>
+
+    <p>Projecting a circle onto an axis is simple: find where the center lands, then extend by the radius in both
+        directions.</p>
+
+    <!-- Projection diagram -->
+    <div class="diagram">
+        <svg width="620" height="210" viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+            <text x="310" y="20" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">Projecting Circle
+                &amp; Polygon onto an Axis</text>
+
+            <!-- Axis line -->
+            <line x1="30" y1="170" x2="590" y2="170" stroke="#555" stroke-width="1.5" stroke-dasharray="5,3" />
+            <text x="600" y="175" fill="#888" font-size="11">axis</text>
+
+            <!-- Polygon (triangle) -->
+            <polygon points="80,60 200,90 140,140" fill="rgba(55,148,255,0.25)" stroke="#3794ff" stroke-width="1.5" />
+            <text x="130" y="80" fill="#3794ff" font-size="11" text-anchor="middle">polygon</text>
+
+            <!-- Polygon projection on axis -->
+            <line x1="80" y1="170" x2="200" y2="170" stroke="#3794ff" stroke-width="5" stroke-linecap="round" />
+            <!-- Drop lines from verts -->
+            <line x1="80" y1="60" x2="80" y2="170" stroke="#3794ff" stroke-width="1" stroke-dasharray="3,3"
+                opacity="0.5" />
+            <line x1="200" y1="90" x2="200" y2="170" stroke="#3794ff" stroke-width="1" stroke-dasharray="3,3"
+                opacity="0.5" />
+            <line x1="140" y1="140" x2="140" y2="170" stroke="#3794ff" stroke-width="1" stroke-dasharray="3,3"
+                opacity="0.5" />
+            <text x="140" y="188" fill="#3794ff" font-size="10" text-anchor="middle">pPoly.min → pPoly.max</text>
+
+            <!-- Circle -->
+            <circle cx="390" cy="90" r="45" fill="rgba(255,148,55,0.25)" stroke="#ff9437" stroke-width="1.5" />
+            <circle cx="390" cy="90" r="3" fill="#fff" />
+            <text x="430" y="68" fill="#ff9437" font-size="11">circle</text>
+
+            <!-- radius lines -->
+            <line x1="390" y1="90" x2="345" y2="90" stroke="#ff9437" stroke-width="1" stroke-dasharray="3,2"
+                opacity="0.7" />
+            <line x1="390" y1="90" x2="435" y2="90" stroke="#ff9437" stroke-width="1" stroke-dasharray="3,2"
+                opacity="0.7" />
+            <text x="367" y="84" fill="#ff9437" font-size="9">r</text>
+            <text x="415" y="84" fill="#ff9437" font-size="9">r</text>
+
+            <!-- Circle projection on axis -->
+            <line x1="345" y1="170" x2="435" y2="170" stroke="#ff9437" stroke-width="5" stroke-linecap="round" />
+            <line x1="390" y1="90" x2="390" y2="170" stroke="#ff9437" stroke-width="1" stroke-dasharray="3,3"
+                opacity="0.5" />
+            <line x1="345" y1="90" x2="345" y2="170" stroke="#ff9437" stroke-width="1" stroke-dasharray="3,3"
+                opacity="0.5" />
+            <line x1="435" y1="90" x2="435" y2="170" stroke="#ff9437" stroke-width="1" stroke-dasharray="3,3"
+                opacity="0.5" />
+            <text x="390" y="188" fill="#ff9437" font-size="10" text-anchor="middle">cProj−r → cProj+r</text>
+
+            <!-- gap indicator -->
+            <text x="272" y="155" fill="#00ff88" font-size="11" text-anchor="middle">gap → no collision</text>
+            <line x1="200" y1="162" x2="345" y2="162" stroke="#00ff88" stroke-width="2" stroke-dasharray="3,2" />
+            <line x1="200" y1="159" x2="200" y2="165" stroke="#00ff88" stroke-width="2" />
+            <line x1="345" y1="159" x2="345" y2="165" stroke="#00ff88" stroke-width="2" />
+        </svg>
+    </div>
+
+    <pre>
+// Test every edge normal from the polygon
+for (let i = 0; i < verts.length; i++) {
+    const v1 = verts[i];
+    const v2 = verts[(i + 1) % verts.length];
+    const edge = Vector.sub(v2, v1);
+    const axis = new Vector(edge.y, -edge.x).normalize(); // outward normal of this edge
+
+    // Project all polygon vertices onto the axis → get a 1D range [min, max]
+    const pPoly = Collisions.projectVerts(verts, axis);
+
+    // Project the circle onto the same axis → center ± radius
+    const cProj   = circle.pos.dot(axis);
+    const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };
+
+    // Gap found? → not colliding
+    if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;
+
+    // No gap — record overlap amount
+    const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);
+    if (overlap < minOverlap) { minOverlap = overlap; bestAxis = axis; }
+}</pre>
+
+    <h4>The Projection Helper</h4>
+    <p>
+        <code>projectVerts</code> takes every vertex of the polygon, dots it with the axis, and records the min and max
+        values — giving us a 1D shadow of the polygon on that axis:
+    </p>
+    <pre>
+static projectVerts(verts, axis) {
+    let min =  Infinity;
+    let max = -Infinity;
+    for (let v of verts) {
+        const p = v.dot(axis); // dot product = scalar position along the axis
+        if (p < min) min = p;
+        if (p > max) max = p;
+    }
+    return { min, max };
+}</pre>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Part 2: Test the Closest-Vertex Axis</h4>
+
+    <p>
+        After all edge normals pass (no gaps found), we run one more axis test. We find which polygon vertex is closest
+        to the circle's center and build an axis pointing from that vertex toward the center. This is the axis that
+        catches corner collisions.
+    </p>
+
+    <pre>
+// Find the polygon vertex closest to the circle's center
+let closestVert = verts[0];
+let closestDist = Vector.sub(circle.pos, verts[0]).magSq(); // .magSq() avoids a sqrt — faster
+for (let i = 1; i < verts.length; i++) {
+    const d = Vector.sub(circle.pos, verts[i]).magSq();
+    if (d < closestDist) { closestDist = d; closestVert = verts[i]; }
+}
+
+// Build the axis: closest vertex → circle center
+const vertAxis = Vector.sub(closestVert, circle.pos);
+if (vertAxis.magSq() > 0.0001) {  // skip if the circle center sits exactly on a vertex
+    vertAxis.normalize();
+
+    // Same SAT test as before, using this new axis
+    const pPoly   = Collisions.projectVerts(verts, vertAxis);
+    const cProj   = circle.pos.dot(vertAxis);
+    const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };
+
+    if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;
+
+    const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);
+    if (overlap < minOverlap) { minOverlap = overlap; bestAxis = vertAxis; }
+}</pre>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h4>Part 3: Fix the Normal Direction &amp; Compute the Contact Point</h4>
+
+    <p>
+        By this point we know they're colliding and we have the best axis. Two things remain:
+    </p>
+    <ol>
+        <li><strong>Orient the normal</strong> — it must always point <em>from the polygon toward the circle</em>
+            (so the solver knows which way to push). We check this with a dot product and flip if needed.</li>
+        <li><strong>Find the contact point</strong> — for a circle, the contact is always the point on its surface
+            that's closest to the polygon: just step from the circle's center along the normal by one radius.</li>
+    </ol>
+
+    <!-- Contact point diagram -->
+    <div class="diagram">
+        <svg width="620" height="200" viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrN" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ff4466" />
+                </marker>
+            </defs>
+            <text x="310" y="20" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">Computing the
+                Contact Point</text>
+
+            <!-- Polygon -->
+            <polygon points="80,70 280,70 280,170 80,170" fill="rgba(55,148,255,0.2)" stroke="#3794ff"
+                stroke-width="1.5" />
+            <text x="130" y="130" fill="#3794ff" font-size="12">polygon</text>
+
+            <!-- Circle overlapping polygon -->
+            <circle cx="340" cy="105" r="70" fill="rgba(255,148,55,0.2)" stroke="#ff9437" stroke-width="1.5" />
+            <text x="390" y="60" fill="#ff9437" font-size="12">circle</text>
+
+            <!-- Circle center -->
+            <circle cx="340" cy="105" r="4" fill="#fff" />
+            <text x="348" y="101" fill="#aaa" font-size="10">center</text>
+
+            <!-- Normal arrow (pointing polygon → circle, left to right) -->
+            <line x1="280" y1="105" x2="340" y2="105" stroke="#ff4466" stroke-width="2" stroke-dasharray="4,3" />
+            <line x1="340" y1="105" x2="400" y2="105" stroke="#ff4466" stroke-width="2" marker-end="url(#arrN)" />
+            <text x="360" y="97" fill="#ff4466" font-size="11">bestAxis (normal)</text>
+
+            <!-- Radius line -->
+            <line x1="340" y1="105" x2="270" y2="105" stroke="#ffaa00" stroke-width="2" />
+            <text x="304" y="98" fill="#ffaa00" font-size="10">radius</text>
+
+            <!-- Contact point -->
+            <circle cx="270" cy="105" r="6" fill="#00ff88" stroke="#004422" stroke-width="1.5" />
+            <text x="255" y="130" fill="#00ff88" font-size="11" text-anchor="middle">contact point</text>
+            <text x="255" y="143" fill="#888" font-size="10" text-anchor="middle">center + normal × radius</text>
+        </svg>
+    </div>
+
+    <pre>
+// Ensure the normal points FROM the polygon TOWARD the circle.
+// If the dot product with (polygon→circle) is negative, we're pointing the wrong way.
+if (Vector.sub(polygon.pos, circle.pos).dot(bestAxis) < 0)
+    bestAxis.mult(-1);
+
+// The contact point is the spot on the circle's edge touching the polygon:
+// start at the circle's center, walk one radius along the normal.
+const contact = circle.pos.copy().add(bestAxis.copy().mult(circle.radius));
+
+return new Manifold(circle, polygon, bestAxis, minOverlap, [contact]);</pre>
+
+    <div class="note">
+        <strong>Why only one contact point?</strong> A circle can only ever touch a flat edge at one point (unlike two
+        polygons that can share an edge and have two contact points). So we always return a single-element
+        <code>contacts</code> array.
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h2>Visualizing the Manifold</h2>
+
+    <p>
+        The <code>Manifold</code> object returned by every collision function stores the push direction and contact
+        points. Its <code>draw</code> method paints these on screen so you can debug collisions visually:
+    </p>
+
+    <!-- Manifold diagram -->
+    <div class="diagram">
+        <svg width="620" height="200" viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrRed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ff3333" />
+                </marker>
+            </defs>
+            <text x="310" y="20" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">What the Manifold
+                Draws</text>
+
+            <!-- Body A -->
+            <rect x="110" y="70" width="110" height="90" rx="3" fill="rgba(55,148,255,0.2)" stroke="#3794ff"
+                stroke-width="1.5" />
+            <text x="165" y="155" fill="#3794ff" font-size="11" text-anchor="middle">Body A</text>
+
+            <!-- Body B -->
+            <rect x="185" y="50" width="110" height="90" rx="3" fill="rgba(255,148,55,0.2)" stroke="#ff9437"
+                stroke-width="1.5" />
+            <text x="240" y="155" fill="#ff9437" font-size="11" text-anchor="middle">Body B</text>
+
+            <!-- Two contact points -->
+            <circle cx="185" cy="80" r="6" fill="#00ff88" stroke="#004422" stroke-width="1.5" />
+            <circle cx="185" cy="120" r="6" fill="#00ff88" stroke="#004422" stroke-width="1.5" />
+            <text x="145" y="100" fill="#00ff88" font-size="11" text-anchor="end">contact points</text>
+
+            <!-- Average of contacts -->
+            <circle cx="185" cy="100" r="3" fill="#fff" opacity="0.5" />
+
+            <!-- Normal arrow from average -->
+            <line x1="185" y1="100" x2="245" y2="100" stroke="#ff3333" stroke-width="2.5" marker-end="url(#arrRed)" />
+            <text x="270" y="96" fill="#ff3333" font-size="11">normal</text>
+            <text x="270" y="109" fill="#888" font-size="10">(avg contact → tip)</text>
+
+            <!-- Legend -->
+            <circle cx="380" cy="75" r="6" fill="#00ff88" stroke="#004422" stroke-width="1" />
+            <text x="393" y="79" fill="#ccc" font-size="11">= contact points (green dots)</text>
+            <line x1="375" y1="100" x2="405" y2="100" stroke="#ff3333" stroke-width="2.5" marker-end="url(#arrRed)" />
+            <text x="413" y="104" fill="#ccc" font-size="11">= collision normal (red arrow)</text>
+        </svg>
+    </div>
+
+    <pre>
+draw(ctx) {
+    if (this.contacts.length === 0) return;
+
+    ctx.save();
+
+    // ── Draw each contact point as a green dot ───────────────────────────
+    ctx.fillStyle   = "#00ff88";
+    ctx.strokeStyle = "#004422";
+    ctx.lineWidth   = 1;
+    for (let c of this.contacts) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    // ── Draw collision normal as a red arrow ─────────────────────────────
+    // First, find the average position of all contact points
+    let avg = new Vector(0, 0);
+    for (let c of this.contacts) avg.add(c);
+    avg.div(this.contacts.length);
+
+    // Draw a 30-pixel arrow from the average contact in the normal direction
+    const tip = avg.copy().add(this.normal.copy().mult(30));
+    ctx.strokeStyle = "#ff3333";
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(avg.x, avg.y);
+    ctx.lineTo(tip.x, tip.y);
+    ctx.stroke();
+
+    ctx.restore();
+}</pre>
+
+    <div class="note">
+        <strong>Debugging tip:</strong> Enable this draw call during development — seeing the green dots and red arrow
+        in real time makes it immediately obvious when a collision normal is flipped or a contact point is in the wrong
+        place.
+    </div>
+    <h2>Putting It All Together</h2>
+
+    <p>Let's recap the entire collision detection pipeline:</p>
+
+    <ol>
+        <li><strong>Broad Phase</strong> (not shown here): Quickly eliminate pairs that can't possibly be colliding</li>
+        <li><strong>Narrow Phase</strong>: Our collision detection functions
+            <ul>
+                <li>Circle vs Circle: Simple distance check</li>
+                <li>Polygon vs Polygon: SAT with all edge normals, clipping for contact points</li>
+                <li>Circle vs Polygon: SAT with edge normals plus vertex axis</li>
+            </ul>
+        </li>
+        <li><strong>Manifold Creation</strong>: Package all collision data (normal, penetration, contacts)</li>
+        <li><strong>Collision Response</strong> (Part 3): Use the manifold to resolve the collision</li>
+    </ol>
+
+    <div class="concept-box">
+        <h3>The Beauty of SAT</h3>
+        <p>The Separating Axis Theorem is elegant because it gives us both detection AND information in one algorithm.
+            If we find separation, we know there's no collision. If all axes show overlap, the axis with minimum overlap
+            becomes our collision normal, and the overlap amount is our penetration depth.</p>
+    </div>
+
+    <h2>Common Pitfalls and Edge Cases</h2>
+
+    <div class="note">
+        <strong>Zero-Length Vectors:</strong> Always check before normalizing! When circles are at the same position or
+        when calculating edge normals from degenerate polygons, you might get zero-length vectors. The code handles this
+        with checks like <code>if (dist > 0)</code> and <code>if (vertAxis.magSq() > 0.0001)</code>.
+    </div>
+
+    <div class="note">
+        <strong>Numerical Precision:</strong> Floating-point math isn't perfect. Small epsilon values (like 0.0001) help
+        avoid false positives from rounding errors.
+    </div>
+
+    <div class="note">
+        <strong>Winding Order:</strong> Polygon vertices should be in consistent order (typically counter-clockwise).
+        The edge normal calculation assumes this when using <code>new Vector(edge.y, -edge.x)</code>.
+    </div>
+
+    <h2>Next Steps</h2>
+
+    <p>Now that you understand how to <em>detect</em> collisions and gather information about them, the next challenge
+        is <em>responding</em> to collisions: calculating impulses, resolving penetration, and making objects bounce
+        realistically. That's where we'll use the Manifold data to apply physics!</p>
+
+    <div class="concept-box">
+        <h3>Key Takeaways</h3>
+        <ul>
+            <li>Collision detection answers: Are they colliding? Where? How much overlap? In what direction?</li>
+            <li>A Manifold stores all collision data in one convenient package</li>
+            <li>Circle-circle uses simple distance checks</li>
+            <li>Polygon collisions use the Separating Axis Theorem (SAT)</li>
+            <li>SAT projects shapes onto perpendicular axes and checks for overlaps</li>
+            <li>Contact point clipping finds exactly where shapes touch</li>
+            <li>Circle-polygon needs extra vertex axes to catch corner collisions</li>
+        </ul>
+    </div>
+
+    <p>Congratulations! You've now mastered the fundamentals of 2D collision detection. This is the foundation that
+        every physics engine builds upon. Keep experimenting, and in the next part, we'll bring these collisions to life
+        with realistic responses!</p>
+
+</body>
+
+</html>
