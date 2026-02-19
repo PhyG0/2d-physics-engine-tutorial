@@ -1,0 +1,223 @@
+{
+    "code": "physics-engine-part-2",
+    "title": "Physics Engine - Part 2: Collision Detection",
+    "description": "Master 2D collision detection using SAT, edge clipping, and hybrid algorithms.",
+    "visible": true,
+    "lessons": [
+        {
+            "title": "Introduction to Collisions",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "# Physics Engine - Part 2: Collision Detection\n\nWelcome to Part 2 of our physics engine tutorial! In this chapter, we'll dive deep into one of the most fascinating aspects of game physics: **collision detection**. By the end of this tutorial, you'll understand how games know when objects touch, overlap, or collide with each other.\n\n> **Prerequisites:** This tutorial assumes you have a basic understanding of vectors and 2D math and building on concepts like position, velocity, and basic geometry. If you need to refresh or learn about these concepts, you can go to [Part 1](https://www.weblercodes.com/Courses/physics-engine-1) first."
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "What defines a collision in a 2D physics engine?",
+                    "answers": [
+                        {
+                            "text": "When two objects overlap or touch each other",
+                            "correct": true
+                        },
+                        {
+                            "text": "When one object reaches the screen edge",
+                            "correct": false
+                        },
+                        {
+                            "text": "When an object has zero velocity",
+                            "correct": false
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## What is a Collision?\n\nImagine you're playing a game where a ball bounces around the screen. How does the game know when the ball hits a wall or another object? That's where collision detection comes in.\n\n### Collision: The Fundamental Concept\n\nA **collision** occurs when two objects in space overlap or touch each other. In 2D physics engines, we need to detect these collisions and gather information about them so we can respond appropriately (like making objects bounce off each other).\n\n![Collision Concept](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/collision-the-fundamental-concept.svg)\n\nWhen we detect a collision, we need to answer several questions:\n\n* **Are they colliding?** A simple yes or no.\n* **Where are they touching?** The contact point(s).\n* **How deep is the overlap?** The penetration depth.\n* **In what direction should they separate?** The collision normal."
+                }
+            ]
+        },
+        {
+            "title": "The Manifold & Collision Dispatcher",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## What is a Manifold?\n\nAll this collision information needs to be stored somewhere. That's where the **Manifold** comes in. Think of it as a \"collision report\" that contains everything we need to know about a collision.\n\n### Manifold: The Collision Data Structure\n\nA **Manifold** is a container that holds all the details about a collision between two bodies.\n\nLet's look at the Manifold class:\n\n```javascript\nclass Manifold {\n    constructor(bodyA, bodyB, normal, penetration, contacts) {\n        this.bodyA = bodyA;           // First colliding body\n        this.bodyB = bodyB;           // Second colliding body\n        this.normal = normal;         // Direction to push bodies apart\n        this.penetration = penetration; // How deep they overlap\n        this.contacts = contacts || []; // Where they touch\n    }\n}\n```\n\n#### Theory\n\n**Normal Vector:** Points from bodyA toward bodyB, showing the direction to separate them.\n\n**Penetration:** A scalar value showing how far the bodies have overlapped.\n\n**Contacts:** An array of points where the surfaces touch.\n\n#### In Practice\n\nWhen two circles collide, the normal points from one center to the other, penetration is how much their radii overlap, and there's typically one contact point.\n\nFor polygons, there can be multiple contact points (like when a box rests on the ground).\n\n![Manifold Diagram](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/in-practice.svg)"
+                },
+                {
+                    "type": 3,
+                    "mode": 1,
+                    "text": "Which properties are typically stored in a Manifold? (Select all that apply)",
+                    "answers": [
+                        {
+                            "text": "Collision Normal",
+                            "correct": true
+                        },
+                        {
+                            "text": "Penetration Depth",
+                            "correct": true
+                        },
+                        {
+                            "text": "Contact Points",
+                            "correct": true
+                        },
+                        {
+                            "text": "Object Mass",
+                            "correct": false
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## The Collision Detection Dispatcher\n\nBefore we dive into specific collision algorithms, let's look at how our system decides which algorithm to use. The `findCollision` method is like a traffic controller that routes collision checks to the right algorithm based on the shape types.\n\n```javascript\nstatic findCollision(bodyA, bodyB) {\n    if (bodyA.type === \"Circle\" && bodyB.type === \"Circle\") {\n        return Collisions.circleVsCircle(bodyA, bodyB);\n    }\n    if (bodyA.type === \"Polygon\" && bodyB.type === \"Polygon\") {\n        return Collisions.polygonVsPolygon(bodyA, bodyB);\n    }\n    if (bodyA.type === \"Circle\" && bodyB.type === \"Polygon\") {\n        return Collisions.circleVsPolygon(bodyA, bodyB);\n    }\n    if (bodyA.type === \"Polygon\" && bodyB.type === \"Circle\") {\n        // Trick: swap inputs and flip the result's normal\n        const m = Collisions.circleVsPolygon(bodyB, bodyA);\n        if (m) {\n            m.normal.mult(-1);\n            [m.bodyA, m.bodyB] = [m.bodyB, m.bodyA];\n        }\n        return m;\n    }\n    return null;\n}\n```\n\n> **Clever Trick:**\n>\n> Why write the same collision code twice? A collision between a Circle (A) and a Polygon (B) is the same as a Polygon (B) and a Circle (A) — just from a different perspective!\n>\n> Instead of writing a new `polygonVsCircle` function, we just:\n>\n> 1. Swap the inputs: call `circleVsPolygon(B, A)` instead.\n> 2. Get the result (which has a normal pointing from Circle → Polygon).\n> 3. **Flip the normal:** Negating the vector makes it point from Polygon → Circle.\n\n![Dispatcher Trick](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/the-collision-detection-dispatcher.svg)"
+                }
+            ]
+        },
+        {
+            "title": "Circle vs Circle Collision",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Circle vs Circle: The Simplest Case\n\nCircle-circle collision is the easiest to understand and implement. Two circles collide when the distance between their centers is less than the sum of their radii.\n\n![Circle vs Circle](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/circle-vs-circle-the-simplest-case.svg)\n\nLet's break down the code step by step:\n\n```javascript\nstatic circleVsCircle(a, b) {\n    // Step 1: Calculate the vector from circle A to circle B\n    const diff = Vector.sub(b.pos, a.pos);\n\n    // Step 2: Get the distance between centers\n    const dist = diff.mag();\n\n    // Step 3: Calculate the sum of radii\n    const rSum = a.radius + b.radius;\n\n    // Step 4: If distance >= sum of radii, they're not colliding\n    if (dist >= rSum) return null;\n\n    // Step 5: Calculate the collision normal\n    // (handle the edge case where circles have the same position)\n    const normal = dist > 0 ? diff.copy().div(dist) : new Vector(1, 0);\n\n    // Step 6: Calculate penetration depth\n    const pen = rSum - dist;\n\n    // Step 7: Calculate contact point\n    // Start at A's center, move along normal by (A's radius - half penetration)\n    const contact = a.pos.copy().add(normal.copy().mult(a.radius - pen / 2));\n\n    // Step 8: Create and return the manifold\n    return new Manifold(a, b, normal, pen, [contact]);\n}\n```\n\n#### The Math\n\n**Distance Formula:** The magnitude of the difference vector gives us the distance between centers.\n\n**Collision Condition:** distance < radius₁ + radius₂\n\n**Normal Direction:** The difference vector normalized points from A to B.\n\n#### Why It Works\n\nIf two circles just touch, the distance between centers equals the sum of radii.\n\nIf they overlap, the distance is less than the sum of radii, and the difference tells us the penetration.\n\nThe contact point is where their surfaces would touch if we pulled them apart slightly.\n\n> **Edge Case Alert!**\n>\n> [View Full Code ↗](https://phyg0.github.io/2d-physics-engine-tutorial/part2/index.html)"
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "What is the condition for a collision between two circles with radii r1 and r2 and distance d between centers?",
+                    "answers": [
+                        {
+                            "text": "d < r1 + r2",
+                            "correct": true
+                        },
+                        {
+                            "text": "d > r1 + r2",
+                            "correct": false
+                        },
+                        {
+                            "text": "d == r1 - r2",
+                            "correct": false
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "SAT Fundamentals",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## The Separating Axis Theorem (SAT)\n\nNow we enter the realm of polygon collision detection. For this, we need a powerful mathematical tool called the **Separating Axis Theorem**.\n\n### The Core Idea of SAT\n\nImagine you have two shapes and a very bright light source. If you can position the light so that the shadows (projections) of the two shapes don't overlap, then the shapes themselves don't collide. If you can't find such a position (after checking all possible angles), the shapes must be colliding.\n\n![SAT Concept](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/the-core-idea-of-sat.svg)\n\n### How SAT Works & Finding Minimum Separation\n\nFor convex polygons, we only need to test along specific axes: the perpendicular to each edge (called the edge's **normal**). Here's why:\n\n1. Take each edge of both polygons\n2. Get the perpendicular vector to that edge (rotate 90 degrees)\n3. Project both polygons onto that perpendicular axis\n4. Check if the projections overlap\n5. If they don't overlap on any axis, the polygons don't collide\n6. If they overlap on all axes, they are colliding, and the axis with the smallest overlap tells us the best separation direction\n\n![Edge Normal Calculation](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/how-sat-works-finding-minimum-separation.svg)"
+                },
+                {
+                    "type": 5,
+                    "codeId": "PLACEHOLDER_SAT",
+                    "text": "Explore the SAT algorithm interactively. Drag shapes and step through the axes."
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### How SAT Works & Finding Minimum Separation\n\nFor convex polygons, we only need to test along specific axes: the perpendicular to each edge (called the edge's **normal**). If projections show a gap on ANY axis, the polygons are separated.\n\n> **Note:** The code below uses the exact same variable names (like `edgeNormal`, `minSeparation`, etc.) as the interactive simulation for better understanding.\n\n```javascript\nstatic findMinSeparation(vertsA, vertsB) {\n    let bestSeparation = -Infinity;\n    let bestEdgeIndex = -1;\n    let bestNormal = null;\n\n    for (let i = 0; i < vertsA.length; i++) {\n        const edgeStart = vertsA[i];\n        const edgeEnd = vertsA[(i + 1) % vertsA.length];\n        \n        // 1. Get the edge normal (rotate edge vector 90° CCW)\n        const edgeVector = Vector.sub(edgeEnd, edgeStart);\n        const edgeNormal = new Vector(edgeVector.y, -edgeVector.x).normalize();\n\n        // 2. Find min separation of vertsB along this normal\n        let minSeparation = Infinity;\n        for (const vertex of vertsB) {\n            const projection = Vector.sub(vertex, edgeStart).dot(edgeNormal);\n            if (projection < minSeparation) minSeparation = projection;\n        }\n\n        // 3. Keep track of the \"least deep\" penetration (best separation)\n        if (minSeparation > bestSeparation) {\n            bestSeparation = minSeparation;\n            bestNormal = edgeNormal;\n            bestEdgeIndex = i;\n        }\n    }\n    return { separation: bestSeparation, normal: bestNormal, edgeIndex: bestEdgeIndex };\n}\n```\n\n#### Simulator Connection\n\n**Outward Normal:** The green arrow in the simulator. It points to the \"Outside\".\n\n**Projection:** The dot product check. Positive = Outside (Green), Negative = Inside (Pink).\n\n#### The Decision\n\nIf `minSeparation > 0`, **all** vertices are outside. We found a gap! Return immediately (in the caller).\n\nIf `minSeparation < 0`, we are overlapping. We keep track of the *closest to zero* (least negative) separation because that's the shortest way out.\n\n[View Full Code ↗](https://phyg0.github.io/2d-physics-engine-tutorial/part2/index.html)"
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "What does a positive separation value (separation > 0) indicate in the SAT algorithm?",
+                    "answers": [
+                        {
+                            "text": "The shapes are separated (not colliding)",
+                            "correct": true
+                        },
+                        {
+                            "text": "The shapes are deeply overlapping",
+                            "correct": false
+                        },
+                        {
+                            "text": "The objects are traveling at high speeds",
+                            "correct": false
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "The Polygon Collision Pipeline",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Polygon vs. Polygon Collision\n\nWhen two polygons collide, we need to know more than just \"yes, they are touching.\" We need to find the exact points of contact so the physics engine knows how to push them apart correctly.\n\n```javascript\nstatic polygonVsPolygon(a, b) {\n    const vertsA = a.getWorldVertices();\n    const vertsB = b.getWorldVertices();\n\n    // Step 1: SAT Check (Separating Axis Theorem)\n    const resA = Collisions.findMinSeparation(vertsA, vertsB);\n    if (resA.separation > 0) return null; // Gap found!\n    const resB = Collisions.findMinSeparation(vertsB, vertsA);\n    if (resB.separation > 0) return null; // Gap found!\n\n    // Step 2: Establish the Reference and Incident Edges\n    // The most efficient direction to separate is the least shallow penetration.\n    let ref, refVerts, incVerts, flip;\n    if (resA.separation > resB.separation) {\n        ref = resA; refVerts = vertsA; incVerts = vertsB; flip = false;\n    } else {\n        ref = resB; refVerts = vertsB; incVerts = vertsA; flip = true;\n    }\n\n    const i = ref.edgeIndex;\n    const refV1 = refVerts[i];\n    const refV2 = refVerts[(i + 1) % refVerts.length];\n    const refNormal = ref.normal;\n\n    // Step 3: Find the incident edge and clip it\n    const incEdge = Collisions.findIncidentEdge(incVerts, refNormal);\n    let contacts = Collisions.clipEdge(refV1, refV2, refNormal, incEdge);\n\n    // Final normal must point from B to A\n    let normal = refNormal.copy();\n    if (flip) normal.mult(-1);\n\n    return new Manifold(a, b, normal, Math.abs(ref.separation), contacts);\n}\n```\n\n> **Big Picture:**\n>\n> The function has two jobs — first decide *if* the polygons are colliding (using SAT), then figure out *where* they are colliding (using edge clipping). Read on to see each step in detail.\n\n### The 4-Step Pipeline\n\nEvery line in `polygonVsPolygon` belongs to one of these four steps:\n\n1. **SAT Check:** Are they even colliding? If yes, what direction should we push them apart?\n2. **Pick Reference & Incident Edges:** Which edge is being \"hit\" and which edge is \"hitting\"?\n3. **Clip the Incident Edge:** Trim the hitting edge so it only spans the width of the hit edge.\n4. **Filter Contact Points:** Keep only the clipped points that are actually inside the other polygon."
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "#### Step 1: SAT Check — Are They Colliding?\n\nSAT (Separating Axis Theorem) says: *if you can find any axis where the two shapes don't overlap, they aren't colliding.* We check every edge normal from both polygons. The moment we find a gap, we bail out early with `null`.\n\nIf **every** axis shows overlap, the shapes are colliding. We then pick the axis with the *least* overlap — that's the direction we'll push them apart, and the edge that produced it becomes our **reference edge**.\n\n![SAT Check](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/step-1-sat-check-are-they-colliding.svg)\n\n```javascript\nconst vertsA = a.getWorldVertices();\nconst vertsB = b.getWorldVertices();\n\n// Test all edge normals from A's edges\nconst resA = Collisions.findMinSeparation(vertsA, vertsB);\nif (resA.separation > 0) return null; // Gap found → not colliding\n\n// Test all edge normals from B's edges\nconst resB = Collisions.findMinSeparation(vertsB, vertsA);\nif (resB.separation > 0) return null; // Gap found → not colliding\n\n// Both tests passed — they ARE colliding.\n// The result with the LEAST penetration (closest to 0) wins: its edge\n// becomes the reference edge and its normal becomes the collision normal.\nlet ref, refVerts, incVerts, flip;\nif (resA.separation > resB.separation) {\n    ref = resA;       // A has less penetration\n    refVerts = vertsA;\n    incVerts = vertsB;\n    flip = false;\n} else {\n    ref = resB;       // B has less penetration\n    refVerts = vertsB;\n    incVerts = vertsA;\n    flip = true;\n}\n\n// Extract the two endpoints and normal of the winning reference edge\nconst i = ref.edgeIndex;\nconst refV1 = refVerts[i];\nconst refV2 = refVerts[(i + 1) % refVerts.length];\nconst refNormal = ref.normal;\n```\n\n> **Pro Tip:**\n>\n> **Why the least penetration?** The axis with the smallest overlap is the most \"efficient\" direction to separate the shapes — it requires the least movement, which means more realistic physics."
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "#### Step 2: Pick Reference & Incident Edges\n\nWe pick the edge on the other polygon that is most facing our reference normal.\n\n```javascript\nstatic findIncidentEdge(verts, refNormal) {\n    let minDot = Infinity;\n    let index = 0;\n    // Loop over every edge of the other polygon\n    for (let i = 0; i < verts.length; i++) {\n        const v1 = verts[i];\n        const v2 = verts[(i + 1) % verts.length];\n        // Calculate this edge's outward normal\n        const edge = Vector.sub(v2, v1);\n        const normal = new Vector(edge.y, -edge.x).normalize();\n        // Dot product: most negative = most opposite to refNormal\n        const d = normal.dot(refNormal);\n        if (d < minDot) { minDot = d; index = i; }\n    }\n    // Return the two endpoints of the incident edge\n    return { v1: verts[index], v2: verts[(index + 1) % verts.length] };\n}\n```\n\nNow that we know *which* polygon owns the collision normal, we label the two colliding edges:\n\n* **Reference Edge** — the edge on the polygon that produced the collision normal. Think of it as the \"floor\" or \"wall\" that is being hit.\n* **Incident Edge** — the edge on the *other* polygon that is most directly facing the reference normal (i.e. most anti-parallel to it). Think of it as the \"corner\" doing the hitting.\n\n![Reference and Incident Edges](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/step-2-pick-the-reference-amp-incident-edges.svg)\n\nTo find the incident edge we loop over every edge of the *other* polygon and pick the one whose outward normal is most opposite to `refNormal` (smallest dot product):\n\nBack in `polygonVsPolygon`, this is called right after we extract the reference edge:\n\n```javascript\n// (refV1, refV2, refNormal already set from Step 1)\nconst incEdge = Collisions.findIncidentEdge(incVerts, refNormal);\n```"
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "#### Step 3: Clip the Incident Edge\n\nThe incident edge is usually longer than the contact zone — parts of it stick out past the ends of the reference edge. We clip it so only the portion that \"spans\" the reference edge survives. This is done in two passes using `clipSegment`:\n\n1. Clip against the **left side-plane** of the reference edge (discard anything to the left of `refV1`).\n2. Clip against the **right side-plane** (discard anything to the right of `refV2`).\n\nAfter both clips, any surviving points that are *behind* (penetrating past) the reference edge are our contact points.\n\n![Clipping Steps](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/step-3-clip-the-incident-edge.svg)\n\n> **Note:** For easier learning, the code snippets below use the same variable names (like `refV1`, `incEdge`, `tangent`) as highlighted in the interactive simulator.\n\n> **Interactive Edge Clipping Simulator**\n>\n> To truly understand this algorithm, explore the simulation below. You can drag the vertices to see how the clipping algorithm reacts to different configurations.\n>\n> [Open Simulator Fullscreen ⤢](../simulations/clipping-tutorial.html)"
+                },
+                {
+                    "type": 5,
+                    "codeId": "PLACEHOLDER_CLIPPING",
+                    "text": "Interactive Edge Clipping Simulator"
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "```javascript\n// In polygonVsPolygon:\nlet contacts = Collisions.clipEdge(refV1, refV2, refNormal, incEdge);\n\n// ─────────────────────────────────────────────────────────────────\nstatic clipEdge(refV1, refV2, refNormal, incEdge) {\n    // The tangent runs along the reference edge (left → right)\n    const tangent = Vector.sub(refV2, refV1).normalize();\n    \n    // Pass 1: clip against the LEFT side-plane at refV1\n    let cp = Collisions.clipSegment([incEdge.v1, incEdge.v2], refV1, tangent);\n    if (cp.length < 2) return []; // entire segment was clipped away\n    \n    // Pass 2: clip against the RIGHT side-plane at refV2 (normal flipped)\n    cp = Collisions.clipSegment(cp, refV2, tangent.copy().mult(-1));\n    if (cp.length < 2) return [];\n    \n    // Pass 3: keep only points that are ON or BEHIND the reference edge\n    // (dot product ≤ 0 means the point is inside / penetrating)\n    const refDist = refNormal.dot(refV1);\n    const contacts = [];\n    for (let p of cp) {\n        const d = p.dot(refNormal) - refDist;\n        if (d <= 0) contacts.push(p);\n    }\n    return contacts;\n}\n```\n\n#### Step 4: The Clip Segment Helper\n\n`clipSegment` does one clip against a single infinite plane defined by a point and a normal. A point is \"inside\" (kept) if it is on the positive side of the plane (dot product ≥ 0). If the segment crosses the plane, we compute the exact crossing point and add it too.\n\n![Clip Segment Helper](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/step-4-the-clip-segment-helper.svg)\n\n```javascript\nstatic clipSegment(points, planePoint, planeNormal) {\n    const out = [];\n    // Signed distance from each endpoint to the plane\n    const dist = p => Vector.sub(p, planePoint).dot(planeNormal);\n    const d0 = dist(points[0]);\n    const d1 = dist(points[1]);\n\n    if (d0 >= 0) out.push(points[0]); // point 0 is inside — keep it\n    if (d1 >= 0) out.push(points[1]); // point 1 is inside — keep it\n\n    // If the segment crosses the plane, compute the intersection point\n    if ((d0 > 0 && d1 < 0) || (d0 < 0 && d1 > 0)) {\n        const t = d0 / (d0 - d1);                        // how far along [0→1] the crossing is\n        out.push(Vector.lerp(points[0], points[1], t));   // interpolate to find the exact point\n    }\n    return out;\n}\n```"
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Finishing Up: Normal Direction & Fallback\n\nAfter clipping, there are two small things left in `polygonVsPolygon`:\n\n```javascript\n// If we chose B as the reference, the normal currently points the wrong way.\n// flip=true means we swapped A and B, so reverse the normal so it always\n// points from body B toward body A (the convention the rest of the engine expects).\nlet normal = refNormal.copy();\nif (flip) normal.mult(-1);\n\n// Rare fallback: clipping can sometimes produce zero contact points\n// (e.g. a vertex-vertex graze). In that case, just use the deepest vertex.\nif (contacts.length === 0) {\n    const refDist = refNormal.dot(refV1);\n    let deepest = null, deepestD = 0;\n    for (let v of incVerts) {\n        const d = v.dot(refNormal) - refDist;\n        if (d < deepestD) { deepestD = d; deepest = v; }\n    }\n    if (deepest) contacts = [deepest.copy()];\n    else return null;\n}\n\n// pen = how deeply they overlap along the normal\nconst pen = Math.abs(ref.separation);\nreturn new Manifold(a, b, normal, pen, contacts);\n```\n\n### Why the Edge Case Occurs\n\nIn a perfect world, if two polygons overlap, the clipping of the \"incident edge\" against the \"reference edge\" planes should yield 1 or 2 contact points. However, clipping can fail if:\n\n* **Numerical Precision:** Small rounding errors in dot product calculations cause the clipping planes to \"miss\" the incident edge.\n* **Degenerate Geometry:** Very thin triangles or overlapping vertices.\n* **Extreme Penetration:** If one polygon is entirely inside another, the clipping logic (which focuses on edges) might struggle.\n\n### Step-by-Step Breakdown of the Fallback Logic\n\n1. **The Trigger** — `if (contacts.length === 0) { ... }` If `clipEdge` failed to find any points where the incident edge is \"behind\" the reference edge, the engine enters this backup mode.\n2. **Defining the Reference Plane** — `const refDist = refNormal.dot(refV1);` This calculates the \"offset\" of the reference edge from the origin along the collision normal. Mathematically, this defines the infinite line (plane) that the reference edge sits on.\n3. **Searching for the \"Deepest\" Point** — The code iterates through every vertex of the incident polygon to find which one has penetrated the reference polygon the most. `v.dot(refNormal) - refDist` calculates the signed distance: negative values mean the vertex is inside the shape. It looks for the most negative value (deepest penetration).\n4. **The Fallback Result** — If a point was found inside the reference shape, it is manually added as the sole contact point. If even this fails (no vertices inside), it returns null.\n\n![Fallback Flow](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/step-by-step-breakdown-of-the-logic.svg)\n\n[View Full Code ↗](https://phyg0.github.io/2d-physics-engine-tutorial/part2/index.html)"
+                }
+            ]
+        },
+        {
+            "title": "Hybrid Collisions",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Circle vs. Polygon Collision\n\nThis collision type is a hybrid — it borrows SAT from polygon-polygon detection, but needs one extra trick to handle corners correctly. Let's look at the full function first, then break it apart.\n\n```javascript\nstatic circleVsPolygon(circle, polygon) {\n    const verts = polygon.getWorldVertices();\n    let minOverlap = Infinity;\n    let bestAxis = null;\n\n    // ── Part 1: Test every polygon edge normal ──────────────────────────\n    for (let i = 0; i < verts.length; i++) {\n        const v1 = verts[i];\n        const v2 = verts[(i + 1) % verts.length];\n        const edge = Vector.sub(v2, v1);\n        const axis = new Vector(edge.y, -edge.x).normalize();\n\n        const pPoly   = Collisions.projectVerts(verts, axis);\n        const cProj   = circle.pos.dot(axis);\n        const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };\n\n        if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;\n\n        const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);\n        if (overlap < minOverlap) { minOverlap = overlap; bestAxis = axis; }\n    }\n\n    // ── Part 2: Test axis from closest vertex → circle center ───────────\n    let closestVert = verts[0];\n    let closestDist = Vector.sub(circle.pos, verts[0]).magSq();\n    for (let i = 1; i < verts.length; i++) {\n        const d = Vector.sub(circle.pos, verts[i]).magSq();\n        if (d < closestDist) { closestDist = d; closestVert = verts[i]; }\n    }\n\n    const vertAxis = Vector.sub(closestVert, circle.pos);\n    if (vertAxis.magSq() > 0.0001) {\n        vertAxis.normalize();\n        const pPoly   = Collisions.projectVerts(verts, vertAxis);\n        const cProj   = circle.pos.dot(vertAxis);\n        const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };\n\n        if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;\n\n        const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);\n        if (overlap < minOverlap) { minOverlap = overlap; bestAxis = vertAxis; }\n    }\n\n    // ── Part 3: Fix normal direction & compute contact point ────────────\n    if (Vector.sub(polygon.pos, circle.pos).dot(bestAxis) < 0)\n        bestAxis.mult(-1);\n\n    const contact = circle.pos.copy().add(bestAxis.copy().mult(circle.radius));\n    return new Manifold(circle, polygon, bestAxis, minOverlap, [contact]);\n}\n```\n\n> **The Plan:**\n>\n> We test SAT axes in two rounds. Round 1 — edge normals (same as polygon-polygon). Round 2 — one special axis toward the closest corner. The axis with the least overlap becomes the collision normal.\n\n### Why Two Rounds of Axes?\n\nWith two polygons, testing every edge normal is enough. But a circle has no edges — it's a smooth curve. The tricky case is when the circle hits a *corner* of the polygon. In that situation, none of the edge normals point toward the circle's center, so SAT would incorrectly say \"no collision.\"\n\n![Why Two Rounds of Axes](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/why-two-rounds-of-axes.svg)\n\n### The 3-Part Breakdown\n\n#### Part 1: Test Every Polygon Edge Normal\n\nFor each edge of the polygon, we compute its outward normal and use it as a SAT axis. Then we project both shapes onto that axis and check for a gap. If any gap is found, we return `null` immediately. Otherwise we track the axis with the *smallest* overlap.\n\nProjecting a circle onto an axis is simple: find where the center lands, then extend by the radius in both directions.\n\n![Part 1 Projection Diagram](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/part-1-test-every-polygon-edge-normal.svg)\n\n```javascript\n// Test every edge normal from the polygon\nfor (let i = 0; i < verts.length; i++) {\n    const v1 = verts[i];\n    const v2 = verts[(i + 1) % verts.length];\n    const edge = Vector.sub(v2, v1);\n    const axis = new Vector(edge.y, -edge.x).normalize(); // outward normal of this edge\n\n    // Project all polygon vertices onto the axis → get a 1D range [min, max]\n    const pPoly = Collisions.projectVerts(verts, axis);\n\n    // Project the circle onto the same axis → center ± radius\n    const cProj   = circle.pos.dot(axis);\n    const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };\n\n    // Gap found? → not colliding\n    if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;\n\n    // No gap — record overlap amount\n    const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);\n    if (overlap < minOverlap) { minOverlap = overlap; bestAxis = axis; }\n}\n```\n\n#### The Projection Helper\n\n`projectVerts` takes every vertex of the polygon, dots it with the axis, and records the min and max values — giving us a 1D shadow of the polygon on that axis:\n\n```javascript\nstatic projectVerts(verts, axis) {\n    let min =  Infinity;\n    let max = -Infinity;\n    for (let v of verts) {\n        const p = v.dot(axis); // dot product = scalar position along the axis\n        if (p < min) min = p;\n        if (p > max) max = p;\n    }\n    return { min, max };\n}\n```\n\n#### Part 2: Test the Closest-Vertex Axis\n\nAfter all edge normals pass (no gaps found), we run one more axis test. We find which polygon vertex is closest to the circle's center and build an axis pointing from that vertex toward the center. This is the axis that catches corner collisions.\n\n```javascript\n// Find the polygon vertex closest to the circle's center\nlet closestVert = verts[0];\nlet closestDist = Vector.sub(circle.pos, verts[0]).magSq(); // .magSq() avoids a sqrt — faster\nfor (let i = 1; i < verts.length; i++) {\n    const d = Vector.sub(circle.pos, verts[i]).magSq();\n    if (d < closestDist) { closestDist = d; closestVert = verts[i]; }\n}\n\n// Build the axis: closest vertex → circle center\nconst vertAxis = Vector.sub(closestVert, circle.pos);\nif (vertAxis.magSq() > 0.0001) {  // skip if the circle center sits exactly on a vertex\n    vertAxis.normalize();\n\n    // Same SAT test as before, using this new axis\n    const pPoly   = Collisions.projectVerts(verts, vertAxis);\n    const cProj   = circle.pos.dot(vertAxis);\n    const pCircle = { min: cProj - circle.radius, max: cProj + circle.radius };\n\n    if (pPoly.max < pCircle.min || pCircle.max < pPoly.min) return null;\n\n    const overlap = Math.min(pPoly.max - pCircle.min, pCircle.max - pPoly.min);\n    if (overlap < minOverlap) { minOverlap = overlap; bestAxis = vertAxis; }\n}\n```\n\n#### Part 3: Fix the Normal Direction & Compute the Contact Point\n\nBy this point we know they're colliding and we have the best axis. Two things remain:\n\n1. **Orient the normal** — it must always point *from the polygon toward the circle* (so the solver knows which way to push). We check this with a dot product and flip if needed.\n2. **Find the contact point** — for a circle, the contact is always the point on its surface that's closest to the polygon: just step from the circle's center along the normal by one radius.\n\n![Part 3 Contact Point Diagram](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/part-3-fix-the-normal-direction-amp-compute-the-contact-point.svg)\n\n```javascript\n// Ensure the normal points FROM the polygon TOWARD the circle.\n// If the dot product with (polygon→circle) is negative, we're pointing the wrong way.\nif (Vector.sub(polygon.pos, circle.pos).dot(bestAxis) < 0)\n    bestAxis.mult(-1);\n\n// The contact point is the spot on the circle's edge touching the polygon:\n// start at the circle's center, walk one radius along the normal.\nconst contact = circle.pos.copy().add(bestAxis.copy().mult(circle.radius));\n\nreturn new Manifold(circle, polygon, bestAxis, minOverlap, [contact]);\n```\n\n> **Why only one contact point?**\n>\n> A circle can only ever touch a flat edge at one point (unlike two polygons that can share an edge and have two contact points). So we always return a single-element `contacts` array."
+                }
+            ]
+        },
+        {
+            "title": "Debugging & Summary",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Visualizing the Manifold\n\nThe `Manifold` object returned by every collision function stores the push direction and contact points. Its `draw` method paints these on screen so you can debug collisions visually.\n\n![Manifold Draw](https://raw.githubusercontent.com/PhyG0/webler-course-images/refs/heads/main/visualizing-the-manifold.svg)\n\n```javascript\ndraw(ctx) {\n    if (this.contacts.length === 0) return;\n\n    ctx.save();\n\n    // ── Draw each contact point as a green dot ─────────────────\n    ctx.fillStyle   = \"#00ff88\";\n    ctx.strokeStyle = \"#004422\";\n    ctx.lineWidth   = 1;\n    for (let c of this.contacts) {\n        ctx.beginPath();\n        ctx.arc(c.x, c.y, 5, 0, Math.PI * 2);\n        ctx.fill();\n        ctx.stroke();\n    }\n\n    // ── Draw collision normal as a red arrow ─────────────────\n    // First, find the average position of all contact points\n    let avg = new Vector(0, 0);\n    for (let c of this.contacts) avg.add(c);\n    avg.div(this.contacts.length);\n\n    // Draw a 30-pixel arrow from the average contact in the normal direction\n    const tip = avg.copy().add(this.normal.copy().mult(30));\n    ctx.strokeStyle = \"#ff3333\";\n    ctx.lineWidth   = 2;\n    ctx.beginPath();\n    ctx.moveTo(avg.x, avg.y); ctx.lineTo(tip.x, tip.y);\n    ctx.stroke();\n\n    ctx.restore();\n}\n```\n\n> **Debugging tip:**\n>\n> Enable this draw call during development — seeing the green dots and red arrow makes it immediately obvious when a collision normal is flipped or a contact point is in the wrong place."
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Common Pitfalls and Edge Cases\n\n> **Zero-Length Vectors:** Always check before normalizing! Same-position circles or degenerate polygons can cause division-by-zero errors.\n\n> **Numerical Precision:** Floating-point math isn't perfect. Small epsilon values (like 0.0001) help avoid false positives.\n\n> **Winding Order:** Polygon vertices should be in consistent order (typically CCW) for correct normal calculation."
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Putting It All Together\n\nHere is the complete narrow phase collision detection pipeline:\n\n### Narrow Phase Pipeline\n\n1. **findCollision()** dispatches to the right algorithm based on shape types.\n2. **circleVsCircle:** Distance check + 1 contact.\n3. **polygonVsPolygon:** SAT (findMinSeparation) → pick ref/inc edges → clip → fallback.\n4. **circleVsPolygon:** SAT edge normals + vertex axis → orient normal → 1 contact.\n5. Every path returns a **Manifold** (normal, penetration, contacts), or null.\n\n### Key Takeaways\n\n* Collision detection answers: Are they colliding? Where? How deep? In what direction?\n* A **Manifold** stores all collision data in one package.\n* Circle-circle uses simple distance checks.\n* Polygon collisions use **Separating Axis Theorem (SAT)** with edge clipping for contact points.\n* Circle-polygon needs a hybrid approach with an extra vertex axis.\n* Edge cases (zero-length vectors, numerical precision, winding order) can trip you up if you're not careful.\n\n> **The Beauty of SAT**\n>\n> SAT is elegant because it reduces the complex geometric problem of \"do these two shapes overlap?\" into a series of simple 1D interval overlap checks. By cleverly choosing which axes to test, we get both correctness and performance.\n\nCongratulations! You've mastered the fundamentals of 2D collision detection. In **Part 3**, we'll use this collision data to calculate physics responses — impulses, friction, bounces — to make our objects react realistically!"
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Final Output & Source Code\n\nIf you want to see the final interactive output and explore all the source code files for this engine, check out the full project in the online IDE.\n\n[Open Full Code in IDE ↗](https://phyg0.github.io/2d-physics-engine-tutorial/part2/index.html)\n\n---\n\n### 🏆 A Note to the Learner\n\nBefore you close this chapter, take a moment to pat yourself on the back. Seriously — what you've just learned is not easy.\n\nCollision detection is one of the most intellectually demanding parts of physics engine development. It takes heart, many iterations, and a lot of \"pen and paper\" debugging to truly wrap your head around things like edge clipping and the Separating Axis Theorem. If you felt stuck at times, that's completely normal and please feel free to ask any questions on sections that you don't understand or improvements needed in any parts of tutorial content in the comments of this course."
+                }
+            ]
+        }
+    ]
+}
