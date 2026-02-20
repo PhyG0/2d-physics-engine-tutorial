@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dot Product - Sandbox Simulation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+        :root {
+            --bg: #07080f;
+            --panel: #0e0f1a;
+            --border: #1a1b2e;
+            --accent: #64ffda;
+            --accent2: #ff6b9d;
+            --accent3: #ffd166;
+            --green: #a8ff78;
+            --violet: #c77dff;
+            --muted: #3d3d5c;
+            --text: #c9d1d9;
+            --dim: #5a6070
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center
+        }
+
+        header {
+            width: 100%;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 1.5rem
+        }
+
+        header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff
+        }
+
+        header span {
+            font-size: .6rem;
+            color: var(--muted);
+            letter-spacing: .15em;
+            text-transform: uppercase
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1100px;
+            flex: 1;
+            padding: 1rem;
+            gap: 1rem
+        }
+
+        .toolbar {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: .8rem 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: .75rem
+        }
+
+        .tab-btn {
+            font-family: 'Space Mono', monospace;
+            font-size: .67rem;
+            padding: .42rem .85rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--accent);
+            color: #0a0a0f;
+            font-weight: 700;
+            letter-spacing: .04em;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            min-height: 500px;
+            width: 100%
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            width: 100%
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.05rem 1.2rem
+        }
+
+        .sec {
+            font-size: .57rem;
+            letter-spacing: .18em;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: .5rem
+        }
+
+        .sdesc {
+            font-size: .68rem;
+            line-height: 1.78;
+            color: var(--dim)
+        }
+
+        .sdesc em {
+            color: var(--accent);
+            font-style: normal
+        }
+
+        .sdesc .neg {
+            color: var(--accent2)
+        }
+
+        .sdesc .pos {
+            color: var(--accent)
+        }
+
+        .sdesc .hi {
+            color: var(--accent3)
+        }
+
+        .mbox {
+            background: #080810;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: .5rem .75rem;
+            font-size: .64rem;
+            color: var(--accent3);
+            margin-top: .5rem;
+            line-height: 1.88;
+            white-space: pre;
+            min-height: 2rem
+        }
+
+        button {
+            font-family: 'Space Mono', monospace;
+            font-size: .67rem;
+            padding: .42rem .85rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            letter-spacing: .04em;
+            transition: all .15s
+        }
+
+        button:hover {
+            border-color: var(--accent);
+            color: var(--accent)
+        }
+
+        .leg-item {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-size: .63rem;
+            color: var(--dim);
+            line-height: 2.1
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        .lsw {
+            width: 17px;
+            height: 2px;
+            flex-shrink: 0
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Dot Product</h1>
+        <span>Sandbox Simulation</span>
+    </header>
+    <div class="main">
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <div class="tab-btn">Sandbox</div>
+            </div>
+            <div class="toolbar-group">
+                <button id="btnReset">Reset Vectors</button>
+            </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="c"></canvas></div>
+        <div class="info-grid">
+            <div class="card" id="panelFormula">
+                <div class="sec">Mathematical Data</div>
+                <div class="mbox" id="formulaBox">Drag the vectors on the canvas!</div>
+            </div>
+            <div class="card" id="panelInfo">
+                <div class="sec">Interpretation</div>
+                <div class="sdesc" id="interpBox">The dot product tells you how much two vectors point in the same
+                    direction.</div>
+            </div>
+            <div class="card" id="panelLegend">
+                <div class="sec">Legend</div>
+                <div class="leg-item">
+                    <div class="dot" style="background:#64ffda"></div>Vector A
+                </div>
+                <div class="leg-item">
+                    <div class="dot" style="background:#ff6b9d"></div>Vector B
+                </div>
+                <div class="leg-item">
+                    <div class="lsw" style="background:#ffd166"></div>Angle arc theta
+                </div>
+                <div class="leg-item">
+                    <div class="lsw" style="background:#c77dff;border-top:1px dashed #c77dff;height:0"></div>Projection
+                </div>
+                <div class="leg-item">
+                    <div class="dot" style="background:#a8ff78"></div>Positive (same dir)
+                </div>
+                <div class="leg-item">
+                    <div class="dot" style="background:#ff6b9d"></div>Negative (opposite)
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const C = document.getElementById('c'), X = C.getContext('2d'), WR = C.parentElement;
+        function resize() { C.width = WR.clientWidth; C.height = Math.max(WR.clientHeight, 500) }
+        resize(); window.addEventListener('resize', () => { resize(); draw() });
+
+        const V = (x, y) => ({ x, y }), add = (a, b) => V(a.x + b.x, a.y + b.y), sub = (a, b) => V(a.x - b.x, a.y - b.y),
+            mul = (a, s) => V(a.x * s, a.y * s), dt = (a, b) => a.x * b.x + a.y * b.y, mg = a => Math.sqrt(a.x * a.x + a.y * a.y),
+            hat = a => { const m = mg(a) || 1; return V(a.x / m, a.y / m) }, perp = a => V(-a.y, a.x),
+            lerp = (a, b, t) => a + (b - a) * t, lerpV = (a, b, t) => V(lerp(a.x, b.x, t), lerp(a.y, b.y, t)),
+            clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+        let origin = V(0, 0), vecA = V(0, 0), vecB = V(0, 0);
+        let dragging = null;
+
+        function initVectors() {
+            const cx = C.width / 2, cy = C.height / 2;
+            origin = V(cx, cy);
+            vecA = V(160, -80);
+            vecB = V(120, 100);
+        }
+        initVectors();
+
+        function bg() {
+            X.fillStyle = '#07080f'; X.fillRect(0, 0, C.width, C.height);
+            X.strokeStyle = 'rgba(255,255,255,.016)'; X.lineWidth = 1;
+            const g = 44;
+            for (let x = 0; x < C.width; x += g) { X.beginPath(); X.moveTo(x, 0); X.lineTo(x, C.height); X.stroke() }
+            for (let y = 0; y < C.height; y += g) { X.beginPath(); X.moveTo(0, y); X.lineTo(C.width, y); X.stroke() }
+            X.strokeStyle = 'rgba(255,255,255,.06)'; X.lineWidth = 1;
+            X.beginPath(); X.moveTo(0, origin.y); X.lineTo(C.width, origin.y); X.stroke();
+            X.beginPath(); X.moveTo(origin.x, 0); X.lineTo(origin.x, C.height); X.stroke();
+        }
+
+        function arrow(x1, y1, x2, y2, col, lw, hs, alpha) {
+            lw = lw ?? 3; hs = hs ?? 20; alpha = alpha ?? 1;
+            X.save(); X.globalAlpha = alpha; X.strokeStyle = col; X.fillStyle = col; X.lineWidth = lw; X.lineCap = 'round';
+            const dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy);
+            if (d < 1) { X.restore(); return }
+            X.beginPath(); X.moveTo(x1, y1); X.lineTo(x2, y2); X.stroke();
+            const ux = dx / d, uy = dy / d;
+            X.beginPath(); X.moveTo(x2, y2);
+            X.lineTo(x2 - hs * ux + hs * .4 * (-uy), y2 - hs * uy + hs * .4 * ux);
+            X.lineTo(x2 - hs * ux - hs * .4 * (-uy), y2 - hs * uy - hs * .4 * ux);
+            X.closePath(); X.fill(); X.restore();
+        }
+
+        function dot2(x, y, r, col, alpha) {
+            alpha = alpha ?? 1; X.save(); X.globalAlpha = alpha;
+            X.beginPath(); X.arc(x, y, r, 0, Math.PI * 2); X.fillStyle = col; X.fill(); X.restore();
+        }
+
+        function lbl(text, x, y, col, sz, align) {
+            col = col ?? '#fff'; sz = sz ?? 10; align = align ?? 'center';
+            X.save(); X.font = `${sz}px 'Space Mono',monospace`; X.textAlign = align; X.textBaseline = 'middle';
+            const m = X.measureText(text), pd = 4;
+            const tx = align === 'left' ? x : align === 'right' ? x - m.width : x - m.width / 2;
+            X.fillStyle = 'rgba(5,6,14,.94)'; X.fillRect(tx - pd, y - sz / 2 - pd, m.width + pd * 2, sz + pd * 2);
+            X.fillStyle = col; X.fillText(text, x, y); X.restore();
+        }
+
+        function drawAngleArc(o, a, b, radius) {
+            const angA = Math.atan2(a.y, a.x), angB = Math.atan2(b.y, b.x);
+            let start = angA, end = angB;
+            let diff = end - start;
+            if (diff > Math.PI) start += 2 * Math.PI;
+            if (diff < -Math.PI) end += 2 * Math.PI;
+            X.save(); X.strokeStyle = 'rgba(255,209,102,.6)'; X.lineWidth = 2; X.setLineDash([4, 3]);
+            X.beginPath(); X.arc(o.x, o.y, radius, Math.min(start, end), Math.max(start, end)); X.stroke();
+            X.setLineDash([]);
+            const mid = (start + end) / 2;
+            lbl('theta', o.x + Math.cos(mid) * (radius + 16), o.y + Math.sin(mid) * (radius + 16), '#ffd166', 11);
+            X.restore();
+        }
+
+        function drawProjection(o, a, b) {
+            const bHat = hat(b), projLen = dt(a, bHat), projPt = add(o, mul(bHat, projLen));
+            const tipA = add(o, a);
+            X.save(); X.strokeStyle = 'rgba(199,125,255,.5)'; X.lineWidth = 1.5; X.setLineDash([5, 5]);
+            X.beginPath(); X.moveTo(tipA.x, tipA.y); X.lineTo(projPt.x, projPt.y); X.stroke();
+            X.setLineDash([]); X.restore();
+            X.save(); X.strokeStyle = '#c77dff'; X.lineWidth = 3; X.lineCap = 'round';
+            X.beginPath(); X.moveTo(o.x, o.y); X.lineTo(projPt.x, projPt.y); X.stroke(); X.restore();
+            dot2(projPt.x, projPt.y, 4, '#c77dff');
+            lbl('proj', projPt.x, projPt.y - 14, '#c77dff', 9);
+        }
+
+        function drawVector(o, v, col, label) {
+            const tip = add(o, v);
+            arrow(o.x, o.y, tip.x, tip.y, col, 3.2, 20);
+            dot2(tip.x, tip.y, 6, col);
+            lbl(label, tip.x + (v.x > 0 ? 14 : -14), tip.y - 14, col, 12);
+        }
+
+        function draw() {
+            bg();
+            if (mg(vecB) > 5) drawProjection(origin, vecA, vecB);
+            drawVector(origin, vecA, '#64ffda', 'A');
+            drawVector(origin, vecB, '#ff6b9d', 'B');
+            if (mg(vecA) > 5 && mg(vecB) > 5) drawAngleArc(origin, vecA, vecB, 40);
+            dot2(origin.x, origin.y, 5, '#fff');
+            lbl('O', origin.x - 16, origin.y + 16, '#fff', 10);
+
+            const ax = vecA.x, ay = -vecA.y, bx = vecB.x, by = -vecB.y;
+            const dotVal = ax * bx + ay * by;
+            const magA = Math.sqrt(ax * ax + ay * ay), magB = Math.sqrt(bx * bx + by * by);
+            const cosTheta = (magA > 0 && magB > 0) ? dotVal / (magA * magB) : 0;
+            const theta = Math.acos(clamp(cosTheta, -1, 1)) * 180 / Math.PI;
+
+            document.getElementById('formulaBox').textContent =
+                `A = (${ax.toFixed(0)}, ${ay.toFixed(0)})   B = (${bx.toFixed(0)}, ${by.toFixed(0)})\n` +
+                `A.B = ${ax.toFixed(0)}*${bx.toFixed(0)} + ${ay.toFixed(0)}*${by.toFixed(0)} = ${dotVal.toFixed(1)}\n` +
+                `|A| = ${magA.toFixed(1)}   |B| = ${magB.toFixed(1)}   theta = ${theta.toFixed(1)} deg`;
+
+            const ib = document.getElementById('interpBox');
+            if (dotVal > 5) ib.innerHTML = '<span class="pos">Positive</span> -> vectors point in <em>similar</em> directions.';
+            else if (dotVal < -5) ib.innerHTML = '<span class="neg">Negative</span> -> vectors point in <em>opposite</em> directions.';
+            else ib.innerHTML = '<span class="hi">Zero</span> -> vectors are <em>perpendicular</em>.';
+
+            const signCol = dotVal > 5 ? '#a8ff78' : dotVal < -5 ? '#ff6b9d' : '#ffd166';
+            const signTxt = dotVal > 5 ? 'POSITIVE' : dotVal < -5 ? 'NEGATIVE' : 'ZERO';
+            X.save(); X.font = "bold 13px 'Space Mono',monospace"; X.textAlign = 'center';
+            X.fillStyle = signCol; X.globalAlpha = .8;
+            X.fillText(`A.B = ${dotVal.toFixed(1)}  (${signTxt})`, C.width / 2, 30);
+            X.restore();
+        }
+
+        const getPos = e => {
+            const r = C.getBoundingClientRect();
+            const t = e.touches ? e.touches[0] : e;
+            return V(t.clientX - r.left, t.clientY - r.top);
+        };
+
+        const start = e => {
+            const p = getPos(e);
+            if (mg(sub(p, add(origin, vecA))) < 25) {
+                dragging = 'A';
+                if (e.touches) e.preventDefault();
+            }
+            else if (mg(sub(p, add(origin, vecB))) < 25) {
+                dragging = 'B';
+                if (e.touches) e.preventDefault();
+            }
+        };
+
+        const move = e => {
+            if (!dragging) return;
+            const p = getPos(e);
+            if (dragging === 'A') vecA = sub(p, origin);
+            if (dragging === 'B') vecB = sub(p, origin);
+            if (e.touches) e.preventDefault();
+            draw();
+        };
+
+        const stop = () => dragging = null;
+
+        C.addEventListener('mousedown', start);
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', stop);
+        C.addEventListener('touchstart', start, { passive: false });
+        window.addEventListener('touchmove', move, { passive: false });
+        window.addEventListener('touchend', stop);
+
+        document.getElementById('btnReset').onclick = () => { initVectors(); draw(); };
+        draw();
+    </script>
+    <script src="bg-music.js"></script>
+</body>
+
+</html>

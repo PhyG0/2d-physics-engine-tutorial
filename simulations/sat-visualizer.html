@@ -106,6 +106,7 @@
       display: block;
       width: 100%;
       height: 100%;
+      touch-action: none;
     }
 
     /* Bottom Grid for Panels */
@@ -384,8 +385,9 @@
       </div>
     </div>
 
-    <!-- Full Width Canvas -->
-    <div class="canvas-wrap"><canvas id="c"></canvas></div>
+    <div class="canvas-wrap">
+      <canvas id="c"></canvas>
+    </div>
 
     <!-- Bottom Grid for Options/Info -->
     <div class="info-grid">
@@ -1084,23 +1086,34 @@
       // ── TTS Engine ────────────────────────────────────────────
       let ttsEnabled = true;
 
-      // speak() returns a Promise that resolves when the utterance finishes (or immediately if muted)
       function speak(text) {
         return new Promise(resolve => {
+          const descBox = document.getElementById('sDesc');
+          if (descBox && text) {
+            descBox.innerHTML = text;
+          }
+
           if (!ttsEnabled || !text || !window.speechSynthesis) { resolve(); return; }
           window.speechSynthesis.cancel();
-          const utter = new SpeechSynthesisUtterance(text);
-          utter.rate = parseFloat(document.getElementById('ttsRate')?.value || 1.0);
-          utter.pitch = parseFloat(document.getElementById('ttsPitch')?.value || 1.0);
-          const voiceSel = document.getElementById('ttsVoice');
-          if (voiceSel && voiceSel.value) {
-            const voices = window.speechSynthesis.getVoices();
-            const found = voices.find(v => v.name === voiceSel.value);
-            if (found) utter.voice = found;
+          const u = new SpeechSynthesisUtterance(text);
+          u.rate = parseFloat(document.getElementById('ttsRate').value || 1);
+          const sel = document.getElementById('ttsVoice');
+          if (sel && sel.value) {
+            u.voice = window.speechSynthesis.getVoices().find(v => v.name === sel.value);
           }
-          utter.onend = () => resolve();
-          utter.onerror = () => resolve(); // don't block on error
-          window.speechSynthesis.speak(utter);
+
+          // Duck background music
+          if (window.bgMusicDuck) window.bgMusicDuck();
+
+          u.onend = () => {
+            if (window.bgMusicRestore) window.bgMusicRestore();
+            resolve();
+          };
+          u.onerror = () => {
+            if (window.bgMusicRestore) window.bgMusicRestore();
+            resolve();
+          };
+          window.speechSynthesis.speak(u);
         });
       }
 
@@ -1192,10 +1205,15 @@
         sel.innerHTML = '<option value="">Default voice</option>';
         // Preferred voice order — first match wins
         const preferred = [
-          'Google UK English Male',
+          'Microsoft Aria Online (Natural) - English (United States)',
+          'Microsoft Jenny Online (Natural) - English (United States)',
+          'Microsoft Guy Online (Natural) - English (United States)',
+          'Google US English',
+          'Samantha',
           'Google UK English Female',
-          'Microsoft Hazel',
-          'Karen',
+          'Google UK English Male',
+          'Daniel',
+          'Microsoft Zira Desktop - English (United States)'
         ];
         let defaultSet = false;
         voices.forEach(v => {
@@ -1206,12 +1224,12 @@
         });
         // Set preferred default
         for (const name of preferred) {
-          const opt = [...sel.options].find(o => o.value === name);
+          const opt = [...sel.options].find(o => o.value.includes(name) || o.value === name);
           if (opt) { opt.selected = true; defaultSet = true; break; }
         }
-        // Fallback: first en-GB voice
+        // Fallback: first en-GB or en-US voice
         if (!defaultSet) {
-          const gbVoice = voices.find(v => v.lang === 'en-GB');
+          const gbVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB');
           if (gbVoice) {
             const opt = [...sel.options].find(o => o.value === gbVoice.name);
             if (opt) opt.selected = true;
@@ -1423,7 +1441,7 @@
           }
 
           // Small pause between steps, then next
-          autoT = setTimeout(tick, parseInt(document.getElementById('spd').value));
+          autoT = setTimeout(tick, parseInt(document.getElementById('spd').value) + 1500); // More prominent pause
         }
 
         // Kick off with a short delay so the button state renders first
@@ -1466,6 +1484,7 @@
       // ── Init ──────────────────────────────────────────────────
       refresh();
     </script>
+    <script src="bg-music.js"></script>
 </body>
 
 </html>

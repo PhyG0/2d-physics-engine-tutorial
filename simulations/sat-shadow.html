@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAT — Shadow Projection</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+    :root {
+      --bg: #07080f;
+      --panel: #0e0f1a;
+      --border: #1a1b2e;
+      --accent: #64ffda;
+      --accent2: #ff6b9d;
+      --accent3: #ffd166;
+      --green: #a8ff78;
+      --violet: #c77dff;
+      --muted: #3d3d5c;
+      --text: #c9d1d9;
+      --dim: #5a6070;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    header span {
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    /* Main Container */
+    .main {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 1100px;
+      flex: 1;
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    /* Top Toolbar for Canvas Controls */
+    .toolbar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Canvas */
+    .canvas-wrap {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 500px;
+      width: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    /* Bottom Grid for Panels */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .card,
+    .step-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      height: 100%;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.05rem 1.2rem;
+    }
+
+    .sec {
+      font-size: .57rem;
+      letter-spacing: .18em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: .5rem;
+    }
+
+    .shape-row {
+      display: flex;
+      gap: .45rem;
+      flex-wrap: wrap;
+      margin-bottom: .35rem;
+    }
+
+    .shape-row label {
+      font-size: .61rem;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: .28rem;
+    }
+
+    .shape-row input {
+      accent-color: var(--accent);
+    }
+
+    .hint {
+      font-size: .59rem;
+      color: var(--muted);
+      margin-bottom: .7rem;
+    }
+
+    .ctrl {
+      display: flex;
+      gap: .45rem;
+      flex-wrap: wrap;
+      margin-bottom: .6rem;
+    }
+
+    button {
+      font-family: 'Space Mono', monospace;
+      font-size: .67rem;
+      padding: .42rem .85rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      letter-spacing: .04em;
+      transition: all .15s;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #0a0a0f;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    button.primary:hover {
+      opacity: .85;
+      color: #0a0a0f;
+    }
+
+    button:disabled {
+      opacity: .25;
+      pointer-events: none;
+    }
+
+    button.active {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .spd {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      font-size: .6rem;
+      color: var(--muted);
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+
+    .step-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.05rem 1.2rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .3s;
+    }
+
+    .step-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: background .3s;
+    }
+
+    .step-card.danger::before {
+      background: var(--accent2);
+    }
+
+    .step-card.warn::before {
+      background: var(--accent3);
+    }
+
+    .step-card.green::before {
+      background: var(--green);
+    }
+
+    .snum {
+      font-size: .57rem;
+      letter-spacing: .18em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: .38rem;
+    }
+
+    .stitle {
+      font-size: .8rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: .4rem;
+    }
+
+    .sdesc {
+      font-size: .68rem;
+      line-height: 1.78;
+      color: var(--dim);
+    }
+
+    .sdesc em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .sdesc .neg {
+      color: var(--accent2);
+    }
+
+    .sdesc .pos {
+      color: var(--accent);
+    }
+
+    .sdesc .hi {
+      color: var(--accent3);
+    }
+
+    .sdesc .vi {
+      color: var(--violet);
+    }
+
+    .mbox {
+      background: #080810;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .5rem .75rem;
+      font-size: .64rem;
+      color: var(--accent3);
+      margin-top: .5rem;
+      line-height: 1.88;
+      white-space: pre;
+      min-height: 2rem;
+    }
+
+    .prog-bar-bg {
+      background: var(--border);
+      border-radius: 99px;
+      height: 3px;
+      width: 100%;
+      overflow: hidden;
+      margin-top: .38rem;
+    }
+
+    .prog-bar-fill {
+      background: var(--accent);
+      height: 100%;
+      border-radius: 99px;
+      transition: width .22s ease;
+    }
+
+    .prog-lbl {
+      font-size: .58rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      margin-top: .28rem;
+    }
+
+    .leg-item {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .63rem;
+      color: var(--dim);
+      line-height: 2.1;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .lsw {
+      width: 17px;
+      height: 2px;
+      flex-shrink: 0;
+    }
+
+    .prog-lbl span:last-child {
+      color: rgba(255, 255, 255, .35)
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Classic Projection - SAT</h1>
+    <span>Project onto the Normal · Find Overlap · Interactive Tutorial</span>
+  </header>
+  <div class="main">
+    <!-- Top Toolbar: Play Controls & Speed -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <div class="ctrl" style="margin:0;">
+          <button id="btnPrev" disabled>← Prev</button>
+          <button id="btnNext" class="primary">Next →</button>
+          <button id="btnAuto">▶ Auto</button>
+          <button id="btnReset">↺</button>
+          <button id="btnMute" title="Toggle narration">🔊</button>
+        </div>
+      </div>
+      <div class="toolbar-group" style="flex:1;max-width:300px;">
+        <div class="spd" style="width:100%;">
+          <span>Speed</span>
+          <input type="range" id="spd" min="0" max="3000" value="400" step="100">
+          <span id="spdLbl">0.4s</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="c"></canvas>
+    </div>
+
+    <!-- Bottom Grid for Options/Info -->
+    <div class="info-grid">
+
+      <!-- Step Details Panel -->
+      <div class="step-card" id="stepCard" style="grid-column: 1 / -1;">
+        <div class="snum" id="sNum">—</div>
+        <div class="stitle" id="sTitle">Welcome</div>
+        <div class="sdesc" id="sDesc">Press <em>Next</em> to begin.</div>
+        <div class="mbox" id="mBox"></div>
+      </div>
+
+      <!-- Shapes Config -->
+      <div class="card">
+        <div class="sec">Shapes</div>
+        <div class="shape-row">
+          <label><input type="radio" name="sA" value="triangle" checked> Tri A</label>
+          <label><input type="radio" name="sA" value="square"> Sq A</label>
+          <label><input type="radio" name="sA" value="pentagon"> Pent A</label>
+        </div>
+        <div class="shape-row">
+          <label><input type="radio" name="sB" value="triangle" checked> Tri B</label>
+          <label><input type="radio" name="sB" value="square"> Sq B</label>
+          <label><input type="radio" name="sB" value="pentagon"> Pent B</label>
+        </div>
+        <p class="hint" style="margin-top:0.8rem;">⟡ Drag shapes · ← → keys navigate</p>
+      </div>
+
+      <!-- Progress -->
+      <div class="card">
+        <div class="sec">Progress</div>
+        <div class="prog-bar-bg">
+          <div class="prog-bar-fill" id="pFill" style="width:0%"></div>
+        </div>
+        <div class="prog-lbl"><span id="pL">Step 1</span><span id="pR">of —</span></div>
+      </div>
+
+      <!-- Narration Settings -->
+      <div class="card">
+        <div class="sec">🎙️ Narration</div>
+        <select id="ttsVoice" style="width:100%;background:#080810;color:#c9d1d9;border:1px solid #1e1e2e;
+    border-radius:4px;padding:.35rem .5rem;font-family:'Space Mono',monospace;font-size:.6rem;margin-bottom:.55rem;">
+          <option value="">Default voice</option>
+        </select>
+        <div class="spd" style="margin-bottom:.4rem;">
+          <span>Rate</span>
+          <input type="range" id="ttsRate" min="0.5" max="2.0" step="0.1" value="1.0">
+          <span id="ttsRateLbl">1.0×</span>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="card">
+        <div class="sec">Legend</div>
+        <div class="leg-item">
+          <div class="dot" style="background:#64ffda"></div>Shape A
+        </div>
+        <div class="leg-item">
+          <div class="dot" style="background:#ff6b9d"></div>Shape B
+        </div>
+        <div class="leg-item">
+          <div class="dot" style="background:#ffd166"></div>Active edge
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#a8ff78"></div>Outward normal n̂
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#c77dff"></div>Projection line (along n̂)
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#64ffda"></div>Shadow A on n̂
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#ff6b9d"></div>Shadow B on n̂
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#a8ff78"></div>Gap → no collision
+        </div>
+        <div class="leg-item">
+          <div class="lsw" style="background:#ff6b9d"></div>Overlap → axis fails
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+
+    // ─── Canvas ────────────────────────────────────────────────────────────────
+    const C = document.getElementById('c');
+    const X = C.getContext('2d');
+    const WR = C.parentElement;
+    function resize() { C.width = WR.clientWidth; C.height = Math.max(WR.clientHeight, 540); }
+    resize();
+    window.addEventListener('resize', () => { resize(); draw(); });
+
+    // ─── Math ──────────────────────────────────────────────────────────────────
+    const V = (x, y) => ({ x, y });
+    const add = (a, b) => V(a.x + b.x, a.y + b.y);
+    const sub = (a, b) => V(a.x - b.x, a.y - b.y);
+    const mul = (a, s) => V(a.x * s, a.y * s);
+    const dot = (a, b) => a.x * b.x + a.y * b.y;
+    const mag = a => Math.sqrt(a.x * a.x + a.y * a.y);
+    const hat = a => { const m = mag(a) || 1; return V(a.x / m, a.y / m); };
+    const perp = a => V(-a.y, a.x);   // 90° CCW
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const lerpV = (a, b, t) => V(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
+    const ease = t => t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+    function centroid(pts) {
+      let cx = 0, cy = 0;
+      for (const p of pts) { cx += p.x; cy += p.y; }
+      return V(cx / pts.length, cy / pts.length);
+    }
+
+    // Outward normal of edge[ei] of polygon pts
+    function edgeNormal(pts, ei) {
+      const a = pts[ei], b = pts[(ei + 1) % pts.length];
+      const mid = V((a.x + b.x) / 2, (a.y + b.y) / 2);
+      let n = hat(perp(sub(b, a)));
+      // flip if pointing inward
+      if (dot(sub(mid, centroid(pts)), n) < 0) n = V(-n.x, -n.y);
+      return n;
+    }
+
+    // Project pts onto unit axis → {mn, mx, mnPt, mxPt}
+    function projectPts(pts, axis) {
+      let mn = Infinity, mx = -Infinity, mnPt = null, mxPt = null;
+      for (const p of pts) {
+        const d = dot(p, axis);
+        if (d < mn) { mn = d; mnPt = p; }
+        if (d > mx) { mx = d; mxPt = p; }
+      }
+      return { mn, mx, mnPt, mxPt };
+    }
+
+    // Foot of perpendicular from point p onto the line: origin + t*axis
+    // The projection line passes through `orig` in direction `axis` (unit).
+    // foot = orig + dot(p-orig, axis)*axis
+    function foot(p, orig, axis) {
+      const t = dot(sub(p, orig), axis);
+      return add(orig, mul(axis, t));
+    }
+
+    const moveV = (pts, dx, dy) => pts.map(p => V(p.x + dx, p.y + dy));
+
+    // ─── Shapes ───────────────────────────────────────────────────────────────
+    let typeA = 'triangle', typeB = 'triangle', shapeA, shapeB;
+
+    function makeShape(type, cx, cy, r) {
+      const p = [];
+      if (type === 'triangle') for (let i = 0; i < 3; i++) { const a = Math.PI / 2 + i * 2 * Math.PI / 3; p.push(V(cx + r * Math.cos(a), cy + r * Math.sin(a))); }
+      if (type === 'square') for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; p.push(V(cx + r * Math.cos(a), cy + r * Math.sin(a))); }
+      if (type === 'pentagon') for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; p.push(V(cx + r * Math.cos(a), cy + r * Math.sin(a))); }
+      return p;
+    }
+
+    function initShapes() {
+      const W = C.width, H = C.height, r = Math.min(W, H) * .125;
+      // Midpoint: (514.5, 258.0) | Offsets: A(-34.8, -15.0), B(34.8, 15.0)
+      shapeA = makeShape(typeA, W * 0.5 - 34.8, H * 0.5 - 15.0, r);
+      shapeB = makeShape(typeB, W * 0.5 + 34.8, H * 0.5 + 15.0, r);
+    }
+
+    // ─── Step builder ─────────────────────────────────────────────────────────
+    // Per edge we emit these steps in order:
+    //  'intro'
+    //  'edge-pick'       show edge highlighted, label it, dim everything else
+    //  'normal-appear'   animate normal arrow growing from edge midpoint
+    //  'proj-line'       draw projection line through scene along n̂
+    //  'cast-A-v#'       one step per vertex of A: animate perpendicular ray + dot landing
+    //  'shadow-A'        lock A's shadow bar [mnA, mxA] on the proj line
+    //  'cast-B-v#'       one step per vertex of B
+    //  'shadow-B'        lock B's shadow bar on same proj line
+    //  'compare'         annotate both bars, show the question
+    //  'gap'             highlight gap region → separating axis found
+    //  'overlap'         highlight overlap region → axis fails
+    //  'result-sep'      final green banner
+    //  'result-col'      final red banner
+
+    let STEPS = [], CUR = 0;
+
+    function buildSteps() {
+      const cA = centroid(shapeA), cB = centroid(shapeB);
+      console.log(`Shape A: (${cA.x.toFixed(1)}, ${cA.y.toFixed(1)}) | Shape B: (${cB.x.toFixed(1)}, ${cB.y.toFixed(1)})`);
+      STEPS = [];
+      STEPS.push({ type: 'intro' });
+
+      const shapes = [
+        { pts: shapeA, name: 'A', otherName: 'B', si: 0 },
+        { pts: shapeB, name: 'B', otherName: 'A', si: 1 },
+      ];
+
+      let found = false;
+
+      for (let si = 0; si < 2 && !found; si++) {
+        const { pts, name, otherName } = shapes[si];
+        for (let ei = 0; ei < pts.length && !found; ei++) {
+          const n = edgeNormal(pts, ei);
+          const eS = pts[ei], eE = pts[(ei + 1) % pts.length];
+          // Place the projection line (purple) safely OUTSIDE both shapes laterally.
+          // 'n' is the axis direction, so 'p' is the lateral direction.
+          const edgeMid = V((eS.x + eE.x) / 2, (eS.y + eE.y) / 2);
+          const p = perp(n);
+          // Find the min/max extent of both shapes along the lateral direction 'p'
+          const dists = [...shapeA, ...shapeB].map(v => dot(sub(v, edgeMid), p));
+          const maxD = Math.max(...dists);
+          const minD = Math.min(...dists);
+
+          // Pick a lateral offset that is outside the [minD, maxD] range.
+          // We'll prefer the 'max' side, but if that's off-screen, we'd ideally check.
+          // For now, let's reliably push it 80px beyond the furthest vertex.
+          const lateralOffset = maxD + 80;
+          const projOrig = add(edgeMid, mul(p, lateralOffset));
+
+          // project both shapes
+          const pA = projectPts(shapeA, n), pB = projectPts(shapeB, n);
+          const hasGap = pA.mn > pB.mx || pB.mn > pA.mx;
+          const overlapAmt = hasGap ? 0 : Math.min(pA.mx, pB.mx) - Math.max(pA.mn, pB.mn);
+
+          // precompute feet for every vertex of each shape
+          const fA = shapeA.map(p => ({ p, ft: foot(p, projOrig, n), d: dot(p, n) }));
+          const fB = shapeB.map(p => ({ p, ft: foot(p, projOrig, n), d: dot(p, n) }));
+
+          // shadow bar endpoints (feet of the min/max vertices)
+          const barA = { mnFt: foot(pA.mnPt, projOrig, n), mxFt: foot(pA.mxPt, projOrig, n), mn: pA.mn, mx: pA.mx };
+          const barB = { mnFt: foot(pB.mnPt, projOrig, n), mxFt: foot(pB.mxPt, projOrig, n), mn: pB.mn, mx: pB.mx };
+
+          const BASE = {
+            si, ei, n, eS, eE, edgeMid, projOrig, pA, pB, fA, fB, barA, barB,
+            name, otherName, hasGap, overlapAmt, nEdges: pts.length
+          };
+
+          STEPS.push({ ...BASE, type: 'edge-pick' });
+          STEPS.push({ ...BASE, type: 'normal-appear' });
+          STEPS.push({ ...BASE, type: 'proj-line' });
+          // one step per A vertex
+          fA.forEach((_, vi) => STEPS.push({ ...BASE, type: 'cast-A', vi, shownA: fA.slice(0, vi + 1) }));
+          STEPS.push({ ...BASE, type: 'shadow-A' });
+          // one step per B vertex
+          fB.forEach((_, vi) => STEPS.push({ ...BASE, type: 'cast-B', vi, shownB: fB.slice(0, vi + 1) }));
+          STEPS.push({ ...BASE, type: 'shadow-B' });
+          STEPS.push({ ...BASE, type: 'compare' });
+          if (hasGap) {
+            STEPS.push({ ...BASE, type: 'gap' });
+            STEPS.push({ ...BASE, type: 'result-sep' });
+            found = true;
+          } else {
+            STEPS.push({ ...BASE, type: 'overlap' });
+          }
+        }
+      }
+      if (!found) STEPS.push({ type: 'result-col' });
+    }
+
+    // ─── Animation ────────────────────────────────────────────────────────────
+    let animT = 1, animId = null;
+    function startAnim(ms) {
+      animT = 0; const t0 = performance.now(), dur = ms || 400;
+      cancelAnimationFrame(animId);
+      const tick = now => { animT = Math.min(1, (now - t0) / dur); draw(); if (animT < 1) animId = requestAnimationFrame(tick); };
+      animId = requestAnimationFrame(tick);
+    }
+    function snapAnim() { animT = 1; cancelAnimationFrame(animId); draw(); }
+
+    // ─── Draw helpers ─────────────────────────────────────────────────────────
+    function bg() {
+      X.fillStyle = '#07080f'; X.fillRect(0, 0, C.width, C.height);
+      X.strokeStyle = 'rgba(255,255,255,.016)'; X.lineWidth = 1;
+      const g = 44;
+      for (let x = 0; x < C.width; x += g) { X.beginPath(); X.moveTo(x, 0); X.lineTo(x, C.height); X.stroke(); }
+      for (let y = 0; y < C.height; y += g) { X.beginPath(); X.moveTo(0, y); X.lineTo(C.width, y); X.stroke(); }
+    }
+
+    function poly(pts, fill, stroke, lw, alpha) {
+      alpha = alpha ?? 1;
+      X.save(); X.globalAlpha = alpha; X.beginPath();
+      pts.forEach((p, i) => i ? X.lineTo(p.x, p.y) : X.moveTo(p.x, p.y));
+      X.closePath();
+      if (fill) { X.fillStyle = fill; X.fill(); }
+      if (stroke) { X.strokeStyle = stroke; X.lineWidth = lw ?? 2; X.stroke(); }
+      X.restore();
+    }
+
+    function dot2(x, y, r, col, alpha) {
+      alpha = alpha ?? 1;
+      X.save(); X.globalAlpha = alpha;
+      X.beginPath(); X.arc(x, y, r, 0, Math.PI * 2); X.fillStyle = col; X.fill();
+      X.restore();
+    }
+
+    function lbl(text, x, y, col, sz, align) {
+      col = col ?? '#fff'; sz = sz ?? 10; align = align ?? 'center';
+      X.save(); X.font = `${sz}px 'Space Mono',monospace`;
+      X.textAlign = align; X.textBaseline = 'middle';
+      const m = X.measureText(text), pd = 4;
+      const tx = align === 'left' ? x : align === 'right' ? x - m.width : x - m.width / 2;
+      X.fillStyle = 'rgba(5,6,14,.94)'; X.fillRect(tx - pd, y - sz / 2 - pd, m.width + pd * 2, sz + pd * 2);
+      X.fillStyle = col; X.fillText(text, x, y); X.restore();
+    }
+
+    // Animated arrow: grows from (x1,y1) toward (x2,y2) as t goes 0→1
+    function arrow(x1, y1, x2, y2, col, lw, hs, alpha, t) {
+      lw = lw ?? 2.5; hs = hs ?? 10; alpha = alpha ?? 1; t = t ?? 1;
+      const et = ease(Math.min(t, 1));
+      const tx = lerp(x1, x2, et), ty = lerp(y1, y2, et);
+      X.save(); X.globalAlpha = alpha; X.strokeStyle = col; X.fillStyle = col; X.lineWidth = lw; X.lineCap = 'round';
+      const dx = tx - x1, dy = ty - y1, d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 1) { X.restore(); return; }
+      X.beginPath(); X.moveTo(x1, y1); X.lineTo(tx, ty); X.stroke();
+      if (t > .8) {
+        const f = (t - .8) / .2, ux = dx / d, uy = dy / d;
+        X.globalAlpha = alpha * f;
+        X.beginPath(); X.moveTo(tx, ty);
+        X.lineTo(tx - hs * ux + hs * .4 * (-uy), ty - hs * uy + hs * .4 * ux);
+        X.lineTo(tx - hs * ux - hs * .4 * (-uy), ty - hs * uy - hs * .4 * ux);
+        X.closePath(); X.fill();
+      }
+      X.restore();
+    }
+
+    // Draw both shapes with optional active-shape highlight
+    function shapes(activeSi, colliding) {
+      activeSi = activeSi ?? -1;
+      const aStroke = activeSi === 0 ? 2.8 : 1.5, bStroke = activeSi === 1 ? 2.8 : 1.5;
+      const aFill = activeSi === 0 ? 'rgba(100,255,218,.14)' : 'rgba(100,255,218,.06)';
+      const bFill = activeSi === 1 ? 'rgba(255,107,157,.14)' : 'rgba(255,107,157,.06)';
+      poly(shapeA, aFill, '#64ffda', aStroke);
+      poly(shapeB, bFill, '#ff6b9d', bStroke);
+      if (colliding) { poly(shapeA, 'rgba(255,107,157,.18)', null); poly(shapeB, 'rgba(100,255,218,.18)', null); }
+      shapeA.forEach(p => dot2(p.x, p.y, 4, '#64ffda'));
+      shapeB.forEach(p => dot2(p.x, p.y, 4, '#ff6b9d'));
+      lbl('A', centroid(shapeA).x, centroid(shapeA).y, '#64ffda', 12);
+      lbl('B', centroid(shapeB).x, centroid(shapeB).y, '#ff6b9d', 12);
+    }
+
+    // Edge number labels on all edges of a polygon
+    function edgeLabels(pts, col, activeEi) {
+      activeEi = activeEi ?? -1;
+      const c = centroid(pts);
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        let n = hat(perp(sub(b, a)));
+        if (dot(sub(V(mx, my), c), n) < 0) n = V(-n.x, -n.y);
+        const off = 18, isA = (i === activeEi);
+        X.save(); X.globalAlpha = isA ? 1 : .32;
+        lbl('e' + (i + 1), mx + n.x * off, my + n.y * off, isA ? '#ffd166' : col, isA ? 10 : 8.5);
+        X.restore();
+      }
+    }
+
+    // Active edge (yellow)
+    function activeEdge(eS, eE, glow) {
+      X.save();
+      if (glow) { X.shadowColor = '#ffd166'; X.shadowBlur = 20; }
+      X.strokeStyle = '#ffd166'; X.lineWidth = 3.5; X.lineCap = 'round';
+      X.beginPath(); X.moveTo(eS.x, eS.y); X.lineTo(eE.x, eE.y); X.stroke();
+      X.restore();
+      dot2(eS.x, eS.y, 6, '#ffd166'); dot2(eE.x, eE.y, 6, '#ffd166');
+    }
+
+    // Normal arrow growing from edge midpoint
+    function normalArrow(eS, eE, n, t) {
+      t = t ?? 1;
+      const mid = V((eS.x + eE.x) / 2, (eS.y + eE.y) / 2);
+      const L = 62;
+      arrow(mid.x, mid.y, mid.x + n.x * L, mid.y + n.y * L, '#a8ff78', 2.8, 12, 1, t);
+      if (t > .9) lbl('n\u0302', mid.x + n.x * (L + 16), mid.y + n.y * (L + 16), '#a8ff78', 11.5);
+    }
+
+    // The projection line: a long line through projOrig in direction n
+    // (This is the 1D ruler onto which we drop shadows)
+    function projLine(projOrig, n, alpha) {
+      alpha = alpha ?? 1;
+      const FAR = 1400;
+      X.save(); X.globalAlpha = alpha;
+      X.strokeStyle = '#c77dff'; X.lineWidth = 2; X.setLineDash([9, 6]);
+      X.shadowColor = '#c77dff'; X.shadowBlur = 6;
+      X.beginPath();
+      X.moveTo(projOrig.x + n.x * FAR, projOrig.y + n.y * FAR);
+      X.lineTo(projOrig.x - n.x * FAR, projOrig.y - n.y * FAR);
+      X.stroke(); X.setLineDash([]); X.restore();
+      // "projection axis" label near the far end
+      if (alpha > .5) {
+        const lx = projOrig.x + n.x * 200, ly = projOrig.y + n.y * 200;
+        lbl('projection axis', lx, ly - 16, '#c77dff', 8.5);
+      }
+    }
+
+    // Single perpendicular drop ray from vertex p to its foot on proj line, animated
+    function dropRay(p, ft, col, t, alpha) {
+      t = t ?? 1; alpha = alpha ?? 1;
+      const cur = lerpV(p, ft, ease(t));
+      X.save(); X.globalAlpha = alpha * .62;
+      X.strokeStyle = col; X.lineWidth = 1.3; X.setLineDash([5, 5]);
+      X.beginPath(); X.moveTo(p.x, p.y); X.lineTo(cur.x, cur.y); X.stroke();
+      X.setLineDash([]); X.restore();
+      // small square marker at foot when arrived
+      if (t >= 1) {
+        X.save(); X.globalAlpha = alpha; X.fillStyle = col;
+        X.fillRect(ft.x - 3.5, ft.y - 3.5, 7, 7); X.restore();
+      }
+    }
+
+    // Shadow bar between two feet ON the projection line
+    function shadowBar(mnFt, mxFt, mn, mx, col, label, alpha) {
+      alpha = alpha ?? 1; label = label ?? '';
+      X.save();
+      // fat translucent fill
+      X.strokeStyle = col; X.lineWidth = 12; X.lineCap = 'round'; X.globalAlpha = alpha * .25;
+      X.beginPath(); X.moveTo(mnFt.x, mnFt.y); X.lineTo(mxFt.x, mxFt.y); X.stroke();
+      // crisp outline
+      X.globalAlpha = alpha; X.lineWidth = 3.5;
+      X.beginPath(); X.moveTo(mnFt.x, mnFt.y); X.lineTo(mxFt.x, mxFt.y); X.stroke();
+      X.restore();
+      dot2(mnFt.x, mnFt.y, 5.5, col, alpha);
+      dot2(mxFt.x, mxFt.y, 5.5, col, alpha);
+      if (label) {
+        const mid = lerpV(mnFt, mxFt, .5);
+        lbl(label, mid.x, mid.y - 16, col, 9.5);
+      }
+      // min/max value labels offset along the normal's perpendicular (edge direction)
+      // We'll just label them floating near the feet
+      lbl('min=' + mn.toFixed(0), mnFt.x, mnFt.y + 20, col, 8.5);
+      lbl('max=' + mx.toFixed(0), mxFt.x, mxFt.y + 20, col, 8.5);
+    }
+
+    // Gap or overlap highlight on the proj line
+    function resultRegion(barA, barB, projOrig, n, hasGap, alpha) {
+      alpha = alpha ?? 1;
+      // compute the feet of the boundary scalars
+      const ftOf = d => add(projOrig, mul(n, d));
+      if (hasGap) {
+        // gap is between min(maxA,maxB) and max(minA,minB)
+        const gL = Math.min(barA.mx, barB.mx), gR = Math.max(barA.mn, barB.mn);
+        const f1 = ftOf(gL), f2 = ftOf(gR);
+        X.save(); X.strokeStyle = '#a8ff78'; X.lineWidth = 14; X.lineCap = 'round';
+        X.globalAlpha = alpha * .28; X.beginPath(); X.moveTo(f1.x, f1.y); X.lineTo(f2.x, f2.y); X.stroke();
+        X.globalAlpha = alpha; X.lineWidth = 3; X.setLineDash([7, 4]);
+        X.beginPath(); X.moveTo(f1.x, f1.y); X.lineTo(f2.x, f2.y); X.stroke();
+        X.setLineDash([]); X.restore();
+        const mid = lerpV(f1, f2, .5);
+        lbl('GAP \u2713', mid.x, mid.y - 20, '#a8ff78', 11);
+        lbl(Math.abs(gR - gL).toFixed(1) + 'px', mid.x, mid.y + 2, '#a8ff78', 9);
+      } else {
+        const oL = Math.max(barA.mn, barB.mn), oR = Math.min(barA.mx, barB.mx);
+        const f1 = ftOf(oL), f2 = ftOf(oR);
+        X.save(); X.strokeStyle = '#ff6b9d'; X.lineWidth = 14; X.lineCap = 'round';
+        X.globalAlpha = alpha * .32; X.beginPath(); X.moveTo(f1.x, f1.y); X.lineTo(f2.x, f2.y); X.stroke();
+        X.globalAlpha = alpha; X.lineWidth = 3; X.setLineDash([7, 4]);
+        X.beginPath(); X.moveTo(f1.x, f1.y); X.lineTo(f2.x, f2.y); X.stroke();
+        X.setLineDash([]); X.restore();
+        const mid = lerpV(f1, f2, .5);
+        lbl('OVERLAP \u2717', mid.x, mid.y - 20, '#ff6b9d', 11);
+        lbl(Math.abs(oR - oL).toFixed(1) + 'px', mid.x, mid.y + 2, '#ff6b9d', 9);
+      }
+    }
+
+    // ─── Master render ────────────────────────────────────────────────────────
+    function draw() {
+      bg();
+      if (!shapeA || !shapeB) return;
+      const step = STEPS[CUR];
+      if (!step) { shapes(); return; }
+      const t = ease(Math.min(animT, 1));
+
+      // ── intro
+      if (step.type === 'intro') {
+        shapes();
+        lbl('Two convex shapes.  Do their shadows overlap on every edge normal?', C.width / 2, 32, '#fff', 11.5);
+        lbl('We project both shapes onto each outward normal — compare the intervals.', C.width / 2, 54, '#5a6070', 9.5);
+        return;
+      }
+
+      // ── result-col
+      if (step.type === 'result-col') {
+        shapes(-1, true);
+        const msg = '\u2717  No separating axis found \u2014 COLLISION';
+        X.save(); X.font = "bold 13px 'Space Mono',monospace"; X.textAlign = 'center'; X.textBaseline = 'middle';
+        const mw = X.measureText(msg).width;
+        X.fillStyle = 'rgba(5,6,14,.95)'; X.fillRect(C.width / 2 - mw / 2 - 18, C.height - 64, mw + 36, 48);
+        X.fillStyle = '#ff6b9d'; X.fillText(msg, C.width / 2, C.height - 48);
+        X.font = "9.5px 'Space Mono',monospace"; X.fillStyle = '#ffd166';
+        X.fillText('Shadows overlapped on every axis \u2014 shapes are penetrating.', C.width / 2, C.height - 32);
+        X.restore(); return;
+      }
+
+      // Destructure common fields
+      const { si, ei, n, eS, eE, projOrig, fA, fB, barA, barB, pA, pB, hasGap, overlapAmt, name, otherName } = step;
+
+      // ── edge-pick
+      if (step.type === 'edge-pick') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE, true);
+        return;
+      }
+
+      // ── normal-appear
+      if (step.type === 'normal-appear') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n, t);
+        return;
+      }
+
+      // ── proj-line
+      if (step.type === 'proj-line') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n, t);
+        return;
+      }
+
+      // ── cast-A  (one vertex at a time)
+      if (step.type === 'cast-A') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        // already-revealed rays (fully drawn, faded)
+        step.shownA.slice(0, -1).forEach(({ p, ft, d }) => {
+          dropRay(p, ft, '#64ffda', 1, .42);
+          lbl(d.toFixed(0), ft.x + n.x * 16, ft.y + n.y * 16, '#64ffda', 8.5, .55);
+          dot2(p.x, p.y, 4, '#64ffda', .55);
+        });
+        // current vertex being projected (animated)
+        const cur = step.shownA[step.shownA.length - 1];
+        dot2(cur.p.x, cur.p.y, 8, '#64ffda');
+        lbl('V' + (step.vi + 1), cur.p.x, cur.p.y - 20, '#ffd166', 10);
+        dropRay(cur.p, cur.ft, '#64ffda', t, 1);
+        if (t > .85) lbl(cur.d.toFixed(0), cur.ft.x + n.x * 16, cur.ft.y + n.y * 16, '#64ffda', 9);
+        return;
+      }
+
+      // ── shadow-A
+      if (step.type === 'shadow-A') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        fA.forEach(({ p, ft, d }) => { dropRay(p, ft, '#64ffda', 1, .32); });
+        shadowBar(barA.mnFt, barA.mxFt, barA.mn, barA.mx, '#64ffda', 'Shadow A', t);
+        return;
+      }
+
+      // ── cast-B
+      if (step.type === 'cast-B') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        fA.forEach(({ p, ft }) => dropRay(p, ft, '#64ffda', 1, .18));
+        shadowBar(barA.mnFt, barA.mxFt, barA.mn, barA.mx, '#64ffda', 'Shadow A', .5);
+        step.shownB.slice(0, -1).forEach(({ p, ft, d }) => {
+          dropRay(p, ft, '#ff6b9d', 1, .42);
+          lbl(d.toFixed(0), ft.x + n.x * 16, ft.y + n.y * 16, '#ff6b9d', 8.5, .55);
+          dot2(p.x, p.y, 4, '#ff6b9d', .55);
+        });
+        const cur = step.shownB[step.shownB.length - 1];
+        dot2(cur.p.x, cur.p.y, 8, '#ff6b9d');
+        lbl('V' + (step.vi + 1), cur.p.x, cur.p.y - 20, '#ffd166', 10);
+        dropRay(cur.p, cur.ft, '#ff6b9d', t, 1);
+        if (t > .85) lbl(cur.d.toFixed(0), cur.ft.x + n.x * 16, cur.ft.y + n.y * 16, '#ff6b9d', 9);
+        return;
+      }
+
+      // ── shadow-B
+      if (step.type === 'shadow-B') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        fA.forEach(({ p, ft }) => dropRay(p, ft, '#64ffda', 1, .18));
+        fB.forEach(({ p, ft }) => dropRay(p, ft, '#ff6b9d', 1, .25));
+        shadowBar(barA.mnFt, barA.mxFt, barA.mn, barA.mx, '#64ffda', 'Shadow A', 1);
+        shadowBar(barB.mnFt, barB.mxFt, barB.mn, barB.mx, '#ff6b9d', 'Shadow B', t);
+        return;
+      }
+
+      // ── compare
+      if (step.type === 'compare') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        fA.forEach(({ p, ft }) => dropRay(p, ft, '#64ffda', 1, .14));
+        fB.forEach(({ p, ft }) => dropRay(p, ft, '#ff6b9d', 1, .14));
+        shadowBar(barA.mnFt, barA.mxFt, barA.mn, barA.mx, '#64ffda', 'Shadow A', 1);
+        shadowBar(barB.mnFt, barB.mxFt, barB.mn, barB.mx, '#ff6b9d', 'Shadow B', 1);
+        const verdict = hasGap
+          ? 'A.max=' + pA.mx.toFixed(0) + ' < B.min=' + pB.mn.toFixed(0) + ' \u2192 GAP!'
+          : 'Overlap = ' + overlapAmt.toFixed(1) + 'px \u2192 axis fails';
+        lbl(verdict, C.width / 2, C.height - 30, hasGap ? '#a8ff78' : '#ff6b9d', 10.5);
+        return;
+      }
+
+      // ── gap
+      if (step.type === 'gap') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        fA.forEach(({ p, ft }) => dropRay(p, ft, '#64ffda', 1, .14));
+        fB.forEach(({ p, ft }) => dropRay(p, ft, '#ff6b9d', 1, .14));
+        shadowBar(barA.mnFt, barA.mxFt, barA.mn, barA.mx, '#64ffda', '', 1);
+        shadowBar(barB.mnFt, barB.mxFt, barB.mn, barB.mx, '#ff6b9d', '', 1);
+        resultRegion(barA, barB, projOrig, n, true, t);
+        X.save(); X.font = "bold 12px 'Space Mono',monospace"; X.textAlign = 'center'; X.textBaseline = 'middle';
+        const msg = '\u2713  Gap found \u2014 Separating Axis \u2014 NO COLLISION!';
+        const mw = X.measureText(msg).width;
+        X.fillStyle = 'rgba(5,6,14,.95)'; X.fillRect(C.width / 2 - mw / 2 - 14, C.height - 46, mw + 28, 30);
+        X.fillStyle = '#a8ff78'; X.fillText(msg, C.width / 2, C.height - 31); X.restore();
+        return;
+      }
+
+      // ── overlap
+      if (step.type === 'overlap') {
+        shapes(si);
+        edgeLabels(shapeA, '#64ffda', si === 0 ? ei : -1);
+        edgeLabels(shapeB, '#ff6b9d', si === 1 ? ei : -1);
+        activeEdge(eS, eE);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        fA.forEach(({ p, ft }) => dropRay(p, ft, '#64ffda', 1, .14));
+        fB.forEach(({ p, ft }) => dropRay(p, ft, '#ff6b9d', 1, .14));
+        shadowBar(barA.mnFt, barA.mxFt, barA.mn, barA.mx, '#64ffda', '', 1);
+        shadowBar(barB.mnFt, barB.mxFt, barB.mn, barB.mx, '#ff6b9d', '', 1);
+        resultRegion(barA, barB, projOrig, n, false, t);
+        lbl('Overlap ' + overlapAmt.toFixed(1) + 'px \u2014 axis fails, try next edge', C.width / 2, C.height - 30, '#ff6b9d', 10);
+        return;
+      }
+
+      // ── result-sep
+      if (step.type === 'result-sep') {
+        shapes(si);
+        activeEdge(eS, eE, true);
+        normalArrow(eS, eE, n);
+        projLine(projOrig, n);
+        shadowBar(barA.mnFt, barA.mxFt, barA.mn, barA.mx, '#64ffda', 'Shadow A', 1);
+        shadowBar(barB.mnFt, barB.mxFt, barB.mn, barB.mx, '#ff6b9d', 'Shadow B', 1);
+        resultRegion(barA, barB, projOrig, n, true, 1);
+        X.save(); X.font = "bold 13px 'Space Mono',monospace"; X.textAlign = 'center'; X.textBaseline = 'middle';
+        const msg = '\u2713  Separating axis on e' + (ei + 1) + ' of ' + name + ' \u2014 NO COLLISION';
+        const mw = X.measureText(msg).width;
+        X.fillStyle = 'rgba(5,6,14,.96)'; X.fillRect(C.width / 2 - mw / 2 - 14, C.height - 46, mw + 28, 30);
+        X.fillStyle = '#a8ff78'; X.fillText(msg, C.width / 2, C.height - 31); X.restore();
+        return;
+      }
+    }
+
+    // ─── Narration ────────────────────────────────────────────────────────────
+    const NARRATION = {
+      intro:
+        "Welcome to the shadow projection method of the Separating Axis Theorem. " +
+        "The key insight is this: if you can find any direction where the shadows of two shapes do not overlap, " +
+        "the shapes cannot be touching. " +
+        "We test one direction per edge — the outward normal. " +
+        "Let's walk through every edge, one at a time.",
+
+      'edge-pick':
+        "We pick edge {ei} of shape {name}, shown in yellow. " +
+        "Every edge of every shape gives us one candidate direction to test. " +
+        "We will derive the outward normal of this edge and use it as our projection axis.",
+
+      'normal-appear':
+        "The green arrow is the outward normal of edge {ei}. " +
+        "It is perpendicular to the edge and points away from shape {name}. " +
+        "This is the direction we will project both shapes onto. " +
+        "Think of it as the direction a light source shines to cast shadows.",
+
+      'proj-line':
+        "The purple dashed line is the projection axis — it runs through the scene along the normal direction. " +
+        "Think of it as a ruler or a number line. " +
+        "We will drop a perpendicular line from every vertex of both shapes onto this ruler. " +
+        "Each vertex lands somewhere on the ruler, giving us a number.",
+
+      'cast-A':
+        "Vertex {vi} of shape A is being projected. " +
+        "We drop a perpendicular line from this vertex straight onto the projection ruler. " +
+        "It lands at position {dval}. We record this. " +
+        "After all vertices of A are projected, the leftmost and rightmost landing positions define A's shadow.",
+
+      'shadow-A':
+        "All vertices of shape A have been projected. " +
+        "The teal bar is shape A's shadow — it spans from {minA} to {maxA} on the projection axis. " +
+        "This interval represents the full extent of shape A when viewed from this direction.",
+
+      'cast-B':
+        "Now vertex {vi} of shape B is projected onto the exact same axis. " +
+        "It lands at position {dval}. " +
+        "We use the identical axis for both shapes — that is what makes the comparison meaningful.",
+
+      'shadow-B':
+        "Shape B's shadow spans from {minB} to {maxB}. " +
+        "Both shadows are now visible on the same axis. " +
+        "Do they overlap, or is there a gap between them?",
+
+      'compare':
+        "Let's compare. Shape A: {minA} to {maxA}. Shape B: {minB} to {maxB}. " +
+        "{verdict}",
+
+      'gap':
+        "There is a gap between the two shadows. They do not touch. " +
+        "A gap on any axis is sufficient proof that the shapes are not colliding — " +
+        "because it means there is empty space between them in that direction. " +
+        "We are done. No collision.",
+
+      'overlap':
+        "The shadows overlap by {overlap} pixels on this axis. " +
+        "An overlap means this direction cannot separate the shapes. " +
+        "We discard this axis and move to the next edge.",
+
+      'result-sep':
+        "We found a separating axis on edge {ei} of shape {name}. " +
+        "By the Separating Axis Theorem, finding even one gap is enough. " +
+        "The shapes are not colliding.",
+
+      'result-col':
+        "We tested every edge of both shapes and found overlapping shadows on every single axis. " +
+        "No separating axis exists anywhere. The shapes are colliding. " +
+        "The axis with the smallest overlap tells us how far to push the shapes apart to resolve the collision.",
+    };
+
+    let ttsEnabled = true;
+    function speak(text) {
+      return new Promise(resolve => {
+        const descBox = document.getElementById('sDesc');
+        if (descBox && text) {
+          descBox.innerHTML = text;
+        }
+
+        if (!ttsEnabled || !text || !window.speechSynthesis) { resolve(); return; }
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = parseFloat(document.getElementById('ttsRate').value || 1);
+        const sel = document.getElementById('ttsVoice');
+        if (sel && sel.value) {
+          u.voice = window.speechSynthesis.getVoices().find(v => v.name === sel.value);
+        }
+
+        // Duck background music
+        if (window.bgMusicDuck) window.bgMusicDuck();
+
+        u.onend = () => {
+          if (window.bgMusicRestore) window.bgMusicRestore();
+          resolve();
+        };
+        u.onerror = () => {
+          if (window.bgMusicRestore) window.bgMusicRestore();
+          resolve();
+        };
+        window.speechSynthesis.speak(u);
+      });
+    }
+
+    function narrate(step) {
+      if (!step) return '';
+      const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
+      if (step.type === 'intro') return NARRATION.intro;
+      if (step.type === 'result-col') return NARRATION['result-col'];
+      const { name, otherName, ei, pA, pB, hasGap, overlapAmt, fA, fB, n } = step;
+      const curA = step.type === 'cast-A' ? step.shownA[step.shownA.length - 1] : null;
+      const curB = step.type === 'cast-B' ? step.shownB[step.shownB.length - 1] : null;
+      const vars = {
+        name, otherName, ei: ei + 1,
+        vi: step.vi != null ? step.vi + 1 : '',
+        dval: curA ? curA.d.toFixed(0) : curB ? curB.d.toFixed(0) : '',
+        minA: pA ? pA.mn.toFixed(0) : '', maxA: pA ? pA.mx.toFixed(0) : '',
+        minB: pB ? pB.mn.toFixed(0) : '', maxB: pB ? pB.mx.toFixed(0) : '',
+        overlap: overlapAmt != null ? overlapAmt.toFixed(1) : '',
+        verdict: hasGap
+          ? 'There is a gap — the shadows do not touch. This is a separating axis!'
+          : 'The intervals overlap by ' + (overlapAmt || 0).toFixed(1) + ' pixels. This axis fails.',
+      };
+      return fill(NARRATION[step.type] || '', vars);
+    }
+
+    function populateVoices() {
+      const sel = document.getElementById('ttsVoice'); if (!sel) return;
+      const vv = window.speechSynthesis.getVoices();
+      sel.innerHTML = '<option value="">Default voice</option>';
+      vv.forEach(v => { const o = document.createElement('option'); o.value = v.name; o.textContent = v.name + ' (' + v.lang + ')'; sel.appendChild(o); });
+      const pref = [
+        'Microsoft Aria Online (Natural) - English (United States)',
+        'Microsoft Jenny Online (Natural) - English (United States)',
+        'Microsoft Guy Online (Natural) - English (United States)',
+        'Google US English',
+        'Samantha',
+        'Google UK English Female',
+        'Google UK English Male',
+        'Daniel',
+        'Microsoft Zira Desktop - English (United States)'
+      ];
+      let ok = false;
+      for (const n of pref) { const o = [...sel.options].find(o => o.value.includes(n) || o.value === n); if (o) { o.selected = true; ok = true; break; } }
+      if (!ok) { const gb = vv.find(v => v.lang === 'en-US' || v.lang === 'en-GB'); if (gb) { const o = [...sel.options].find(o => o.value === gb.name); if (o) o.selected = true; } }
+    }
+    if (window.speechSynthesis) { window.speechSynthesis.onvoiceschanged = populateVoices; populateVoices(); }
+
+    document.getElementById('btnMute').onclick = () => {
+      ttsOn = !ttsOn;
+      document.getElementById('btnMute').textContent = ttsOn ? '\uD83D\uDD0A' : '\uD83D\uDD07';
+      if (!ttsOn && window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+    document.getElementById('ttsRate').oninput = function () {
+      document.getElementById('ttsRateLbl').textContent = parseFloat(this.value).toFixed(1) + '\u00d7';
+    };
+
+    // ─── UI text panel ─────────────────────────────────────────────────────────
+    function getUI(step) {
+      if (!step) return { title: '', desc: '', math: '', cls: '' };
+      if (step.type === 'intro') return {
+        title: 'Classic Projection - \u2014 SAT',
+        desc: 'We project both shapes onto each edge\'s outward normal and compare the resulting intervals. ' +
+          'If the two shadows have a <em>gap</em> on any axis, the shapes are NOT colliding. ' +
+          'We test every edge of both shapes in turn.',
+        math: 'gap: A.max < B.min  OR  B.max < A.min\n\u2192 shapes SEPARATED', cls: ''
+      };
+      if (step.type === 'result-col') return {
+        title: '\u2717 Collision',
+        desc: 'Shadows overlapped on <em>every single axis</em>. No separating axis exists. The shapes are <span class="neg">colliding</span>. The axis with smallest overlap gives the MTV.',
+        math: 'No gap \u2192 COLLISION\nMTV = axis of min overlap', cls: 'danger'
+      };
+
+      const { name, otherName, ei, pA, pB, hasGap, overlapAmt } = step; const en = ei + 1;
+      if (step.type === 'edge-pick') return {
+        title: 'Edge e' + en + ' of Shape ' + name,
+        desc: 'The <span class="hi">yellow edge e' + en + '</span> is selected. Its outward normal will be our projection axis. ' +
+          'We will cast both shapes as shadows along this direction and compare.',
+        math: 'edge e' + en + ': V' + en + ' \u2192 V' + (ei + 1 < step.nEdges ? en + 1 : 1), cls: 'warn'
+      };
+      if (step.type === 'normal-appear') return {
+        title: 'Outward Normal n\u0302',
+        desc: 'The <em>green arrow</em> is the outward normal of e' + en + ' \u2014 perpendicular to the edge and pointing away from shape ' + name + '. ' +
+          'This is our <em>projection axis</em>. Both shapes will be projected along this direction.',
+        math: 'n\u0302 = normalise( perp(e' + en + ') )\n  \u2192 outward from ' + name, cls: ''
+      };
+      if (step.type === 'proj-line') return {
+        title: 'Projection Line',
+        desc: 'The <span class="vi">purple dashed line</span> runs along n\u0302, offset from the edge. ' +
+          'It is the 1D ruler every vertex will be projected onto. ' +
+          'Each vertex drops a <em>perpendicular ray</em> onto this ruler and gets a position number.',
+        math: 'proj(v) = dot(v, n\u0302)\nMaps a 2D point \u2192 1D number.', cls: ''
+      };
+      if (step.type === 'cast-A') {
+        const vd = step.fA[step.vi].d.toFixed(1);
+        return {
+          title: 'Project V' + (step.vi + 1) + ' of Shape A',
+          desc: 'Vertex <em>V' + (step.vi + 1) + '</em> drops perpendicularly onto the ruler at position <em>' + vd + '</em>. ' +
+            'We record this value. After all vertices, the min and max positions define A\'s shadow.',
+          math: 'dot(V' + (step.vi + 1) + ', n\u0302) = ' + vd, cls: ''
+        };
+      }
+      if (step.type === 'shadow-A') return {
+        title: 'Shadow A: [' + pA.mn.toFixed(0) + ', ' + pA.mx.toFixed(0) + ']',
+        desc: 'All of A\'s vertices have been projected. The <em>teal bar</em> spans from <em>' + pA.mn.toFixed(1) + '</em> to <em>' + pA.mx.toFixed(1) + '</em>. ' +
+          'This is the full extent of shape A viewed from this direction.',
+        math: 'A.min = ' + pA.mn.toFixed(2) + '\nA.max = ' + pA.mx.toFixed(2) + '\nspan  = ' + (pA.mx - pA.mn).toFixed(2), cls: ''
+      };
+      if (step.type === 'cast-B') {
+        const vd = step.fB[step.vi].d.toFixed(1);
+        return {
+          title: 'Project V' + (step.vi + 1) + ' of Shape B',
+          desc: 'Vertex <em>V' + (step.vi + 1) + '</em> of shape B is projected onto the <em>same axis</em>, landing at <span class="neg">' + vd + '</span>. ' +
+            'Same axis for both shapes \u2014 that makes the comparison valid.',
+          math: 'dot(V' + (step.vi + 1) + ', n\u0302) = ' + vd, cls: ''
+        };
+      }
+      if (step.type === 'shadow-B') return {
+        title: 'Shadow B: [' + pB.mn.toFixed(0) + ', ' + pB.mx.toFixed(0) + ']',
+        desc: 'Both shadows on the same axis. A: <em>[' + pA.mn.toFixed(0) + ', ' + pA.mx.toFixed(0) + ']</em> &nbsp; B: <span class="neg">[' + pB.mn.toFixed(0) + ', ' + pB.mx.toFixed(0) + ']</span>. ' +
+          'Is there a gap or an overlap?',
+        math: 'A: [' + pA.mn.toFixed(1) + ', ' + pA.mx.toFixed(1) + ']\nB: [' + pB.mn.toFixed(1) + ', ' + pB.mx.toFixed(1) + ']', cls: ''
+      };
+      if (step.type === 'compare') {
+        const gap = hasGap ? Math.max(pA.mn, pB.mn) - Math.min(pA.mx, pB.mx) : 0;
+        return {
+          title: 'Comparing Shadows',
+          desc: hasGap
+            ? '<em>A.max=' + pA.mx.toFixed(1) + '</em> &lt; <em>B.min=' + pB.mn.toFixed(1) + '</em> \u2014 A ends before B begins. <em>Gap = ' + gap.toFixed(1) + 'px!</em>'
+            : 'A.max=' + pA.mx.toFixed(1) + ' &gt; B.min=' + pB.mn.toFixed(1) + ' \u2014 shadows share a region. <span class="neg">Overlap = ' + overlapAmt.toFixed(1) + 'px. Axis fails.</span>',
+          math: hasGap
+            ? 'gap = B.min\u2212A.max = ' + gap.toFixed(2) + '\n> 0 \u2192 SEPARATED \u2713'
+            : 'overlap = min(Amax,Bmax)\u2212max(Amin,Bmin)\n       = ' + overlapAmt.toFixed(2) + '\n> 0 \u2192 axis fails, continue',
+          cls: hasGap ? 'green' : 'danger'
+        };
+      }
+      if (step.type === 'gap') {
+        const gap = Math.max(pA.mn, pB.mn) - Math.min(pA.mx, pB.mx);
+        return {
+          title: '\u2713 Gap \u2014 Separating Axis Found!',
+          desc: 'The <em>green region</em> is the gap of <em>' + gap.toFixed(1) + 'px</em> between the shadows. ' +
+            'A gap on any axis proves the shapes are separated. By SAT, we can stop immediately.',
+          math: 'gap = ' + gap.toFixed(2) + ' > 0\n\u2192 SEPARATING AXIS \u2713\n\u2192 NO COLLISION', cls: 'green'
+        };
+      }
+      if (step.type === 'overlap') return {
+        title: 'Overlap = ' + overlapAmt.toFixed(1) + 'px \u2014 Axis Fails',
+        desc: 'The <span class="neg">red region</span> shows ' + overlapAmt.toFixed(1) + 'px of shared shadow. An overlap means this axis cannot separate the shapes. Try the next edge.',
+        math: 'overlap = ' + overlapAmt.toFixed(2) + '\n> 0 \u2192 not separated\n\u2192 continue to next edge', cls: 'danger'
+      };
+      if (step.type === 'result-sep') return {
+        title: '\u2713 No Collision!',
+        desc: 'Gap found on e' + en + ' of shape ' + name + '. By SAT, <em>one separating axis is enough</em>. The shapes are definitely not colliding.',
+        math: 'gap on e' + en + ' of ' + name + '\n\u2192 SEPARATED\n\u2192 NO COLLISION \u2713', cls: 'green'
+      };
+      return { title: '', desc: '', math: '', cls: '' };
+    }
+
+    function updatePanel() {
+      const step = STEPS[CUR], info = getUI(step);
+      document.getElementById('sNum').textContent = 'Step ' + (CUR + 1) + ' / ' + STEPS.length;
+      document.getElementById('sTitle').textContent = info.title;
+      document.getElementById('sDesc').innerHTML = info.desc;
+      document.getElementById('mBox').textContent = info.math;
+      document.getElementById('stepCard').className = 'step-card' + (info.cls ? ' ' + info.cls : '');
+      document.getElementById('btnPrev').disabled = CUR === 0;
+      document.getElementById('btnNext').disabled = CUR === STEPS.length - 1;
+      const pct = STEPS.length > 1 ? CUR / (STEPS.length - 1) * 100 : 0;
+      document.getElementById('pFill').style.width = pct + '%';
+      document.getElementById('pL').textContent = 'Step ' + (CUR + 1);
+      document.getElementById('pR').textContent = 'of ' + STEPS.length;
+    }
+
+    // ─── Navigation ────────────────────────────────────────────────────────────
+    function goTo(idx, anim) {
+      anim = anim ?? true;
+      CUR = Math.max(0, Math.min(STEPS.length - 1, idx));
+      updatePanel();
+      const s = STEPS[CUR];
+      if (anim && s && (s.type === 'cast-A' || s.type === 'cast-B')) startAnim(560);
+      else if (anim && s && (s.type === 'normal-appear' || s.type === 'proj-line')) startAnim(480);
+      else if (anim && s && (s.type === 'gap' || s.type === 'overlap' || s.type === 'shadow-A' || s.type === 'shadow-B')) startAnim(420);
+      else snapAnim();
+      speak(narrate(s));
+    }
+
+    function refresh() {
+      stopAuto();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      initShapes(); buildSteps(); CUR = 0; updatePanel(); snapAnim();
+    }
+
+    document.getElementById('btnNext').onclick = () => goTo(CUR + 1);
+    document.getElementById('btnPrev').onclick = () => goTo(CUR - 1);
+    document.getElementById('btnReset').onclick = refresh;
+
+    let isAuto = false, autoTimer = null;
+    function stopAuto() {
+      isAuto = false; clearTimeout(autoTimer);
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      document.getElementById('btnAuto').textContent = '\u25b6 Auto';
+      document.getElementById('btnAuto').classList.remove('active');
+    }
+    document.getElementById('btnAuto').onclick = () => {
+      if (isAuto) { stopAuto(); return; }
+      isAuto = true;
+      document.getElementById('btnAuto').textContent = '\u25a0 Stop';
+      document.getElementById('btnAuto').classList.add('active');
+      async function tick() {
+        if (!isAuto) return;
+        if (CUR >= STEPS.length - 1) { stopAuto(); return; }
+        CUR = Math.min(STEPS.length - 1, CUR + 1); updatePanel();
+        const s = STEPS[CUR];
+        if (s.type === 'cast-A' || s.type === 'cast-B') startAnim(560);
+        else if (s.type === 'normal-appear' || s.type === 'proj-line') startAnim(480);
+        else if (s.type === 'gap' || s.type === 'overlap' || s.type === 'shadow-A' || s.type === 'shadow-B') startAnim(420);
+        else snapAnim();
+        await speak(narrate(s));
+        if (!isAuto) return;
+        autoTimer = setTimeout(tick, parseInt(document.getElementById('spd').value) + 1500); // Prominent pause between steps
+      }
+      autoTimer = setTimeout(tick, 300);
+    };
+    document.getElementById('spd').oninput = function () {
+      document.getElementById('spdLbl').textContent = (this.value / 1000).toFixed(1) + 's';
+    };
+
+    document.querySelectorAll('input[name=sA]').forEach(r => r.onchange = function () { typeA = this.value; refresh(); });
+    document.querySelectorAll('input[name=sB]').forEach(r => r.onchange = function () { typeB = this.value; refresh(); });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(CUR + 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(CUR - 1); }
+    });
+
+    // ─── Drag ─────────────────────────────────────────────────────────────────
+    let drag = null, dragStart = null, snapA, snapB;
+    function mpt(e) { const r = C.getBoundingClientRect(); return V((e.clientX - r.left) * (C.width / r.width), (e.clientY - r.top) * (C.height / r.height)); }
+    C.addEventListener('mousedown', e => {
+      const p = mpt(e), cA = centroid(shapeA), cB = centroid(shapeB);
+      const dA = Math.hypot(p.x - cA.x, p.y - cA.y), dB = Math.hypot(p.x - cB.x, p.y - cB.y);
+      if (dA < 85 || dB < 85) { drag = dA < dB ? 'A' : 'B'; dragStart = p; snapA = shapeA.map(p => V(p.x, p.y)); snapB = shapeB.map(p => V(p.x, p.y)); }
+    });
+    C.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const p = mpt(e), dx = p.x - dragStart.x, dy = p.y - dragStart.y;
+      if (drag === 'A') shapeA = moveV(snapA, dx, dy); else shapeB = moveV(snapB, dx, dy);
+      buildSteps(); CUR = Math.min(CUR, STEPS.length - 1); updatePanel(); snapAnim();
+    });
+    C.addEventListener('mouseup', () => drag = null);
+    C.addEventListener('mouseleave', () => drag = null);
+    C.addEventListener('touchstart', e => { e.preventDefault(); C.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+    C.addEventListener('touchmove', e => { e.preventDefault(); C.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+    C.addEventListener('touchend', () => C.dispatchEvent(new MouseEvent('mouseup')));
+
+    refresh();
+
+  </script>
+  <script src="bg-music.js"></script>
+</body>
+
+</html>

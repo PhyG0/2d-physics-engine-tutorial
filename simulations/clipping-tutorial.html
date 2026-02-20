@@ -932,17 +932,15 @@
     let chosenVoice = null;
 
     const MALE_VOICE_PRIORITY = [
+      'Microsoft Aria Online (Natural) - English (United States)',
+      'Microsoft Jenny Online (Natural) - English (United States)',
+      'Microsoft Guy Online (Natural) - English (United States)',
+      'Google US English',
+      'Samantha',
+      'Google UK English Female',
       'Google UK English Male',
-      'Daniel',            // macOS/iOS high-quality en-GB male
-      'Google US English', // Chrome's clear US male
-      'Alex',              // macOS US male
-      'Fred',              // macOS US male
-      'Arthur',            // macOS en-GB male
-      'Aaron',             // macOS US male
-      'Eddy',              // macOS en-US
-      'Reed',              // macOS en-US
-      'Thomas',            // en-GB
-      'Oliver',            // en-GB
+      'Daniel',
+      'Microsoft Zira Desktop - English (United States)'
     ];
 
     function pickVoice() {
@@ -951,18 +949,18 @@
 
       // 1. Exact name match from priority list
       for (const name of MALE_VOICE_PRIORITY) {
-        const found = voices.find(v => v.name === name);
+        const found = voices.find(v => v.name.includes(name) || v.name === name);
         if (found) { chosenVoice = found; return; }
       }
-      // 2. Name contains 'male' (case-insensitive)
-      const maleName = voices.find(v => v.name.toLowerCase().includes('male'));
-      if (maleName) { chosenVoice = maleName; return; }
-      // 3. en-GB any
-      const enGB = voices.find(v => v.lang === 'en-GB');
-      if (enGB) { chosenVoice = enGB; return; }
-      // 4. en-US any
+      // 2. Name contains 'natural' or 'online' (case-insensitive)
+      const naturalName = voices.find(v => v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online'));
+      if (naturalName) { chosenVoice = naturalName; return; }
+      // 3. en-US any
       const enUS = voices.find(v => v.lang === 'en-US');
       if (enUS) { chosenVoice = enUS; return; }
+      // 4. en-GB any
+      const enGB = voices.find(v => v.lang === 'en-GB');
+      if (enGB) { chosenVoice = enGB; return; }
       // 5. Any English
       const en = voices.find(v => v.lang.startsWith('en'));
       if (en) { chosenVoice = en; return; }
@@ -986,6 +984,11 @@
     });
 
     function speak(txt) {
+      const descBox = document.getElementById('step-desc');
+      if (descBox && txt) {
+        descBox.innerHTML = txt;
+      }
+
       if (!ttsOn || !window.speechSynthesis) return;
       speechSynthesis.cancel();
       // re-attempt voice pick in case voices loaded late
@@ -993,9 +996,20 @@
       const clean = txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const u = new SpeechSynthesisUtterance(clean);
       if (chosenVoice) u.voice = chosenVoice;
-      u.lang = 'en-GB';
-      u.rate = 0.88;
-      u.pitch = 0.85; // lower pitch → sounds more male on any fallback voice
+      u.lang = 'en-US';
+      u.rate = 0.95;
+      u.pitch = 1.0;
+
+      // Duck background music
+      if (window.bgMusicDuck) window.bgMusicDuck();
+
+      u.onend = () => {
+        if (window.bgMusicRestore) window.bgMusicRestore();
+      };
+      u.onerror = () => {
+        if (window.bgMusicRestore) window.bgMusicRestore();
+      };
+
       speechSynthesis.speak(u);
     }
 
@@ -1228,9 +1242,16 @@
       // ── FINAL ─────────────────────────────────────────────────────────────────
       steps.push({
         title: `🎉 ${S_()} — Final Result!`,
-        say: `And there it is — the final answer shown in yellow. ${contactPoints.length === 2 ? 'We have two contact points forming the final clipped contact edge. These are the actual points where the two edges touch or intersect.' : contactPoints.length === 1 ? 'We have one contact point — the edges touch at a single location.' : 'There are no contact points — the edges do not actually intersect within the boundary.'}  This is the complete Sutherland-Hodgman edge clipping process. Left clip, right clip, depth filter — done!`,
-        desc: `<b style="color:#ffd166">Yellow = final clipped edge</b> — the true intersection region of the two edges!<br>Left clip → Right clip → Depth filter → Result.`,
+        say: `And there it is — the final answer shown in yellow. ${contactPoints.length === 2 ? 'We have two contact points forming the final clipped contact edge. These are the actual points where the two edges touch or intersect.' : contactPoints.length === 1 ? 'We have one contact point — the edges touch at a single location.' : 'There are no contact points — the edges do not actually intersect within the boundary.'}`,
+        desc: `<b style="color:#ffd166">Yellow = final clipped edge</b> — the true intersection region of the two edges!`,
         dur: 1100, enter(t) { S.final = eO(t); }
+      });
+
+      steps.push({
+        title: `🎉 ${S_()} — Finished!`,
+        say: `This concludes the complete Sutherland-Hodgman edge clipping process. Left clip, right clip, depth filter — done! We now have the exact points needed to calculate physics impulses and push shapes apart.`,
+        desc: `Left clip → Right clip → Depth filter → Result.`,
+        dur: 1100, enter(t) { S.final = 1; }
       });
 
       return steps;
@@ -1295,6 +1316,7 @@
     document.getElementById('prog').textContent = `Step 0 / ${steps.length}`;
     drawScene();
   </script>
+  <script src="bg-music.js"></script>
 </body>
 
 </html>
