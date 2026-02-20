@@ -308,12 +308,29 @@
   <h1>Edge Clipping — Interactive Visual Tutorial</h1>
 
   <!-- TOP: next/prev always visible -->
-  <div id="top-bar">
-    <button id="btn-restart">↺ Restart</button>
-    <button id="btn-prev">← Prev</button>
-    <button id="btn-next">Next Step →</button>
-    <span id="prog">Step 0 / –</span>
-    <button id="btn-tts">🔊 Voice ON</button>
+  <div class="toolbar"
+    style="width:100%;max-width:980px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
+    <div class="toolbar-group" style="display:flex;align-items:center;gap:12px;">
+      <div class="ctrl" style="display:flex;gap:8px;">
+        <button id="btnPrev" disabled
+          style="background:#181d2a;border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">←
+          Prev</button>
+        <button id="btnNext" class="primary"
+          style="background:var(--accent);color:#0b0d12;border:1px solid var(--accent);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">Next
+          →</button>
+        <button id="btnAuto"
+          style="background:#181d2a;border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">▶
+          Auto</button>
+        <button id="btnReset"
+          style="background:#181d2a;border:1px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">↺</button>
+        <button id="btnMute" title="Toggle narration"
+          style="background:#181d2a;border:1px solid var(--yellow);color:var(--yellow);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">🔊</button>
+        <button id="btnMuteMusic" title="Toggle music"
+          style="background:#181d2a;border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">🎵</button>
+      </div>
+      <div id="prog" style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);">Step 1 of —
+      </div>
+    </div>
   </div>
 
   <!-- CANVAS -->
@@ -608,7 +625,7 @@
         cpR: 0,
         // depth filter
         showCandidates: 0,
-        showRefNorm: 0,      // <--- NEW
+        showRefNorm: 0,
         showDepthShade: 0,
         showDepth0: 0, showDepth1: 0,
         showKept: 0,
@@ -975,13 +992,7 @@
       setTimeout(pickVoice, 1000);
     }
 
-    document.getElementById('btn-tts').addEventListener('click', () => {
-      ttsOn = !ttsOn;
-      const b = document.getElementById('btn-tts');
-      b.textContent = ttsOn ? '🔊 Voice ON' : '🔇 Voice OFF';
-      b.classList.toggle('off', !ttsOn);
-      if (!ttsOn) speechSynthesis.cancel();
-    });
+
 
     function speak(txt) {
       const descBox = document.getElementById('step-desc');
@@ -997,7 +1008,7 @@
       const u = new SpeechSynthesisUtterance(clean);
       if (chosenVoice) u.voice = chosenVoice;
       u.lang = 'en-US';
-      u.rate = 0.95;
+      u.rate = 1.0;
       u.pitch = 1.0;
 
       // Duck background music
@@ -1295,18 +1306,56 @@
       drawScene();
     }
 
-    document.getElementById('btn-next').addEventListener('click', () => {
+    document.getElementById('btnNext').onclick = () => {
       if (anim) return;
       if (curStep < 0) { computeGeo(); steps = buildSteps(); }
       if (curStep < steps.length - 1) startStep(curStep + 1);
-    });
-    document.getElementById('btn-prev').addEventListener('click', () => {
+    };
+    document.getElementById('btnPrev').onclick = () => {
       if (anim || curStep <= 0) return;
       resetS();
-      for (let i = 0; i < curStep - 1; i++)steps[i].enter(1);
+      for (let i = 0; i < curStep - 1; i++) steps[i].enter(1);
       startStep(curStep - 1);
-    });
-    document.getElementById('btn-restart').addEventListener('click', fullReset);
+    };
+    document.getElementById('btnReset').onclick = fullReset;
+
+    document.getElementById('btnMute').onclick = () => {
+      ttsOn = !ttsOn;
+      document.getElementById('btnMute').textContent = ttsOn ? '🔊' : '🔇';
+      if (!ttsOn && window.speechSynthesis) speechSynthesis.cancel();
+    };
+
+    const btnMuteMusic = document.getElementById('btnMuteMusic');
+    if (btnMuteMusic) {
+      btnMuteMusic.onclick = () => {
+        if (window.toggleBgMusicMute) {
+          const isMuted = window.toggleBgMusicMute();
+          btnMuteMusic.style.opacity = isMuted ? '0.5' : '1';
+        }
+      };
+    }
+
+    let autoOn = false, autoTimer = null;
+    function stopAuto() {
+      autoOn = false; clearTimeout(autoTimer);
+      document.getElementById('btnAuto').textContent = '▶ Auto';
+    }
+
+    document.getElementById('btnAuto').onclick = () => {
+      if (autoOn) { stopAuto(); return; }
+      autoOn = true;
+      document.getElementById('btnAuto').textContent = '■ Stop';
+      async function tick() {
+        if (!autoOn) return;
+        if (curStep >= steps.length - 1) { stopAuto(); return; }
+        startStep(curStep + 1);
+        // We need a way to wait for the speech to finish if possible, 
+        // but startStep(i) handles speak() internally.
+        // For auto-play consistency with other sims, we'll just use a fixed delay after the step starts.
+        autoTimer = setTimeout(tick, 3000);
+      }
+      tick();
+    };
 
     // ─────────────────────────────────────────────────────────────────────────────
     // INIT

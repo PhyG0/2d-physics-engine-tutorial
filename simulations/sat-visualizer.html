@@ -374,15 +374,10 @@
           <button id="btnAuto">▶ Auto</button>
           <button id="btnReset">↺</button>
           <button id="btnMute" title="Toggle narration">🔊</button>
+          <button id="btnMuteMusic" title="Toggle music">🎵</button>
         </div>
       </div>
-      <div class="toolbar-group" style="flex:1;max-width:300px;">
-        <div class="spd" style="width:100%;">
-          <span>Speed</span>
-          <input type="range" id="spd" min="0" max="3000" value="400" step="100">
-          <span id="spdLbl">0.4s</span>
-        </div>
-      </div>
+
     </div>
 
     <div class="canvas-wrap">
@@ -432,11 +427,6 @@
       border-radius:4px;padding:.35rem .5rem;font-family:'Space Mono',monospace;font-size:.6rem;margin-bottom:.55rem;">
           <option value="">Default voice</option>
         </select>
-        <div class="spd" style="margin-bottom:.4rem;">
-          <span>Rate</span>
-          <input type="range" id="ttsRate" min="0.5" max="2.0" step="0.1" value="1.0">
-          <span id="ttsRateLbl">1.0×</span>
-        </div>
       </div>
 
       <!-- Legend -->
@@ -1096,7 +1086,7 @@
           if (!ttsEnabled || !text || !window.speechSynthesis) { resolve(); return; }
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance(text);
-          u.rate = parseFloat(document.getElementById('ttsRate').value || 1);
+          u.rate = 1.0;
           const sel = document.getElementById('ttsVoice');
           if (sel && sel.value) {
             u.voice = window.speechSynthesis.getVoices().find(v => v.name === sel.value);
@@ -1248,10 +1238,6 @@
         if (!ttsEnabled) window.speechSynthesis?.cancel();
       };
 
-      // Rate slider label
-      document.getElementById('ttsRate').oninput = function () {
-        document.getElementById('ttsRateLbl').textContent = parseFloat(this.value).toFixed(1) + '×';
-      };
 
       // ── UI ────────────────────────────────────────────────────
       function getUI(step) {
@@ -1402,6 +1388,22 @@
       document.getElementById('btnPrev').onclick = () => goTo(cur - 1);
       document.getElementById('btnReset').onclick = refresh;
 
+      document.getElementById('btnMute').onclick = () => {
+        ttsEnabled = !ttsEnabled;
+        document.getElementById('btnMute').textContent = ttsEnabled ? '🔊' : '🔇';
+        if (!ttsEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+      };
+
+      const btnMuteMusic = document.getElementById('btnMuteMusic');
+      if (btnMuteMusic) {
+        btnMuteMusic.onclick = () => {
+          if (window.toggleBgMusicMute) {
+            const isMuted = window.toggleBgMusicMute();
+            btnMuteMusic.style.opacity = isMuted ? '0.5' : '1';
+          }
+        };
+      }
+
       let isAuto = false, autoT = null;
       function stopAuto() {
         isAuto = false;
@@ -1441,13 +1443,13 @@
           }
 
           // Small pause between steps, then next
-          autoT = setTimeout(tick, parseInt(document.getElementById('spd').value) + 1500); // More prominent pause
+          autoT = setTimeout(tick, 2000); // Fixed 2.0s pause between steps
         }
 
         // Kick off with a short delay so the button state renders first
         autoT = setTimeout(tick, 300);
       };
-      document.getElementById('spd').oninput = function () { document.getElementById('spdLbl').textContent = (this.value / 1000).toFixed(1) + 's'; };
+
 
       // ── Shape selectors ───────────────────────────────────────
       document.querySelectorAll('input[name=sA]').forEach(r => r.onchange = function () { typeA = this.value; refresh(); });

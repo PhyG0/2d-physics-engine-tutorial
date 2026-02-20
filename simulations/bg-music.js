@@ -4,7 +4,7 @@
     const MAX_START_TIME = 3 * 60 * 60; // 3 hours in seconds
 
     const audio = new Audio(AUDIO_URL);
-    audio.volume = 0.2; // Set a reasonable background volume
+    audio.volume = 0.4; // Set a reasonable background volume
 
     function playRandom() {
         const randomTime = Math.floor(Math.random() * MAX_START_TIME);
@@ -37,6 +37,11 @@
     // Expose volume controls to the global window object so simulations can duck the volume
     window.setBgMusicVolume = function (vol) {
         audio.volume = Math.max(0, Math.min(1, vol));
+    };
+
+    window.toggleBgMusicMute = function () {
+        audio.muted = !audio.muted;
+        return audio.muted;
     };
 
     let duckInterval = null;

@@ -286,785 +286,798 @@
     <div class="main">
         <div class="toolbar">
             <div class="toolbar-group">
-                <div class="tab-btn">Tutorial</div>
-            </div>
-            <div class="toolbar-group" id="tutorialControls">
-                <button id="btnPrev" disabled>Previous</button>
-                <button id="btnNext" class="primary">Next Step</button>
-                <button id="btnAuto" title="Auto-play tutorial">Auto</button>
-                <button id="btnReset">Reset</button>
-                <button id="btnMute" title="Toggle narration">Sound</button>
-            </div>
-            <!-- Canvas -->
-            <div class="canvas-wrap">
-                <canvas id="c"></canvas>
-            </div>
-            <div class="info-grid">
-                <div class="step-card" id="stepCard" style="grid-column:1/-1">
-                    <div class="snum" id="sNum">-</div>
-                    <div class="stitle" id="sTitle">Welcome</div>
-                    <div class="sdesc" id="sDesc">Press Next to begin.</div>
-                    <div class="mbox" id="mBox"></div>
-                </div>
-                <div class="card" id="panelLegend">
-                    <div class="sec">Legend</div>
-                    <div class="leg-item">
-                        <div class="dot" style="background:#64ffda"></div>Vector A
-                    </div>
-                    <div class="leg-item">
-                        <div class="dot" style="background:#ff6b9d"></div>Vector B
-                    </div>
-                    <div class="leg-item">
-                        <div class="lsw" style="background:#ffd166"></div>Angle arc theta
-                    </div>
-                    <div class="leg-item">
-                        <div class="lsw" style="background:#c77dff;border-top:1px dashed #c77dff;height:0"></div>
-                        Projection
-                    </div>
-                </div>
-                <div class="card" id="panelProgress">
-                    <div class="sec">Progress</div>
-                    <div class="prog-bar-bg">
-                        <div class="prog-bar-fill" id="pFill" style="width:0%"></div>
-                    </div>
-                    <div class="prog-lbl"><span id="pL">Step 1</span><span id="pR">of -</span></div>
-                </div>
-                <div class="card" id="panelNarration">
-                    <div class="sec">Narration Settings</div>
-                    <select id="ttsVoice"
-                        style="width:100%;background:#080810;color:#c9d1d9;border:1px solid #1e1e2e;border-radius:4px;padding:.35rem .5rem;font-family:'Space Mono',monospace;font-size:.6rem;margin-bottom:.55rem;">
-                        <option value="">Default voice</option>
-                    </select>
-                    <div style="display:flex;align-items:center;gap:.55rem;font-size:.6rem;color:var(--muted)">
-                        <span>Rate</span>
-                        <input type="range" id="ttsRate" min="0.5" max="2.0" step="0.1" value="1.0"
-                            style="flex:1;accent-color:var(--accent)">
-                        <span id="ttsRateLbl">1.0x</span>
-                    </div>
+                <div class="ctrl" style="margin:0;">
+                    <button id="btnPrev" disabled>← Prev</button>
+                    <button id="btnNext" class="primary">Next →</button>
+                    <button id="btnAuto">▶ Auto</button>
+                    <button id="btnReset">↺</button>
+                    <button id="btnMute" title="Toggle narration">🔊</button>
+                    <button id="btnMuteMusic" title="Toggle music">🎵</button>
                 </div>
             </div>
         </div>
-        <script>
-            const C = document.getElementById('c'), X = C.getContext('2d'), WR = C.parentElement;
-            function resize() { C.width = WR.clientWidth; C.height = Math.max(WR.clientHeight, 500) }
-            resize(); window.addEventListener('resize', () => { resize(); renderScene() });
+        <!-- Canvas -->
+        <div class="canvas-wrap">
+            <canvas id="c"></canvas>
+        </div>
+        <div class="info-grid">
+            <div class="step-card" id="stepCard" style="grid-column:1/-1">
+                <div class="snum" id="sNum">-</div>
+                <div class="stitle" id="sTitle">Welcome</div>
+                <div class="sdesc" id="sDesc">Press Next to begin.</div>
+                <div class="mbox" id="mBox"></div>
+            </div>
+            <div class="card" id="panelLegend">
+                <div class="sec">Legend</div>
+                <div class="leg-item">
+                    <div class="dot" style="background:#64ffda"></div>Vector A
+                </div>
+                <div class="leg-item">
+                    <div class="dot" style="background:#ff6b9d"></div>Vector B
+                </div>
+                <div class="leg-item">
+                    <div class="lsw" style="background:#ffd166"></div>Angle arc theta
+                </div>
+                <div class="leg-item">
+                    <div class="lsw" style="background:#c77dff;border-top:1px dashed #c77dff;height:0"></div>
+                    Projection
+                </div>
+            </div>
+            <div class="card" id="panelProgress">
+                <div class="sec">Progress</div>
+                <div class="prog-bar-bg">
+                    <div class="prog-bar-fill" id="pFill" style="width:0%"></div>
+                </div>
+                <div class="prog-lbl"><span id="pL">Step 1</span><span id="pR">of -</span></div>
+            </div>
+            <div class="card" id="panelNarration">
+                <div class="sec">Narration Settings</div>
+                <select id="ttsVoice"
+                    style="width:100%;background:#080810;color:#c9d1d9;border:1px solid #1e1e2e;border-radius:4px;padding:.35rem .5rem;font-family:'Space Mono',monospace;font-size:.6rem;margin-bottom:.55rem;">
+                    <option value="">Default voice</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <script>
+        const C = document.getElementById('c'), X = C.getContext('2d'), WR = C.parentElement;
+        function resize() { C.width = WR.clientWidth; C.height = Math.max(WR.clientHeight, 500) }
+        resize(); window.addEventListener('resize', () => { resize(); renderScene() });
 
-            const V = (x, y) => ({ x, y }), add = (a, b) => V(a.x + b.x, a.y + b.y), sub = (a, b) => V(a.x - b.x, a.y - b.y),
-                mul = (a, s) => V(a.x * s, a.y * s), dt = (a, b) => a.x * b.x + a.y * b.y, mg = a => Math.sqrt(a.x * a.x + a.y * a.y),
-                hat = a => { const m = mg(a) || 1; return V(a.x / m, a.y / m) }, perp = a => V(-a.y, a.x);
+        const V = (x, y) => ({ x, y }), add = (a, b) => V(a.x + b.x, a.y + b.y), sub = (a, b) => V(a.x - b.x, a.y - b.y),
+            mul = (a, s) => V(a.x * s, a.y * s), dt = (a, b) => a.x * b.x + a.y * b.y, mg = a => Math.sqrt(a.x * a.x + a.y * a.y),
+            hat = a => { const m = mg(a) || 1; return V(a.x / m, a.y / m) }, perp = a => V(-a.y, a.x);
 
-            // Math & Animation Helpers
-            const ease = t => t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-            const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-            const lerp = (a, b, t) => a + (b - a) * t;
-            const lerpV = (a, b, t) => V(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
+        // Math & Animation Helpers
+        const ease = t => t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const lerpV = (a, b, t) => V(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
 
-            // State
-            let origin = V(0, 0); // Set in init
-            let tutCur = 0, tutSteps = [];
+        // State
+        let origin = V(0, 0); // Set in init
+        let tutCur = 0, tutSteps = [];
 
-            // Scene State for Animation
-            const scene = {
-                a: V(160, -80), b: V(120, 100),
-                opacity: 1,
-                light: V(0, -150),
-                look: V(100, 0),   // For FOV step
-                enemy: V(100, 50), // For FOV step
-                pt: V(100, -80),   // For Closest Point step
-                vel: V(100, 80)    // For Reflection step
-            };
-            const targets = {
-                a: V(160, -80), b: V(120, 100),
-                opacity: 1,
-                light: V(0, -150),
-                look: V(100, 0),
-                enemy: V(100, 50),
-                pt: V(100, -80),
-                vel: V(100, 80)
-            };
+        // Scene State for Animation
+        const scene = {
+            a: V(160, -80), b: V(120, 100),
+            opacity: 1,
+            light: V(0, -150),
+            look: V(100, 0),   // For FOV step
+            enemy: V(100, 50), // For FOV step
+            pt: V(100, -80),   // For Closest Point step
+            vel: V(100, 80)    // For Reflection step
+        };
+        const targets = {
+            a: V(160, -80), b: V(120, 100),
+            opacity: 1,
+            light: V(0, -150),
+            look: V(100, 0),
+            enemy: V(100, 50),
+            pt: V(100, -80),
+            vel: V(100, 80)
+        };
 
-            function setTarget(k, v) { targets[k] = v; }
+        function setTarget(k, v) { targets[k] = v; }
 
-            function initVectors() {
-                const cx = C.width / 2, cy = C.height / 2;
-                origin = V(cx, cy);
-            }
-            initVectors();
+        function initVectors() {
+            const cx = C.width / 2, cy = C.height / 2;
+            origin = V(cx, cy);
+        }
+        initVectors();
 
-            // Animation Loop
-            function update() {
-                const dt = 0.15;
-                scene.a = lerpV(scene.a, targets.a, dt);
-                scene.b = lerpV(scene.b, targets.b, dt);
-                scene.opacity = lerp(scene.opacity, targets.opacity, dt);
-                scene.light = lerpV(scene.light, targets.light, dt);
-                scene.look = lerpV(scene.look, targets.look, dt);
-                scene.enemy = lerpV(scene.enemy, targets.enemy, dt);
-                scene.pt = lerpV(scene.pt, targets.pt, dt);
-                scene.vel = lerpV(scene.vel, targets.vel, dt);
+        // Animation Loop
+        function update() {
+            const dt = 0.15;
+            scene.a = lerpV(scene.a, targets.a, dt);
+            scene.b = lerpV(scene.b, targets.b, dt);
+            scene.opacity = lerp(scene.opacity, targets.opacity, dt);
+            scene.light = lerpV(scene.light, targets.light, dt);
+            scene.look = lerpV(scene.look, targets.look, dt);
+            scene.enemy = lerpV(scene.enemy, targets.enemy, dt);
+            scene.pt = lerpV(scene.pt, targets.pt, dt);
+            scene.vel = lerpV(scene.vel, targets.vel, dt);
 
-                renderScene();
-                requestAnimationFrame(update);
-            }
+            renderScene();
+            requestAnimationFrame(update);
+        }
 
-            function bg() {
-                X.fillStyle = '#07080f'; X.fillRect(0, 0, C.width, C.height);
-                X.strokeStyle = 'rgba(255,255,255,.016)'; X.lineWidth = 1;
-                const g = 44;
-                for (let x = 0; x < C.width; x += g) { X.beginPath(); X.moveTo(x, 0); X.lineTo(x, C.height); X.stroke() }
-                for (let y = 0; y < C.height; y += g) { X.beginPath(); X.moveTo(0, y); X.lineTo(C.width, y); X.stroke() }
-                X.strokeStyle = 'rgba(255,255,255,.06)'; X.lineWidth = 1;
-                X.beginPath(); X.moveTo(0, origin.y); X.lineTo(C.width, origin.y); X.stroke();
-                X.beginPath(); X.moveTo(origin.x, 0); X.lineTo(origin.x, C.height); X.stroke();
-            }
+        function bg() {
+            X.fillStyle = '#07080f'; X.fillRect(0, 0, C.width, C.height);
+            X.strokeStyle = 'rgba(255,255,255,.016)'; X.lineWidth = 1;
+            const g = 44;
+            for (let x = 0; x < C.width; x += g) { X.beginPath(); X.moveTo(x, 0); X.lineTo(x, C.height); X.stroke() }
+            for (let y = 0; y < C.height; y += g) { X.beginPath(); X.moveTo(0, y); X.lineTo(C.width, y); X.stroke() }
+            X.strokeStyle = 'rgba(255,255,255,.06)'; X.lineWidth = 1;
+            X.beginPath(); X.moveTo(0, origin.y); X.lineTo(C.width, origin.y); X.stroke();
+            X.beginPath(); X.moveTo(origin.x, 0); X.lineTo(origin.x, C.height); X.stroke();
+        }
 
-            // Drawing Helpers
-            function arrow(x1, y1, x2, y2, col, lw, hs, alpha) {
-                lw = lw ?? 3; hs = hs ?? 16; alpha = alpha ?? 1;
-                X.save(); X.globalAlpha = alpha; X.strokeStyle = col; X.fillStyle = col; X.lineWidth = lw; X.lineCap = 'round';
-                const dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy);
-                if (d < 1) { X.restore(); return }
-                X.beginPath(); X.moveTo(x1, y1); X.lineTo(x2, y2); X.stroke();
-                const ux = dx / d, uy = dy / d;
-                X.beginPath(); X.moveTo(x2, y2);
-                X.lineTo(x2 - hs * ux + hs * .4 * (-uy), y2 - hs * uy + hs * .4 * ux);
-                X.lineTo(x2 - hs * ux - hs * .4 * (-uy), y2 - hs * uy - hs * .4 * ux);
-                X.closePath(); X.fill(); X.restore();
-            }
+        // Drawing Helpers
+        function arrow(x1, y1, x2, y2, col, lw, hs, alpha) {
+            lw = lw ?? 3; hs = hs ?? 16; alpha = alpha ?? 1;
+            X.save(); X.globalAlpha = alpha; X.strokeStyle = col; X.fillStyle = col; X.lineWidth = lw; X.lineCap = 'round';
+            const dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy);
+            if (d < 1) { X.restore(); return }
+            X.beginPath(); X.moveTo(x1, y1); X.lineTo(x2, y2); X.stroke();
+            const ux = dx / d, uy = dy / d;
+            X.beginPath(); X.moveTo(x2, y2);
+            X.lineTo(x2 - hs * ux + hs * .4 * (-uy), y2 - hs * uy + hs * .4 * ux);
+            X.lineTo(x2 - hs * ux - hs * .4 * (-uy), y2 - hs * uy - hs * .4 * ux);
+            X.closePath(); X.fill(); X.restore();
+        }
 
-            function dot2(x, y, r, col, alpha) {
-                alpha = alpha ?? 1; X.save(); X.globalAlpha = alpha;
-                X.beginPath(); X.arc(x, y, r, 0, Math.PI * 2); X.fillStyle = col; X.fill(); X.restore();
-            }
+        function dot2(x, y, r, col, alpha) {
+            alpha = alpha ?? 1; X.save(); X.globalAlpha = alpha;
+            X.beginPath(); X.arc(x, y, r, 0, Math.PI * 2); X.fillStyle = col; X.fill(); X.restore();
+        }
 
-            function pill(text, x, y, col, bgCol, alpha) {
-                alpha = alpha ?? 1; bgCol = bgCol ?? 'rgba(14,15,26,0.85)';
-                X.save(); X.globalAlpha = alpha;
-                X.font = "bold 11px 'Space Mono',monospace";
-                X.textBaseline = 'middle'; X.textAlign = 'center';
-                const m = X.measureText(text), w = m.width + 12, h = 20, r = 6;
-                X.shadowColor = 'rgba(0,0,0,0.5)'; X.shadowBlur = 4;
-                X.fillStyle = bgCol;
-                X.beginPath(); X.roundRect(x - w / 2, y - h / 2, w, h, r); X.fill();
-                X.shadowColor = 'transparent';
-                X.fillStyle = col; X.fillText(text, x, y + 1);
-                X.restore();
-            }
+        function pill(text, x, y, col, bgCol, alpha) {
+            alpha = alpha ?? 1; bgCol = bgCol ?? 'rgba(14,15,26,0.85)';
+            X.save(); X.globalAlpha = alpha;
+            X.font = "bold 11px 'Space Mono',monospace";
+            X.textBaseline = 'middle'; X.textAlign = 'center';
+            const m = X.measureText(text), w = m.width + 12, h = 20, r = 6;
+            X.shadowColor = 'rgba(0,0,0,0.5)'; X.shadowBlur = 4;
+            X.fillStyle = bgCol;
+            X.beginPath(); X.roundRect(x - w / 2, y - h / 2, w, h, r); X.fill();
+            X.shadowColor = 'transparent';
+            X.fillStyle = col; X.fillText(text, x, y + 1);
+            X.restore();
+        }
 
-            function drawAngleArc(o, a, b, radius) {
-                const angA = Math.atan2(a.y, a.x), angB = Math.atan2(b.y, b.x);
-                let start = angA, end = angB;
-                let diff = end - start;
-                if (diff > Math.PI) start += 2 * Math.PI;
-                if (diff < -Math.PI) end += 2 * Math.PI;
-                X.save(); X.strokeStyle = 'rgba(255,209,102,.6)'; X.lineWidth = 2; X.setLineDash([4, 3]);
-                X.beginPath(); X.arc(o.x, o.y, radius, Math.min(start, end), Math.max(start, end)); X.stroke();
-                X.setLineDash([]);
-                const mid = (start + end) / 2;
-                pill('theta', o.x + Math.cos(mid) * (radius + 16), o.y + Math.sin(mid) * (radius + 16), '#ffd166');
-                X.restore();
-            }
+        function drawAngleArc(o, a, b, radius) {
+            const angA = Math.atan2(a.y, a.x), angB = Math.atan2(b.y, b.x);
+            let start = angA, end = angB;
+            let diff = end - start;
+            if (diff > Math.PI) start += 2 * Math.PI;
+            if (diff < -Math.PI) end += 2 * Math.PI;
+            X.save(); X.strokeStyle = 'rgba(255,209,102,.6)'; X.lineWidth = 2; X.setLineDash([4, 3]);
+            X.beginPath(); X.arc(o.x, o.y, radius, Math.min(start, end), Math.max(start, end)); X.stroke();
+            X.setLineDash([]);
+            const mid = (start + end) / 2;
+            pill('theta', o.x + Math.cos(mid) * (radius + 16), o.y + Math.sin(mid) * (radius + 16), '#ffd166');
+            X.restore();
+        }
 
-            function drawProjection(o, a, b) {
-                const bHat = hat(b), projLen = dt(a, bHat), projPt = add(o, mul(bHat, projLen));
-                const tipA = add(o, a);
-                X.save(); X.strokeStyle = 'rgba(199,125,255,.5)'; X.lineWidth = 1.5; X.setLineDash([5, 5]);
-                X.beginPath(); X.moveTo(tipA.x, tipA.y); X.lineTo(projPt.x, projPt.y); X.stroke();
+        function drawProjection(o, a, b) {
+            const bHat = hat(b), projLen = dt(a, bHat), projPt = add(o, mul(bHat, projLen));
+            const tipA = add(o, a);
+            X.save(); X.strokeStyle = 'rgba(199,125,255,.5)'; X.lineWidth = 1.5; X.setLineDash([5, 5]);
+            X.beginPath(); X.moveTo(tipA.x, tipA.y); X.lineTo(projPt.x, projPt.y); X.stroke();
+            X.setLineDash([]); X.restore();
+            X.save(); X.strokeStyle = '#c77dff'; X.lineWidth = 3; X.lineCap = 'round';
+            X.beginPath(); X.moveTo(o.x, o.y); X.lineTo(projPt.x, projPt.y); X.stroke(); X.restore();
+            dot2(projPt.x, projPt.y, 4, '#c77dff');
+            pill('proj', projPt.x, projPt.y - 14, '#c77dff');
+        }
+
+        function drawVector(o, v, col, label, showComponents, valPrefix) {
+            const tip = add(o, v);
+            arrow(o.x, o.y, tip.x, tip.y, col, 3.2, 20);
+            dot2(tip.x, tip.y, 6, col);
+            if (label) pill(label, tip.x + (v.x > 0 ? 14 : -14), tip.y - 14, col);
+            if (showComponents) {
+                X.save(); X.strokeStyle = col; X.globalAlpha = .3; X.lineWidth = 1.5; X.setLineDash([4, 4]);
+                X.beginPath(); X.moveTo(o.x, o.y); X.lineTo(o.x + v.x, o.y); X.stroke();
+                X.beginPath(); X.moveTo(o.x + v.x, o.y); X.lineTo(tip.x, tip.y); X.stroke();
                 X.setLineDash([]); X.restore();
-                X.save(); X.strokeStyle = '#c77dff'; X.lineWidth = 3; X.lineCap = 'round';
-                X.beginPath(); X.moveTo(o.x, o.y); X.lineTo(projPt.x, projPt.y); X.stroke(); X.restore();
-                dot2(projPt.x, projPt.y, 4, '#c77dff');
-                pill('proj', projPt.x, projPt.y - 14, '#c77dff');
+                pill(`${valPrefix || ''}X = ${v.x.toFixed(0)}`, o.x + v.x / 2, o.y + (v.y > 0 ? -12 : 12), col, null, 0.8);
+                pill(`${valPrefix || ''}Y = ${(-v.y).toFixed(0)}`, o.x + v.x + (v.x > 0 ? 16 : -16), o.y + v.y / 2, col, null, 0.8);
             }
-
-            function drawVector(o, v, col, label, showComponents, valPrefix) {
-                const tip = add(o, v);
-                arrow(o.x, o.y, tip.x, tip.y, col, 3.2, 20);
-                dot2(tip.x, tip.y, 6, col);
-                if (label) pill(label, tip.x + (v.x > 0 ? 14 : -14), tip.y - 14, col);
-                if (showComponents) {
-                    X.save(); X.strokeStyle = col; X.globalAlpha = .3; X.lineWidth = 1.5; X.setLineDash([4, 4]);
-                    X.beginPath(); X.moveTo(o.x, o.y); X.lineTo(o.x + v.x, o.y); X.stroke();
-                    X.beginPath(); X.moveTo(o.x + v.x, o.y); X.lineTo(tip.x, tip.y); X.stroke();
-                    X.setLineDash([]); X.restore();
-                    pill(`${valPrefix || ''}X = ${v.x.toFixed(0)}`, o.x + v.x / 2, o.y + (v.y > 0 ? -12 : 12), col, null, 0.8);
-                    pill(`${valPrefix || ''}Y = ${(-v.y).toFixed(0)}`, o.x + v.x + (v.x > 0 ? 16 : -16), o.y + v.y / 2, col, null, 0.8);
-                }
-            }
+        }
 
 
-            // Tutorial Definition
-            function buildTutorial() {
-                tutSteps = [
-                    {
-                        title: 'Welcome',
-                        narrate: '',
-                        desc: 'This tutorial teaches you <em>vectors</em> and the <em>dot product</em> — step by step, from scratch.<br><strong>Click Next Step to begin.</strong>',
-                        enter() {
-                            setTarget('a', V(100, -80)); setTarget('b', V(120, 60));
-                            targets.opacity = 1; targets.light = V(0, -150); targets.look = V(100, 0); targets.enemy = V(100, 50);
-                        },
-                        draw(o) {
-                            pill('Vectors and the Dot Product', o.x, o.y - 50, '#fff', null, 1);
-                            pill('A visual, narrated guide', o.x, o.y - 12, '#5a6070', null, 0.8);
-                            drawVector(o, scene.a, '#64ffda', ''); drawVector(o, scene.b, '#ff6b9d', '');
-                            dot2(o.x, o.y, 5, '#fff');
-                        }
+        // Tutorial Definition
+        function buildTutorial() {
+            tutSteps = [
+                {
+                    title: 'Welcome',
+                    narrate: '',
+                    desc: 'This tutorial teaches you <em>vectors</em> and the <em>dot product</em> — step by step, from scratch.<br><strong>Click Next Step to begin.</strong>',
+                    enter() {
+                        setTarget('a', V(100, -80)); setTarget('b', V(120, 60));
+                        targets.opacity = 1; targets.light = V(0, -150); targets.look = V(100, 0); targets.enemy = V(100, 50);
                     },
-                    {
-                        title: 'What is a Vector?',
-                        narrate: 'A vector is an arrow. It has two pieces of information: a direction, and a length. The direction is where the arrow points, and the length, also called the magnitude, is how long the arrow is. We write a vector as two numbers in parentheses: the horizontal part, and the vertical part.',
-                        desc: 'A <em>vector</em> is an arrow with a <em>direction</em> and a <em>length</em>. We write it as two numbers: horizontal and vertical parts.',
-                        enter() {
-                            setTarget('a', V(160, -100)); setTarget('b', V(0, 0)); // hide b
-                        },
-                        draw(o) {
-                            drawVector(o, scene.a, '#64ffda', '', false);
-                            const tip = add(o, scene.a), mid = lerpV(o, tip, 0.5);
-                            pill('direction ->', mid.x - 40, mid.y - 20, '#ffd166');
-                            pill('length = ' + mg(scene.a).toFixed(0) + ' px', mid.x + 30, mid.y + 16, '#a8ff78');
-                            dot2(o.x, o.y, 5, '#fff');
-                            pill('start', o.x - 30, o.y + 16, '#5a6070');
-                            pill('tip', tip.x + 14, tip.y - 6, '#64ffda');
-                        }
-                    },
-                    {
-                        title: 'X and Y Components',
-                        narrate: 'Every vector can be broken into two parts: the horizontal part, called X, and the vertical part, called Y. Together they describe how far right and how far up the arrow goes. For this vector, X is 160, meaning it goes 160 pixels to the right. Y is negative 100, meaning it goes 100 pixels upward.',
-                        desc: 'Every vector breaks into an <em>X part</em> and a <em>Y part</em>. On screen, up is negative.',
-                        enter() {
-                            setTarget('a', V(160, -100));
-                        },
-                        draw(o) {
-                            drawVector(o, scene.a, '#64ffda', '', true);
-                            const tip = add(o, scene.a);
-                            pill('(160, -100)', tip.x + 14, tip.y - 14, '#64ffda');
-                            dot2(o.x, o.y, 5, '#fff');
-                        }
-                    },
-                    {
-                        title: 'Adding Two Vectors',
-                        narrate: 'To add two vectors, place the second arrow at the tip of the first. The result goes from the start of the first to the tip of the second. Each component adds separately.',
-                        desc: 'Place arrow B at the <em>tip</em> of arrow A. The result goes from start to final tip.',
-                        enter() {
-                            setTarget('a', V(120, -40)); setTarget('b', V(60, -90));
-                        },
-                        draw(o) {
-                            const tipA = add(o, scene.a), tipAB = add(tipA, scene.b);
-                            arrow(o.x, o.y, tipA.x, tipA.y, '#64ffda', 3, 20);
-                            pill('A', lerpV(o, tipA, 0.5).x - 14, lerpV(o, tipA, 0.5).y - 14, '#64ffda');
-                            arrow(tipA.x, tipA.y, tipAB.x, tipAB.y, '#ff6b9d', 3, 20);
-                            pill('B', lerpV(tipA, tipAB, 0.5).x + 14, lerpV(tipA, tipAB, 0.5).y, '#ff6b9d');
-                            arrow(o.x, o.y, tipAB.x, tipAB.y, '#a8ff78', 2.5, 18, 0.7);
-                            pill('A + B', lerpV(o, tipAB, 0.5).x - 40, lerpV(o, tipAB, 0.5).y, '#a8ff78');
-                            const fx = o.x, fy = o.y + 70;
-                            pill(`A  =  (${scene.a.x.toFixed(0)}, ${(-scene.a.y).toFixed(0)})`, fx, fy, '#64ffda');
-                            pill(`B  =  (${scene.b.x.toFixed(0)}, ${(-scene.b.y).toFixed(0)})`, fx, fy + 24, '#ff6b9d');
-                            const sum = add(scene.a, scene.b);
-                            pill(`A+B = (${sum.x.toFixed(0)}, ${(-sum.y).toFixed(0)})`, fx, fy + 48, '#a8ff78');
-                            dot2(o.x, o.y, 5, '#fff');
-                        }
-                    },
-                    {
-                        title: 'Subtracting: Point to Point',
-                        narrate: 'To find the arrow from one point to another, you subtract. B minus A gives you a vector that starts at A and points toward B.',
-                        desc: 'To get the arrow from point A to point B: compute <em>B - A</em>.',
-                        enter() {
-                            setTarget('a', V(-110, 30)); setTarget('b', V(90, -50));
-                        },
-                        draw(o) {
-                            const pA = add(o, scene.a), pB = add(o, scene.b);
-                            dot2(pA.x, pA.y, 8, '#64ffda'); pill('A', pA.x - 20, pA.y + 18, '#64ffda');
-                            dot2(pB.x, pB.y, 8, '#ff6b9d'); pill('B', pB.x + 16, pB.y - 14, '#ff6b9d');
-                            arrow(pA.x, pA.y, pB.x, pB.y, '#ffd166', 3, 20);
-                            pill('B - A', lerpV(pA, pB, 0.5).x, lerpV(pA, pB, 0.5).y - 18, '#ffd166');
-                            pill('direction and distance from A to B', o.x, o.y + 80, '#5a6070');
-                        }
-                    },
-                    {
-                        title: 'The Math: Multiply and Add',
-                        narrate: 'Mathematically, it is simple: we multiply their X components, multiply their Y components, and add those two numbers together. The result is just a single number, not a vector.',
-                        desc: '<code>Dot = (A.x × B.x) + (A.y × B.y)</code><br>It produces a single scalar value (a number), not a new arrow.',
-                        enter() { setTarget('a', V(100, 0)); setTarget('b', V(100, -100)); },
-                        draw(o) {
-                            // Assuming drawSys, drawV, tutA, tutB are defined elsewhere or will be added.
-                            // For now, using existing scene.a, scene.b for drawing.
-                            drawVector(o, scene.a, '#64ffda', 'A');
-                            drawVector(o, scene.b, '#ff6b9d', 'B');
-                            const dt = (scene.a.x * scene.b.x + scene.a.y * scene.b.y) / 100; // Simplified for display
-                            pill(`A · B = ${dt.toFixed(0)}`, o.x, o.y + 60, '#c77dff', null, 1.2);
-                        }
-                    },
-                    {
-                        title: 'What is the Dot Product?',
-                        narrate: 'The dot product takes two vectors and gives you back a single number. You compute it by multiplying matching parts and adding the results.',
-                        desc: 'Multiply matching parts, then add. Result is a single number.',
-                        enter() {
-                            setTarget('a', V(140, -60)); setTarget('b', V(100, 80));
-                        },
-                        draw(o) {
-                            drawVector(o, scene.a, '#64ffda', '', false);
-                            drawVector(o, scene.b, '#ff6b9d', '', false);
-                            pill('A', o.x + scene.a.x + 12, o.y + scene.a.y - 10, '#64ffda');
-                            pill('B', o.x + scene.b.x + 12, o.y + scene.b.y + 6, '#ff6b9d');
-                            dot2(o.x, o.y, 5, '#fff');
-                            const fx = o.x, fy = o.y + 90;
-                            const ax = scene.a.x, ay = -scene.a.y, bx = scene.b.x, by = -scene.b.y;
-                            pill(`Step 1:  Ax * Bx  =  ${ax.toFixed(0)} * ${bx.toFixed(0)}  =  ${(ax * bx).toFixed(0)}`, fx, fy, '#ffd166');
-                            pill(`Step 2:  Ay * By  =  ${ay.toFixed(0)} * ${by.toFixed(0)}  =  ${(ay * by).toFixed(0)}`, fx, fy + 24, '#ffd166');
-                            const res = ax * bx + ay * by;
-                            pill(`Step 3:  Add them  =  ${(ax * bx).toFixed(0)} + ${(ay * by).toFixed(0)}  =  ${res.toFixed(0)}`, fx, fy + 48, '#a8ff78');
-                        }
-                    },
-                    {
-                        title: 'The Sign Tells You the Angle',
-                        narrate: 'The number you get tells you something important. Positive means same direction. Zero means perpendicular. Negative means opposite directions.',
-                        desc: 'Positive: angle < 90. Zero: 90. Negative: opposite sides.',
-                        enter() {
-                            setTarget('a', V(0, 0)); setTarget('b', V(0, 0));
-                        },
-                        draw(o) {
-                            const sp = 180, yy = o.y - 30;
-                            const o1 = V(o.x - sp, yy);
-                            drawVector(o1, V(70, -50), '#64ffda', '', false); drawVector(o1, V(80, -30), '#ff6b9d', '', false);
-                            pill('positive', o1.x, o1.y + 30, '#a8ff78'); pill('same direction', o1.x, o1.y + 50, '#5a6070', null, 0.8);
-                            const o2 = V(o.x, yy);
-                            drawVector(o2, V(80, 0), '#64ffda', '', false); drawVector(o2, V(0, -80), '#ff6b9d', '', false);
-                            pill('zero', o2.x, o2.y + 30, '#ffd166'); pill('90 degrees', o2.x, o2.y + 50, '#5a6070', null, 0.8);
-                            const o3 = V(o.x + sp, yy);
-                            drawVector(o3, V(70, -30), '#64ffda', '', false); drawVector(o3, V(-60, 50), '#ff6b9d', '', false);
-                            pill('negative', o3.x, o3.y + 30, '#ff6b9d'); pill('opposite', o3.x, o3.y + 50, '#5a6070', null, 0.8);
-                        }
-                    },
-                    {
-                        title: 'Perpendicular = Zero',
-                        narrate: 'A very useful special case: zero means 90 degrees. This is how you check right angles without complex math.',
-                        desc: 'Dot product = 0 means perpendicular. Great for quick checks.',
-                        enter() {
-                            setTarget('a', V(140, 0)); setTarget('b', V(0, -120));
-                        },
-                        draw(o) {
-                            const a = scene.a, b = scene.b;
-                            drawVector(o, a, '#64ffda', '', false); drawVector(o, b, '#ff6b9d', '', false);
-                            pill('A', o.x + 152, o.y + 6, '#64ffda'); pill('B', o.x + 12, o.y - 130, '#ff6b9d');
-                            drawAngleArc(o, a, b, 30); pill('90 degrees', o.x + 22, o.y - 42, '#ffd166');
-                            dot2(o.x, o.y, 5, '#fff');
-                            pill('Ax * Bx = 140 * 0 = 0', o.x, o.y + 60, '#ffd166');
-                            pill('Ay * By = 0 * -120 = 0', o.x, o.y + 84, '#ffd166');
-                            pill('dot = 0 + 0 = 0 -> perpendicular', o.x, o.y + 110, '#a8ff78');
-                        }
-                    },
-                    {
-                        title: 'How Long is a Vector?',
-                        narrate: 'The length is computed using the Pythagorean theorem: the square root of X squared plus Y squared.',
-                        desc: 'Magnitude is distance from start to tip: <em>sqrt(x*x + y*y)</em>.',
-                        enter() {
-                            setTarget('a', V(120, -90)); setTarget('b', V(0, 0));
-                        },
-                        draw(o) {
-                            const v = scene.a; drawVector(o, v, '#64ffda', '', true);
-                            pill('x = 120', o.x + 60, o.y + 20, '#ffd166');
-                            pill('y = 90', o.x + 136, o.y - 45, '#c77dff');
-                            pill('length = 150', o.x + 10, o.y - 59, '#a8ff78');
-                            dot2(o.x, o.y, 5, '#fff');
-                            const fy = o.y + 60;
-                            pill('Step 1:  120 squared = 14400', o.x, fy, '#ffd166');
-                            pill('Step 2:   90 squared =  8100', o.x, fy + 24, '#c77dff');
-                            pill('Step 3:  sqrt(22500) = 150', o.x, fy + 48, '#a8ff78');
-                        }
-                    },
-                    {
-                        title: 'Unit Vectors',
-                        narrate: 'A unit vector has length 1. You get it by dividing by the total length. This is called normalizing.',
-                        desc: 'Normalize by dividing components by length. Keeps direction, sets size to 1.',
-                        enter() {
-                            setTarget('a', V(120, -90));
-                        },
-                        draw(o) {
-                            const v = scene.a, uv = hat(v);
-                            drawVector(o, v, '#64ffda', '', false);
-                            pill('original (length 150)', o.x + 132, o.y - 100, '#64ffda');
-                            const uvO = V(o.x, o.y + 80); arrow(uvO.x, uvO.y, uvO.x + uv.x * 80, uvO.y + uv.y * 80, '#a8ff78', 3.5, 18);
-                            pill('unit vector (length 1)', uvO.x + uv.x * 80 + 12, uvO.y + uv.y * 80 - 10, '#a8ff78');
-                            dot2(o.x, o.y, 5, '#fff'); dot2(uvO.x, uvO.y, 5, '#fff');
-                            pill('divide each part by 150', o.x, o.y + 140, '#ffd166');
-                        }
-                    },
-                    {
-                        title: 'Subtraction (A - B)',
-                        narrate: 'To subtract B from A, we draw an arrow from the tip of B to the tip of A. Imagine starting at B and asking, what path do I take to reach A?',
-                        desc: 'Subtracting B from A means finding the vector that goes from B to A.',
-                        enter() { /* initSandbox(); */ setTarget('a', V(100, -80)); setTarget('b', V(-70, -60)); },
-                        draw(o) {
-                            o.y += 40;
-                            // Assuming drawSys, drawV, tutA, tutB are defined elsewhere or will be added.
-                            // For now, using existing drawVector and add/sub for drawing.
-                            const pA = add(o, scene.a), pB = add(o, scene.b);
-                            drawVector(o, scene.a, '#64ffda', 'A');
-                            drawVector(o, scene.b, '#ff6b9d', 'B');
-                            drawVector(pB, sub(scene.a, scene.b), '#ffd166', 'A - B');
-                        }
-                    },
-                    {
-                        title: 'Subtraction (B - A)',
-                        narrate: 'If we flip it and subtract A from B, we just draw the arrow in the reverse direction: from A to B. Let us look at that.',
-                        desc: 'Reversing the order gives a vector pointing the opposite way.',
-                        enter() { /* initSandbox(); */ setTarget('a', V(100, -80)); setTarget('b', V(-70, -60)); },
-                        draw(o) {
-                            o.y += 40;
-                            // Assuming drawSys, drawV, tutA, tutB are defined elsewhere or will be added.
-                            // For now, using existing drawVector and add/sub for drawing.
-                            const pA = add(o, scene.a), pB = add(o, scene.b);
-                            drawVector(o, scene.a, '#64ffda', 'A');
-                            drawVector(o, scene.b, '#ff6b9d', 'B');
-                            drawVector(pA, sub(scene.b, scene.a), '#ffd166', 'B - A');
-                        }
-                    },
-                    {
-                        title: 'Projection',
-                        narrate: 'Projection is like casting a shadow. It tells you how far one vector reaches in the direction of another.',
-                        desc: 'Projection of A onto B is like A\'s shadow on B. Compute using dot product with unit vector.',
-                        enter() { setTarget('a', V(140, -80)); setTarget('b', V(180, 20)); },
-                        draw(o) {
-                            const a = scene.a, b = scene.b;
-                            drawVector(o, a, '#64ffda', '', false); drawVector(o, b, '#ff6b9d', '', false);
-                            drawProjection(o, a, b); drawAngleArc(o, a, b, 40);
-                            const bh = hat(b), proj = dt(a, bh), pt = add(o, mul(bh, proj));
-                            X.save(); X.strokeStyle = '#a8ff78'; X.lineWidth = 5; X.lineCap = 'round';
-                            X.beginPath(); X.moveTo(o.x, o.y); X.lineTo(pt.x, pt.y); X.stroke(); X.restore();
-                            pill('shadow', pt.x - 40, pt.y + 20, '#a8ff78');
-                            pill('shadow length = dot(A, unit of B) = ' + proj.toFixed(0) + ' px', o.x, o.y + 90, '#ffd166');
-                        }
-                    },
-                    {
-                        title: 'Interactive: Lighting',
-                        narrate: 'In video games, the dot product calculates lighting. If a surface faces the light, it is bright. If it faces away, it is dark.',
-                        desc: 'Drag the <em>Light Vector</em>! Dot product measures how aligned the light is with the surface normal.',
-                        enter() {
-                            setTarget('a', V(0, 0)); setTarget('b', V(0, 0));
-                        },
-                        onDrag(pos) {
-                            const rel = sub(pos, V(origin.x, origin.y - 10)); // surface center offset
-                            if (mg(rel) > 10) setTarget('light', rel);
-                        },
-                        draw(o) {
-                            const surfY = o.y + 50;
-                            X.fillStyle = '#3d3d5c'; X.fillRect(o.x - 100, surfY, 200, 10); // Surface
-                            const N = V(0, -1); // Surface normal
-                            const L = hat(scene.light);
-                            const brightness = Math.max(0, dt(N, L));
-
-                            // Draw Object Lit
-                            const colVal = Math.floor(brightness * 255);
-                            X.fillStyle = `rgb(${colVal}, ${colVal}, ${colVal})`;
-                            X.beginPath(); X.arc(o.x, surfY - 40, 30, 0, Math.PI * 2); X.fill();
-
-                            // Draw Vectors
-                            arrow(o.x, surfY, o.x, surfY - 60, '#a8ff78', 3, 10);
-                            pill('Normal', o.x + 10, surfY - 70, '#a8ff78');
-
-                            drawVector(V(o.x, surfY - 40), scene.light, '#ffd166', '');
-                            pill('Light Source', o.x + scene.light.x, o.y + scene.light.y - 60, '#ffd166');
-
-                            pill(`Brightness: ${(brightness * 100).toFixed(0)}%`, o.x, o.y + 120, brightness > 0.5 ? '#fff' : '#555');
-                        }
-                    },
-                    {
-                        title: 'Interactive: Field of View',
-                        narrate: 'It also helps AI see. The dot product tells us if an object is in front of or behind the player.',
-                        desc: 'Drag the <em>Enemy</em>! If dot product > 0, they are in front. If < 0, they are behind.',
-                        enter() { },
-                        onDrag(pos) {
-                            const rel = sub(pos, origin);
-                            setTarget('enemy', rel);
-                        },
-                        draw(o) {
-                            const player = V(o.x, o.y);
-                            const lookDir = hat(scene.look);
-                            const enemyPos = add(o, scene.enemy);
-                            const toEnemy = sub(enemyPos, player);
-                            const toEnemyDir = hat(toEnemy);
-
-                            const inFront = dt(lookDir, toEnemyDir) > 0;
-
-                            // Draw Player
-                            dot2(player.x, player.y, 10, '#64ffda');
-                            arrow(player.x, player.y, player.x + lookDir.x * 60, player.y + lookDir.y * 60, '#64ffda', 3, 10);
-                            pill('Player Look', player.x + lookDir.x * 70, player.y + lookDir.y * 70, '#64ffda');
-
-                            // Draw Enemy
-                            dot2(enemyPos.x, enemyPos.y, 10, '#ff6b9d');
-                            pill('Enemy', enemyPos.x, enemyPos.y - 20, '#ff6b9d');
-
-                            // Draw Vector to Enemy
-                            X.save(); X.setLineDash([5, 5]); X.strokeStyle = '#555';
-                            X.beginPath(); X.moveTo(player.x, player.y); X.lineTo(enemyPos.x, enemyPos.y); X.stroke();
-                            X.restore();
-
-                            const status = inFront ? "IN FRONT (Visible)" : "BEHIND (Not Visible)";
-                            const col = inFront ? '#a8ff78' : '#ff4d6d';
-                            pill(status, o.x, o.y + 130, col, null, 1);
-                        }
-                    },
-                    {
-                        title: 'Interactive: Closest Point',
-                        narrate: 'Another use: finding the closest point. Drag the target point. We use the dot product to find where it would hit the line.',
-                        desc: 'Projection gives the <em>closest point</em> on an infinite line. We clamp it for segments.',
-                        enter() { setTarget('a', V(0, 0)); setTarget('b', V(0, 0)); },
-                        onDrag(pos) {
-                            const rel = sub(pos, origin);
-                            setTarget('pt', rel);
-                        },
-                        draw(o) {
-                            const p1 = V(-140, 60), p2 = V(140, -60);
-                            const pt = scene.pt;
-
-                            // Draw Line Segment
-                            X.beginPath(); X.moveTo(o.x + p1.x, o.y + p1.y); X.lineTo(o.x + p2.x, o.y + p2.y);
-                            X.strokeStyle = '#555'; X.lineWidth = 4; X.stroke();
-                            dot2(o.x + p1.x, o.y + p1.y, 4, '#555'); dot2(o.x + p2.x, o.y + p2.y, 4, '#555');
-
-                            // Calc projection
-                            const line = sub(p2, p1), len2 = dt(line, line);
-                            const toPt = sub(pt, p1);
-                            const t = clamp(dt(toPt, line) / len2, 0, 1);
-                            const closest = add(p1, mul(line, t));
-
-                            // Visuals
-                            X.save(); X.setLineDash([4, 4]); X.strokeStyle = '#ffd166';
-                            X.beginPath(); X.moveTo(o.x + pt.x, o.y + pt.y); X.lineTo(o.x + closest.x, o.y + closest.y); X.stroke();
-                            X.restore();
-
-                            dot2(o.x + pt.x, o.y + pt.y, 8, '#ff6b9d'); pill('Target', o.x + pt.x + 16, o.y + pt.y - 10, '#ff6b9d');
-                            dot2(o.x + closest.x, o.y + closest.y, 6, '#a8ff78'); pill('Closest', o.x + closest.x, o.y + closest.y + 20, '#a8ff78');
-                        }
-                    },
-                    {
-                        title: 'Interactive: Reflection',
-                        narrate: 'Finally, physics uses dot product to bounce things. The reflection formula uses the normal to flip the velocity.',
-                        desc: 'Drag the <em>Velocity</em>! <em>R = I - 2 * dot(I, N) * N</em>.',
-                        enter() { setTarget('pt', V(0, 0)); },
-                        onDrag(pos) {
-                            const rel = sub(pos, origin);
-                            if (dt(rel, V(0, -1)) < 0) setTarget('vel', rel); // Only incoming
-                        },
-                        draw(o) {
-                            const surfY = o.y + 20;
-                            X.fillStyle = '#3d3d5c'; X.fillRect(o.x - 120, surfY, 240, 4); // Surface
-                            const N = V(0, -1);
-                            arrow(o.x, surfY, o.x, surfY - 40, '#555', 2, 8); pill('N', o.x + 10, surfY - 50, '#555');
-
-                            const I = scene.vel; // Incoming
-                            const IdotN = dt(I, N);
-                            // R = I - 2 * (I.N) * N
-                            const R = sub(I, mul(N, 2 * IdotN));
-
-                            drawVector(o, I, '#ff6b9d', 'Incoming');
-                            drawVector(o, R, '#64ffda', 'Reflection');
-
-                            dot2(o.x, o.y, 4, '#fff');
-                        }
-                    },
-                    {
-                        title: 'Summary',
-                        narrate: 'A vector is an arrow with direction and length. Dot product measures alignment. You now have the building blocks!',
-                        desc: 'Vectors, components, adding, subtracting, dot product, sign checks, magnitude, unit vectors, and projection - done!',
-                        enter() { setTarget('a', V(0, 0)); setTarget('b', V(0, 0)); },
-                        draw(o) {
-                            pill('Tutorial Summary', o.x, o.y - 120, '#fff', null, 1);
-                            const items = [
-                                ['- Vectors: direction and length', '#64ffda'],
-                                ['- Components: X and Y parts', '#ffd166'],
-                                ['- Addition: tip-to-tail', '#a8ff78'],
-                                ['- Subtraction: point to point', '#ffd166'],
-                                ['- Dot Product: multiply, then add', '#c77dff'],
-                                ['- Sign: same / perpendicular / opposite', '#a8ff78'],
-                                ['- Magnitude: length calculation', '#64ffda'],
-                                ['- Unit Vectors: length of 1', '#ff6b9d'],
-                                ['- Projection: shadow on a line', '#ffd166'],
-                                ['- Lighting & FOV: Real world uses', '#a8ff78'],
-                            ];
-                            items.forEach((it, i) => pill(it[0], o.x, o.y - 80 + i * 22, it[1], 'rgba(0,0,0,0)', 1));
-                        }
+                    draw(o) {
+                        pill('Vectors and the Dot Product', o.x, o.y - 50, '#fff', null, 1);
+                        pill('A visual, narrated guide', o.x, o.y - 12, '#5a6070', null, 0.8);
+                        drawVector(o, scene.a, '#64ffda', ''); drawVector(o, scene.b, '#ff6b9d', '');
+                        dot2(o.x, o.y, 5, '#fff');
                     }
-                ];
-            }
-            buildTutorial();
+                },
+                {
+                    title: 'What is a Vector?',
+                    narrate: 'A vector is an arrow. It has two pieces of information: a direction, and a length. The direction is where the arrow points, and the length, also called the magnitude, is how long the arrow is. We write a vector as two numbers in parentheses: the horizontal part, and the vertical part.',
+                    desc: 'A <em>vector</em> is an arrow with a <em>direction</em> and a <em>length</em>. We write it as two numbers: horizontal and vertical parts.',
+                    enter() {
+                        setTarget('a', V(160, -100)); setTarget('b', V(0, 0)); // hide b
+                    },
+                    draw(o) {
+                        drawVector(o, scene.a, '#64ffda', '', false);
+                        const tip = add(o, scene.a), mid = lerpV(o, tip, 0.5);
+                        pill('direction ->', mid.x - 40, mid.y - 20, '#ffd166');
+                        pill('length = ' + mg(scene.a).toFixed(0) + ' px', mid.x + 30, mid.y + 16, '#a8ff78');
+                        dot2(o.x, o.y, 5, '#fff');
+                        pill('start', o.x - 30, o.y + 16, '#5a6070');
+                        pill('tip', tip.x + 14, tip.y - 6, '#64ffda');
+                    }
+                },
+                {
+                    title: 'X and Y Components',
+                    narrate: 'Every vector can be broken into two parts: the horizontal part, called X, and the vertical part, called Y. Together they describe how far right and how far up the arrow goes. For this vector, X is 160, meaning it goes 160 pixels to the right. Y is negative 100, meaning it goes 100 pixels upward.',
+                    desc: 'Every vector breaks into an <em>X part</em> and a <em>Y part</em>. On screen, up is negative.',
+                    enter() {
+                        setTarget('a', V(160, -100));
+                    },
+                    draw(o) {
+                        drawVector(o, scene.a, '#64ffda', '', true);
+                        const tip = add(o, scene.a);
+                        pill('(160, -100)', tip.x + 14, tip.y - 14, '#64ffda');
+                        dot2(o.x, o.y, 5, '#fff');
+                    }
+                },
+                {
+                    title: 'Adding Two Vectors',
+                    narrate: 'To add two vectors, place the second arrow at the tip of the first. The result goes from the start of the first to the tip of the second. Each component adds separately.',
+                    desc: 'Place arrow B at the <em>tip</em> of arrow A. The result goes from start to final tip.',
+                    enter() {
+                        setTarget('a', V(120, -40)); setTarget('b', V(60, -90));
+                    },
+                    draw(o) {
+                        const tipA = add(o, scene.a), tipAB = add(tipA, scene.b);
+                        arrow(o.x, o.y, tipA.x, tipA.y, '#64ffda', 3, 20);
+                        pill('A', lerpV(o, tipA, 0.5).x - 14, lerpV(o, tipA, 0.5).y - 14, '#64ffda');
+                        arrow(tipA.x, tipA.y, tipAB.x, tipAB.y, '#ff6b9d', 3, 20);
+                        pill('B', lerpV(tipA, tipAB, 0.5).x + 14, lerpV(tipA, tipAB, 0.5).y, '#ff6b9d');
+                        arrow(o.x, o.y, tipAB.x, tipAB.y, '#a8ff78', 2.5, 18, 0.7);
+                        pill('A + B', lerpV(o, tipAB, 0.5).x - 40, lerpV(o, tipAB, 0.5).y, '#a8ff78');
+                        const fx = o.x, fy = o.y + 70;
+                        pill(`A  =  (${scene.a.x.toFixed(0)}, ${(-scene.a.y).toFixed(0)})`, fx, fy, '#64ffda');
+                        pill(`B  =  (${scene.b.x.toFixed(0)}, ${(-scene.b.y).toFixed(0)})`, fx, fy + 24, '#ff6b9d');
+                        const sum = add(scene.a, scene.b);
+                        pill(`A+B = (${sum.x.toFixed(0)}, ${(-sum.y).toFixed(0)})`, fx, fy + 48, '#a8ff78');
+                        dot2(o.x, o.y, 5, '#fff');
+                    }
+                },
+                {
+                    title: 'Subtracting: Point to Point',
+                    narrate: 'To find the arrow from one point to another, you subtract. B minus A gives you a vector that starts at A and points toward B.',
+                    desc: 'To get the arrow from point A to point B: compute <em>B - A</em>.',
+                    enter() {
+                        setTarget('a', V(-110, 30)); setTarget('b', V(90, -50));
+                    },
+                    draw(o) {
+                        const pA = add(o, scene.a), pB = add(o, scene.b);
+                        dot2(pA.x, pA.y, 8, '#64ffda'); pill('A', pA.x - 20, pA.y + 18, '#64ffda');
+                        dot2(pB.x, pB.y, 8, '#ff6b9d'); pill('B', pB.x + 16, pB.y - 14, '#ff6b9d');
+                        arrow(pA.x, pA.y, pB.x, pB.y, '#ffd166', 3, 20);
+                        pill('B - A', lerpV(pA, pB, 0.5).x, lerpV(pA, pB, 0.5).y - 18, '#ffd166');
+                        pill('direction and distance from A to B', o.x, o.y + 80, '#5a6070');
+                    }
+                },
+                {
+                    title: 'The Math: Multiply and Add',
+                    narrate: 'Mathematically, it is simple: we multiply their X components, multiply their Y components, and add those two numbers together. The result is just a single number, not a vector.',
+                    desc: '<code>Dot = (A.x × B.x) + (A.y × B.y)</code><br>It produces a single scalar value (a number), not a new arrow.',
+                    enter() { setTarget('a', V(100, 0)); setTarget('b', V(100, -100)); },
+                    draw(o) {
+                        // Assuming drawSys, drawV, tutA, tutB are defined elsewhere or will be added.
+                        // For now, using existing scene.a, scene.b for drawing.
+                        drawVector(o, scene.a, '#64ffda', 'A');
+                        drawVector(o, scene.b, '#ff6b9d', 'B');
+                        const dt = (scene.a.x * scene.b.x + scene.a.y * scene.b.y) / 100; // Simplified for display
+                        pill(`A · B = ${dt.toFixed(0)}`, o.x, o.y + 60, '#c77dff', null, 1.2);
+                    }
+                },
+                {
+                    title: 'What is the Dot Product?',
+                    narrate: 'The dot product takes two vectors and gives you back a single number. You compute it by multiplying matching parts and adding the results.',
+                    desc: 'Multiply matching parts, then add. Result is a single number.',
+                    enter() {
+                        setTarget('a', V(140, -60)); setTarget('b', V(100, 80));
+                    },
+                    draw(o) {
+                        drawVector(o, scene.a, '#64ffda', '', false);
+                        drawVector(o, scene.b, '#ff6b9d', '', false);
+                        pill('A', o.x + scene.a.x + 12, o.y + scene.a.y - 10, '#64ffda');
+                        pill('B', o.x + scene.b.x + 12, o.y + scene.b.y + 6, '#ff6b9d');
+                        dot2(o.x, o.y, 5, '#fff');
+                        const fx = o.x, fy = o.y + 90;
+                        const ax = scene.a.x, ay = -scene.a.y, bx = scene.b.x, by = -scene.b.y;
+                        pill(`Step 1:  Ax * Bx  =  ${ax.toFixed(0)} * ${bx.toFixed(0)}  =  ${(ax * bx).toFixed(0)}`, fx, fy, '#ffd166');
+                        pill(`Step 2:  Ay * By  =  ${ay.toFixed(0)} * ${by.toFixed(0)}  =  ${(ay * by).toFixed(0)}`, fx, fy + 24, '#ffd166');
+                        const res = ax * bx + ay * by;
+                        pill(`Step 3:  Add them  =  ${(ax * bx).toFixed(0)} + ${(ay * by).toFixed(0)}  =  ${res.toFixed(0)}`, fx, fy + 48, '#a8ff78');
+                    }
+                },
+                {
+                    title: 'The Sign Tells You the Angle',
+                    narrate: 'The number you get tells you something important. Positive means same direction. Zero means perpendicular. Negative means opposite directions.',
+                    desc: 'Positive: angle < 90. Zero: 90. Negative: opposite sides.',
+                    enter() {
+                        setTarget('a', V(0, 0)); setTarget('b', V(0, 0));
+                    },
+                    draw(o) {
+                        const sp = 180, yy = o.y - 30;
+                        const o1 = V(o.x - sp, yy);
+                        drawVector(o1, V(70, -50), '#64ffda', '', false); drawVector(o1, V(80, -30), '#ff6b9d', '', false);
+                        pill('positive', o1.x, o1.y + 30, '#a8ff78'); pill('same direction', o1.x, o1.y + 50, '#5a6070', null, 0.8);
+                        const o2 = V(o.x, yy);
+                        drawVector(o2, V(80, 0), '#64ffda', '', false); drawVector(o2, V(0, -80), '#ff6b9d', '', false);
+                        pill('zero', o2.x, o2.y + 30, '#ffd166'); pill('90 degrees', o2.x, o2.y + 50, '#5a6070', null, 0.8);
+                        const o3 = V(o.x + sp, yy);
+                        drawVector(o3, V(70, -30), '#64ffda', '', false); drawVector(o3, V(-60, 50), '#ff6b9d', '', false);
+                        pill('negative', o3.x, o3.y + 30, '#ff6b9d'); pill('opposite', o3.x, o3.y + 50, '#5a6070', null, 0.8);
+                    }
+                },
+                {
+                    title: 'Perpendicular = Zero',
+                    narrate: 'A very useful special case: zero means 90 degrees. This is how you check right angles without complex math.',
+                    desc: 'Dot product = 0 means perpendicular. Great for quick checks.',
+                    enter() {
+                        setTarget('a', V(140, 0)); setTarget('b', V(0, -120));
+                    },
+                    draw(o) {
+                        const a = scene.a, b = scene.b;
+                        drawVector(o, a, '#64ffda', '', false); drawVector(o, b, '#ff6b9d', '', false);
+                        pill('A', o.x + 152, o.y + 6, '#64ffda'); pill('B', o.x + 12, o.y - 130, '#ff6b9d');
+                        drawAngleArc(o, a, b, 30); pill('90 degrees', o.x + 22, o.y - 42, '#ffd166');
+                        dot2(o.x, o.y, 5, '#fff');
+                        pill('Ax * Bx = 140 * 0 = 0', o.x, o.y + 60, '#ffd166');
+                        pill('Ay * By = 0 * -120 = 0', o.x, o.y + 84, '#ffd166');
+                        pill('dot = 0 + 0 = 0 -> perpendicular', o.x, o.y + 110, '#a8ff78');
+                    }
+                },
+                {
+                    title: 'How Long is a Vector?',
+                    narrate: 'The length is computed using the Pythagorean theorem: the square root of X squared plus Y squared.',
+                    desc: 'Magnitude is distance from start to tip: <em>sqrt(x*x + y*y)</em>.',
+                    enter() {
+                        setTarget('a', V(120, -90)); setTarget('b', V(0, 0));
+                    },
+                    draw(o) {
+                        const v = scene.a; drawVector(o, v, '#64ffda', '', true);
+                        pill('x = 120', o.x + 60, o.y + 20, '#ffd166');
+                        pill('y = 90', o.x + 136, o.y - 45, '#c77dff');
+                        pill('length = 150', o.x + 10, o.y - 59, '#a8ff78');
+                        dot2(o.x, o.y, 5, '#fff');
+                        const fy = o.y + 60;
+                        pill('Step 1:  120 squared = 14400', o.x, fy, '#ffd166');
+                        pill('Step 2:   90 squared =  8100', o.x, fy + 24, '#c77dff');
+                        pill('Step 3:  sqrt(22500) = 150', o.x, fy + 48, '#a8ff78');
+                    }
+                },
+                {
+                    title: 'Unit Vectors',
+                    narrate: 'A unit vector has length 1. You get it by dividing by the total length. This is called normalizing.',
+                    desc: 'Normalize by dividing components by length. Keeps direction, sets size to 1.',
+                    enter() {
+                        setTarget('a', V(120, -90));
+                    },
+                    draw(o) {
+                        const v = scene.a, uv = hat(v);
+                        drawVector(o, v, '#64ffda', '', false);
+                        pill('original (length 150)', o.x + 132, o.y - 100, '#64ffda');
+                        const uvO = V(o.x, o.y + 80); arrow(uvO.x, uvO.y, uvO.x + uv.x * 80, uvO.y + uv.y * 80, '#a8ff78', 3.5, 18);
+                        pill('unit vector (length 1)', uvO.x + uv.x * 80 + 12, uvO.y + uv.y * 80 - 10, '#a8ff78');
+                        dot2(o.x, o.y, 5, '#fff'); dot2(uvO.x, uvO.y, 5, '#fff');
+                        pill('divide each part by 150', o.x, o.y + 140, '#ffd166');
+                    }
+                },
+                {
+                    title: 'Subtraction (A - B)',
+                    narrate: 'To subtract B from A, we draw an arrow from the tip of B to the tip of A. Imagine starting at B and asking, what path do I take to reach A?',
+                    desc: 'Subtracting B from A means finding the vector that goes from B to A.',
+                    enter() { /* initSandbox(); */ setTarget('a', V(100, -80)); setTarget('b', V(-70, -60)); },
+                    draw(o) {
+                        o.y += 40;
+                        // Assuming drawSys, drawV, tutA, tutB are defined elsewhere or will be added.
+                        // For now, using existing drawVector and add/sub for drawing.
+                        const pA = add(o, scene.a), pB = add(o, scene.b);
+                        drawVector(o, scene.a, '#64ffda', 'A');
+                        drawVector(o, scene.b, '#ff6b9d', 'B');
+                        drawVector(pB, sub(scene.a, scene.b), '#ffd166', 'A - B');
+                    }
+                },
+                {
+                    title: 'Subtraction (B - A)',
+                    narrate: 'If we flip it and subtract A from B, we just draw the arrow in the reverse direction: from A to B. Let us look at that.',
+                    desc: 'Reversing the order gives a vector pointing the opposite way.',
+                    enter() { /* initSandbox(); */ setTarget('a', V(100, -80)); setTarget('b', V(-70, -60)); },
+                    draw(o) {
+                        o.y += 40;
+                        // Assuming drawSys, drawV, tutA, tutB are defined elsewhere or will be added.
+                        // For now, using existing drawVector and add/sub for drawing.
+                        const pA = add(o, scene.a), pB = add(o, scene.b);
+                        drawVector(o, scene.a, '#64ffda', 'A');
+                        drawVector(o, scene.b, '#ff6b9d', 'B');
+                        drawVector(pA, sub(scene.b, scene.a), '#ffd166', 'B - A');
+                    }
+                },
+                {
+                    title: 'Projection',
+                    narrate: 'Projection is like casting a shadow. It tells you how far one vector reaches in the direction of another.',
+                    desc: 'Projection of A onto B is like A\'s shadow on B. Compute using dot product with unit vector.',
+                    enter() { setTarget('a', V(140, -80)); setTarget('b', V(180, 20)); },
+                    draw(o) {
+                        const a = scene.a, b = scene.b;
+                        drawVector(o, a, '#64ffda', '', false); drawVector(o, b, '#ff6b9d', '', false);
+                        drawProjection(o, a, b); drawAngleArc(o, a, b, 40);
+                        const bh = hat(b), proj = dt(a, bh), pt = add(o, mul(bh, proj));
+                        X.save(); X.strokeStyle = '#a8ff78'; X.lineWidth = 5; X.lineCap = 'round';
+                        X.beginPath(); X.moveTo(o.x, o.y); X.lineTo(pt.x, pt.y); X.stroke(); X.restore();
+                        pill('shadow', pt.x - 40, pt.y + 20, '#a8ff78');
+                        pill('shadow length = dot(A, unit of B) = ' + proj.toFixed(0) + ' px', o.x, o.y + 90, '#ffd166');
+                    }
+                },
+                {
+                    title: 'Interactive: Lighting',
+                    narrate: 'In video games, the dot product calculates lighting. If a surface faces the light, it is bright. If it faces away, it is dark.',
+                    desc: 'Drag the <em>Light Vector</em>! Dot product measures how aligned the light is with the surface normal.',
+                    enter() {
+                        setTarget('a', V(0, 0)); setTarget('b', V(0, 0));
+                    },
+                    onDrag(pos) {
+                        const rel = sub(pos, V(origin.x, origin.y - 10)); // surface center offset
+                        if (mg(rel) > 10) setTarget('light', rel);
+                    },
+                    draw(o) {
+                        const surfY = o.y + 50;
+                        X.fillStyle = '#3d3d5c'; X.fillRect(o.x - 100, surfY, 200, 10); // Surface
+                        const N = V(0, -1); // Surface normal
+                        const L = hat(scene.light);
+                        const brightness = Math.max(0, dt(N, L));
 
-            function updateUI() {
-                const step = tutSteps[tutCur];
-                document.getElementById('sNum').textContent = `Step ${tutCur + 1} of ${tutSteps.length}`;
-                document.getElementById('sTitle').textContent = step.title;
+                        // Draw Object Lit
+                        const colVal = Math.floor(brightness * 255);
+                        X.fillStyle = `rgb(${colVal}, ${colVal}, ${colVal})`;
+                        X.beginPath(); X.arc(o.x, surfY - 40, 30, 0, Math.PI * 2); X.fill();
 
-                // Show narration in the description box if available, otherwise fallback to standard desc
-                document.getElementById('sDesc').innerHTML = (step && step.narrate) ? step.narrate : step.desc;
+                        // Draw Vectors
+                        arrow(o.x, surfY, o.x, surfY - 60, '#a8ff78', 3, 10);
+                        pill('Normal', o.x + 10, surfY - 70, '#a8ff78');
 
-                document.getElementById('mBox').textContent = step.math || '';
-                document.getElementById('pFill').style.width = `${((tutCur + 1) / tutSteps.length) * 100}%`;
-                document.getElementById('pL').textContent = `Step ${tutCur + 1}`;
-                document.getElementById('pR').textContent = `of ${tutSteps.length}`;
-                document.getElementById('btnPrev').disabled = tutCur === 0;
-                document.getElementById('btnNext').disabled = tutCur === tutSteps.length - 1;
-            }
+                        drawVector(V(o.x, surfY - 40), scene.light, '#ffd166', '');
+                        pill('Light Source', o.x + scene.light.x, o.y + scene.light.y - 60, '#ffd166');
 
-            function renderScene() {
-                bg();
-                const step = tutSteps[tutCur];
-                if (step && step.draw) step.draw(origin);
-            }
+                        pill(`Brightness: ${(brightness * 100).toFixed(0)}%`, o.x, o.y + 120, brightness > 0.5 ? '#fff' : '#555');
+                    }
+                },
+                {
+                    title: 'Interactive: Field of View',
+                    narrate: 'It also helps AI see. The dot product tells us if an object is in front of or behind the player.',
+                    desc: 'Drag the <em>Enemy</em>! If dot product > 0, they are in front. If < 0, they are behind.',
+                    enter() { },
+                    onDrag(pos) {
+                        const rel = sub(pos, origin);
+                        setTarget('enemy', rel);
+                    },
+                    draw(o) {
+                        const player = V(o.x, o.y);
+                        const lookDir = hat(scene.look);
+                        const enemyPos = add(o, scene.enemy);
+                        const toEnemy = sub(enemyPos, player);
+                        const toEnemyDir = hat(toEnemy);
 
-            function draw() { // Compat for old calls
-                updateUI();
-                renderScene();
-            }
+                        const inFront = dt(lookDir, toEnemyDir) > 0;
 
-            // Input Handling
-            let dragging = false;
-            C.addEventListener('pointerdown', e => dragging = true);
-            window.addEventListener('pointerup', e => dragging = false);
-            C.addEventListener('pointermove', e => {
-                if (!dragging) return;
-                const step = tutSteps[tutCur];
-                if (step && step.onDrag) {
-                    const rect = C.getBoundingClientRect();
-                    const pos = V(e.clientX - rect.left, e.clientY - rect.top);
-                    step.onDrag(pos);
+                        // Draw Player
+                        dot2(player.x, player.y, 10, '#64ffda');
+                        arrow(player.x, player.y, player.x + lookDir.x * 60, player.y + lookDir.y * 60, '#64ffda', 3, 10);
+                        pill('Player Look', player.x + lookDir.x * 70, player.y + lookDir.y * 70, '#64ffda');
+
+                        // Draw Enemy
+                        dot2(enemyPos.x, enemyPos.y, 10, '#ff6b9d');
+                        pill('Enemy', enemyPos.x, enemyPos.y - 20, '#ff6b9d');
+
+                        // Draw Vector to Enemy
+                        X.save(); X.setLineDash([5, 5]); X.strokeStyle = '#555';
+                        X.beginPath(); X.moveTo(player.x, player.y); X.lineTo(enemyPos.x, enemyPos.y); X.stroke();
+                        X.restore();
+
+                        const status = inFront ? "IN FRONT (Visible)" : "BEHIND (Not Visible)";
+                        const col = inFront ? '#a8ff78' : '#ff4d6d';
+                        pill(status, o.x, o.y + 130, col, null, 1);
+                    }
+                },
+                {
+                    title: 'Interactive: Closest Point',
+                    narrate: 'Another use: finding the closest point. Drag the target point. We use the dot product to find where it would hit the line.',
+                    desc: 'Projection gives the <em>closest point</em> on an infinite line. We clamp it for segments.',
+                    enter() { setTarget('a', V(0, 0)); setTarget('b', V(0, 0)); },
+                    onDrag(pos) {
+                        const rel = sub(pos, origin);
+                        setTarget('pt', rel);
+                    },
+                    draw(o) {
+                        const p1 = V(-140, 60), p2 = V(140, -60);
+                        const pt = scene.pt;
+
+                        // Draw Line Segment
+                        X.beginPath(); X.moveTo(o.x + p1.x, o.y + p1.y); X.lineTo(o.x + p2.x, o.y + p2.y);
+                        X.strokeStyle = '#555'; X.lineWidth = 4; X.stroke();
+                        dot2(o.x + p1.x, o.y + p1.y, 4, '#555'); dot2(o.x + p2.x, o.y + p2.y, 4, '#555');
+
+                        // Calc projection
+                        const line = sub(p2, p1), len2 = dt(line, line);
+                        const toPt = sub(pt, p1);
+                        const t = clamp(dt(toPt, line) / len2, 0, 1);
+                        const closest = add(p1, mul(line, t));
+
+                        // Visuals
+                        X.save(); X.setLineDash([4, 4]); X.strokeStyle = '#ffd166';
+                        X.beginPath(); X.moveTo(o.x + pt.x, o.y + pt.y); X.lineTo(o.x + closest.x, o.y + closest.y); X.stroke();
+                        X.restore();
+
+                        dot2(o.x + pt.x, o.y + pt.y, 8, '#ff6b9d'); pill('Target', o.x + pt.x + 16, o.y + pt.y - 10, '#ff6b9d');
+                        dot2(o.x + closest.x, o.y + closest.y, 6, '#a8ff78'); pill('Closest', o.x + closest.x, o.y + closest.y + 20, '#a8ff78');
+                    }
+                },
+                {
+                    title: 'Interactive: Reflection',
+                    narrate: 'Finally, physics uses dot product to bounce things. The reflection formula uses the normal to flip the velocity.',
+                    desc: 'Drag the <em>Velocity</em>! <em>R = I - 2 * dot(I, N) * N</em>.',
+                    enter() { setTarget('pt', V(0, 0)); },
+                    onDrag(pos) {
+                        const rel = sub(pos, origin);
+                        if (dt(rel, V(0, -1)) < 0) setTarget('vel', rel); // Only incoming
+                    },
+                    draw(o) {
+                        const surfY = o.y + 20;
+                        X.fillStyle = '#3d3d5c'; X.fillRect(o.x - 120, surfY, 240, 4); // Surface
+                        const N = V(0, -1);
+                        arrow(o.x, surfY, o.x, surfY - 40, '#555', 2, 8); pill('N', o.x + 10, surfY - 50, '#555');
+
+                        const I = scene.vel; // Incoming
+                        const IdotN = dt(I, N);
+                        // R = I - 2 * (I.N) * N
+                        const R = sub(I, mul(N, 2 * IdotN));
+
+                        drawVector(o, I, '#ff6b9d', 'Incoming');
+                        drawVector(o, R, '#64ffda', 'Reflection');
+
+                        dot2(o.x, o.y, 4, '#fff');
+                    }
+                },
+                {
+                    title: 'Summary',
+                    narrate: 'A vector is an arrow with direction and length. Dot product measures alignment. You now have the building blocks!',
+                    desc: 'Vectors, components, adding, subtracting, dot product, sign checks, magnitude, unit vectors, and projection - done!',
+                    enter() { setTarget('a', V(0, 0)); setTarget('b', V(0, 0)); },
+                    draw(o) {
+                        pill('Tutorial Summary', o.x, o.y - 120, '#fff', null, 1);
+                        const items = [
+                            ['- Vectors: direction and length', '#64ffda'],
+                            ['- Components: X and Y parts', '#ffd166'],
+                            ['- Addition: tip-to-tail', '#a8ff78'],
+                            ['- Subtraction: point to point', '#ffd166'],
+                            ['- Dot Product: multiply, then add', '#c77dff'],
+                            ['- Sign: same / perpendicular / opposite', '#a8ff78'],
+                            ['- Magnitude: length calculation', '#64ffda'],
+                            ['- Unit Vectors: length of 1', '#ff6b9d'],
+                            ['- Projection: shadow on a line', '#ffd166'],
+                            ['- Lighting & FOV: Real world uses', '#a8ff78'],
+                        ];
+                        items.forEach((it, i) => pill(it[0], o.x, o.y - 80 + i * 22, it[1], 'rgba(0,0,0,0)', 1));
+                    }
                 }
+            ];
+        }
+        buildTutorial();
+
+        function updateUI() {
+            const step = tutSteps[tutCur];
+            document.getElementById('sNum').textContent = `Step ${tutCur + 1} of ${tutSteps.length}`;
+            document.getElementById('sTitle').textContent = step.title;
+
+            // Show narration in the description box if available, otherwise fallback to standard desc
+            document.getElementById('sDesc').innerHTML = (step && step.narrate) ? step.narrate : step.desc;
+
+            document.getElementById('mBox').textContent = step.math || '';
+            document.getElementById('pFill').style.width = `${((tutCur + 1) / tutSteps.length) * 100}%`;
+            document.getElementById('pL').textContent = `Step ${tutCur + 1}`;
+            document.getElementById('pR').textContent = `of ${tutSteps.length}`;
+            document.getElementById('btnPrev').disabled = tutCur === 0;
+            document.getElementById('btnNext').disabled = tutCur === tutSteps.length - 1;
+        }
+
+        function renderScene() {
+            bg();
+            const step = tutSteps[tutCur];
+            if (step && step.draw) step.draw(origin);
+        }
+
+        function draw() { // Compat for old calls
+            updateUI();
+            renderScene();
+        }
+
+        // Input Handling
+        let dragging = false;
+        C.addEventListener('pointerdown', e => dragging = true);
+        window.addEventListener('pointerup', e => dragging = false);
+        C.addEventListener('pointermove', e => {
+            if (!dragging) return;
+            const step = tutSteps[tutCur];
+            if (step && step.onDrag) {
+                const rect = C.getBoundingClientRect();
+                const pos = V(e.clientX - rect.left, e.clientY - rect.top);
+                step.onDrag(pos);
+            }
+        });
+
+        // TTS logic
+        let synth = window.speechSynthesis, voices = [];
+        const muteBtn = document.getElementById('btnMute'), voiceSel = document.getElementById('ttsVoice'),
+            rateIn = document.getElementById('ttsRate'), rateLbl = document.getElementById('ttsRateLbl'),
+            autoBtn = document.getElementById('btnAuto');
+        let muted = false, autoPlay = false, autoTimer = null;
+
+        function loadVoices() {
+            voices = synth.getVoices();
+            voiceSel.innerHTML = '<option value="">Default voice</option>';
+            voices.forEach((v, i) => {
+                const opt = document.createElement('option'); opt.value = i; opt.textContent = `${v.name} (${v.lang})`;
+                voiceSel.appendChild(opt);
             });
 
-            // TTS logic
-            let synth = window.speechSynthesis, voices = [];
-            const muteBtn = document.getElementById('btnMute'), voiceSel = document.getElementById('ttsVoice'),
-                rateIn = document.getElementById('ttsRate'), rateLbl = document.getElementById('ttsRateLbl'),
-                autoBtn = document.getElementById('btnAuto');
-            let muted = false, autoPlay = false, autoTimer = null;
-
-            function loadVoices() {
-                voices = synth.getVoices();
-                voiceSel.innerHTML = '<option value="">Default voice</option>';
-                voices.forEach((v, i) => {
-                    const opt = document.createElement('option'); opt.value = i; opt.textContent = `${v.name} (${v.lang})`;
-                    voiceSel.appendChild(opt);
-                });
-
-                const preferred = [
-                    'Microsoft Aria Online (Natural) - English (United States)',
-                    'Microsoft Jenny Online (Natural) - English (United States)',
-                    'Microsoft Guy Online (Natural) - English (United States)',
-                    'Google US English',
-                    'Samantha',
-                    'Google UK English Female',
-                    'Google UK English Male',
-                    'Daniel',
-                    'Microsoft Zira Desktop - English (United States)'
-                ];
-                let defaultSet = false;
-                for (const name of preferred) {
-                    const vIdx = voices.findIndex(v => v.name.includes(name) || v.name === name);
-                    if (vIdx !== -1) {
-                        voiceSel.value = vIdx;
-                        defaultSet = true;
-                        break;
-                    }
-                }
-                if (!defaultSet) {
-                    const vIdx = voices.findIndex(v => v.lang === 'en-US' || v.lang === 'en-GB');
-                    if (vIdx !== -1) voiceSel.value = vIdx;
+            const preferred = [
+                'Microsoft Aria Online (Natural) - English (United States)',
+                'Microsoft Jenny Online (Natural) - English (United States)',
+                'Microsoft Guy Online (Natural) - English (United States)',
+                'Google US English',
+                'Samantha',
+                'Google UK English Female',
+                'Google UK English Male',
+                'Daniel',
+                'Microsoft Zira Desktop - English (United States)'
+            ];
+            let defaultSet = false;
+            for (const name of preferred) {
+                const vIdx = voices.findIndex(v => v.name.includes(name) || v.name === name);
+                if (vIdx !== -1) {
+                    voiceSel.value = vIdx;
+                    defaultSet = true;
+                    break;
                 }
             }
-            if (synth && synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
-            loadVoices();
-
-            function stopAuto() {
-                autoPlay = false; clearTimeout(autoTimer);
-                autoBtn.textContent = 'Auto'; autoBtn.classList.remove('primary');
-                if (synth) synth.cancel();
+            if (!defaultSet) {
+                const vIdx = voices.findIndex(v => v.lang === 'en-US' || v.lang === 'en-GB');
+                if (vIdx !== -1) voiceSel.value = vIdx;
             }
+        }
+        if (synth && synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+        loadVoices();
 
-            function nextStep() {
-                if (tutCur < tutSteps.length - 1) {
-                    tutCur++;
-                    if (tutSteps[tutCur].enter) tutSteps[tutCur].enter();
-                    draw(); speakStep();
-                } else {
-                    stopAuto();
-                }
-            }
+        function stopAuto() {
+            autoPlay = false; clearTimeout(autoTimer);
+            autoBtn.textContent = 'Auto'; autoBtn.classList.remove('primary');
+            if (synth) synth.cancel();
+        }
 
-            function speakStep() {
-                if (autoTimer) clearTimeout(autoTimer);
-                if (!synth) return;
-                synth.cancel();
+        document.getElementById('btnReset').onclick = () => {
+            tutCur = 0;
+            if (tutSteps[tutCur].enter) tutSteps[tutCur].enter();
+            draw(); speakStep();
+        };
 
-                const s = tutSteps[tutCur];
-                // If we're at the start or muted, handle auto-advance differently
-                if (tutCur === 0 || muted || !s.narrate) {
-                    if (autoPlay) {
-                        const wordCount = s.narrate ? s.narrate.split(' ').length : 10;
-                        const readingSpeed = 200 * parseFloat(rateIn.value); // words per minute
-                        const duration = Math.max(2000, (wordCount / readingSpeed) * 60000);
-                        autoTimer = setTimeout(nextStep, duration);
-                    }
-                    return;
-                }
-
-                const u = new SpeechSynthesisUtterance(s.narrate);
-                if (voiceSel.value !== "") u.voice = voices[voiceSel.value];
-                u.rate = parseFloat(rateIn.value);
-
-                // Duck background music
-                if (window.bgMusicDuck) window.bgMusicDuck();
-
-                u.onend = () => {
-                    if (window.bgMusicRestore) window.bgMusicRestore();
-                    if (autoPlay) autoTimer = setTimeout(nextStep, 2500); // 2.5s prominent pause between steps
-                };
-
-                u.onerror = () => {
-                    if (window.bgMusicRestore) window.bgMusicRestore();
-                };
-
-                synth.speak(u);
-            }
-
-            muteBtn.onclick = () => { muted = !muted; muteBtn.textContent = muted ? 'Sound Off' : 'Sound On'; if (muted) synth.cancel(); else speakStep(); };
-            rateIn.oninput = () => rateLbl.textContent = rateIn.value + 'x';
-
-            autoBtn.onclick = () => {
-                autoPlay = !autoPlay;
-                autoBtn.textContent = autoPlay ? 'Stop' : 'Auto';
-                if (autoPlay) {
-                    autoBtn.classList.add('primary');
-                    // If not currently speaking/animating, start
-                    if (!synth.speaking) speakStep();
-                } else {
-                    stopAuto();
+        const btnMuteMusic = document.getElementById('btnMuteMusic');
+        if (btnMuteMusic) {
+            btnMuteMusic.onclick = () => {
+                if (window.toggleBgMusicMute) {
+                    const isMuted = window.toggleBgMusicMute();
+                    btnMuteMusic.style.opacity = isMuted ? '0.5' : '1';
                 }
             };
+        }
 
-            document.getElementById('btnNext').addEventListener('click', () => { stopAuto(); nextStep(); });
-            document.getElementById('btnPrev').addEventListener('click', () => {
+        function nextStep() {
+            if (tutCur < tutSteps.length - 1) {
+                tutCur++;
+                if (tutSteps[tutCur].enter) tutSteps[tutCur].enter();
+                draw(); speakStep();
+            } else {
                 stopAuto();
-                if (tutCur > 0) {
-                    tutCur--;
-                    if (tutSteps[tutCur].enter) tutSteps[tutCur].enter();
-                    draw(); speakStep();
+            }
+        }
+
+        function speakStep() {
+            if (autoTimer) clearTimeout(autoTimer);
+            if (!synth) return;
+            synth.cancel();
+
+            const s = tutSteps[tutCur];
+            // If we're at the start or muted, handle auto-advance differently
+            if (tutCur === 0 || muted || !s.narrate) {
+                if (autoPlay) {
+                    const wordCount = s.narrate ? s.narrate.split(' ').length : 10;
+                    const duration = Math.max(2000, (wordCount / 200) * 60000);
+                    autoTimer = setTimeout(nextStep, duration);
                 }
-            });
-            document.getElementById('btnReset').addEventListener('click', () => {
-                stopAuto();
-                tutCur = 0;
-                if (tutSteps[0].enter) tutSteps[0].enter();
-                synth.cancel();
-                draw();
-            });
+                return;
+            }
 
-            // Initial setup
+            const u = new SpeechSynthesisUtterance(s.narrate);
+            if (voiceSel.value !== "") u.voice = voices[voiceSel.value];
+            u.rate = 1.0;
+
+            // Duck background music
+            if (window.bgMusicDuck) window.bgMusicDuck();
+
+            u.onend = () => {
+                if (window.bgMusicRestore) window.bgMusicRestore();
+                if (autoPlay) autoTimer = setTimeout(nextStep, 2500); // 2.5s prominent pause between steps
+            };
+
+            u.onerror = () => {
+                if (window.bgMusicRestore) window.bgMusicRestore();
+            };
+
+            synth.speak(u);
+        }
+
+        muteBtn.onclick = () => {
+            muted = !muted;
+            muteBtn.textContent = muted ? '🔇' : '🔊';
+            if (muted) synth.cancel(); else speakStep();
+        };
+
+        autoBtn.onclick = () => {
+            autoPlay = !autoPlay;
+            autoBtn.textContent = autoPlay ? 'Stop' : 'Auto';
+            if (autoPlay) {
+                autoBtn.classList.add('primary');
+                // If not currently speaking/animating, start
+                if (!synth.speaking) speakStep();
+            } else {
+                stopAuto();
+            }
+        };
+
+        document.getElementById('btnNext').addEventListener('click', () => { stopAuto(); nextStep(); });
+        document.getElementById('btnPrev').addEventListener('click', () => {
+            stopAuto();
+            if (tutCur > 0) {
+                tutCur--;
+                if (tutSteps[tutCur].enter) tutSteps[tutCur].enter();
+                draw(); speakStep();
+            }
+        });
+        document.getElementById('btnReset').addEventListener('click', () => {
+            stopAuto();
+            tutCur = 0;
             if (tutSteps[0].enter) tutSteps[0].enter();
+            synth.cancel();
             draw();
-            update(); // Start loop
-        </script>
-        <script src="bg-music.js"></script>
+        });
+
+        // Initial setup
+        if (tutSteps[0].enter) tutSteps[0].enter();
+        draw();
+        update(); // Start loop
+    </script>
+    <script src="bg-music.js"></script>
 </body>
 
 </html>
