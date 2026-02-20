@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="250" viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg">
+            <!-- No Collision -->
+            <text x="100" y="20" fill="#ffffff" font-size="14" text-anchor="middle">No Collision</text>
+            <circle cx="60" cy="80" r="30" fill="none" stroke="#3794ff" stroke-width="2" />
+            <circle cx="140" cy="80" r="30" fill="none" stroke="#3794ff" stroke-width="2" />
+            <text x="100" y="140" fill="#00ff88" font-size="12" text-anchor="middle">Separated</text>
+
+            <!-- Touching -->
+            <text x="300" y="20" fill="#ffffff" font-size="14" text-anchor="middle">Just Touching</text>
+            <circle cx="270" cy="80" r="30" fill="none" stroke="#ffaa00" stroke-width="2" />
+            <circle cx="330" cy="80" r="30" fill="none" stroke="#ffaa00" stroke-width="2" />
+            <circle cx="300" cy="80" r="3" fill="#ff3333" />
+            <text x="300" y="140" fill="#ffaa00" font-size="12" text-anchor="middle">Contact Point</text>
+
+            <!-- Overlapping -->
+            <text x="500" y="20" fill="#ffffff" font-size="14" text-anchor="middle">Overlapping</text>
+            <circle cx="475" cy="80" r="30" fill="rgba(255, 50, 50, 0.3)" stroke="#ff3333" stroke-width="2" />
+            <circle cx="525" cy="80" r="30" fill="rgba(255, 50, 50, 0.3)" stroke="#ff3333" stroke-width="2" />
+            <line x1="500" y1="80" x2="520" y2="80" stroke="#00ff88" stroke-width="2" />
+            <text x="500" y="140" fill="#ff3333" font-size="12" text-anchor="middle">Penetration Depth</text>
+        </svg>

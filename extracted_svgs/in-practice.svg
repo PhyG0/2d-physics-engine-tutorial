@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#ff3333" />
+                </marker>
+            </defs>
+
+            <!-- Two overlapping circles -->
+            <circle cx="250" cy="100" r="50" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff" stroke-width="2" />
+            <circle cx="350" cy="100" r="50" fill="rgba(255, 148, 55, 0.3)" stroke="#ff9437" stroke-width="2" />
+
+            <!-- Normal vector -->
+            <line x1="300" y1="100" x2="380" y2="100" stroke="#ff3333" stroke-width="3" marker-end="url(#arrowhead)" />
+            <text x="340" y="85" fill="#ff3333" font-size="12" text-anchor="middle">Normal</text>
+
+            <!-- Contact point -->
+            <circle cx="300" cy="100" r="4" fill="#00ff88" />
+            <text x="300" y="130" fill="#00ff88" font-size="12" text-anchor="middle">Contact</text>
+
+            <!-- Penetration -->
+            <line x1="250" y1="140" x2="350" y2="140" stroke="#ffaa00" stroke-width="2" stroke-dasharray="5,5" />
+            <line x1="250" y1="135" x2="250" y2="145" stroke="#ffaa00" stroke-width="2" />
+            <line x1="350" y1="135" x2="350" y2="145" stroke="#ffaa00" stroke-width="2" />
+            <text x="300" y="165" fill="#ffaa00" font-size="12" text-anchor="middle">Distance = 100</text>
+            <text x="300" y="180" fill="#ffffff" font-size="11" text-anchor="middle">Penetration = 100 - (50 + 50) = 0
+                (just touching)</text>
+
+            <!-- Labels -->
+            <text x="250" y="50" fill="#3794ff" font-size="14" text-anchor="middle">Body A</text>
+            <text x="350" y="50" fill="#ff9437" font-size="14" text-anchor="middle">Body B</text>
+        </svg>

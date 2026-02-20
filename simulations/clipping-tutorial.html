@@ -3,32 +3,31 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Edge Clipping Tutorial</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Edge Clipping — Interactive Visual Tutorial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@300;500;700&display=swap');
-
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
-    }
-
     :root {
       --bg: #0b0d12;
-      --panel: #12151d;
-      --border: #1d2130;
-      --green: #3ddc84;
-      --orange: #ff8c42;
-      --blue: #4da6ff;
-      --purple: #b48eff;
+      --panel: #141925;
+      --border: #232d42;
+      --text: #d0d8f0;
+      --muted: #5a6480;
+      --accent: #3ddc84;
       --red: #ff4d6d;
       --yellow: #ffd166;
-      --text: #dde3f0;
-      --muted: #5a6480;
-      --accent: #4da6ff;
+      --blue: #4da6ff;
+      --purple: #b48eff;
+      --orange: #ff8c42;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
@@ -38,267 +37,356 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 14px;
+      padding: 16px;
       min-height: 100vh;
-      padding: 12px 14px;
-      gap: 10px
     }
 
     h1 {
       font-size: 1.15rem;
       font-weight: 700;
+      letter-spacing: .04em;
       color: var(--accent);
-      letter-spacing: -.02em;
-      text-align: center
+      text-transform: uppercase;
+      margin-bottom: 2px;
     }
 
-    /* TOP CONTROLS — always at top */
-    #top-bar {
-      display: flex;
-      gap: 9px;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: center;
+    /* ── TOOLBAR ─────────────────────────────────────────── */
+    .toolbar {
       width: 100%;
       max-width: 980px;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .ctrl {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     button {
-      background: #181d2a;
-      border: 1px solid var(--border);
-      color: var(--text);
       font-family: 'DM Sans', sans-serif;
       font-size: .85rem;
       font-weight: 600;
       padding: 8px 18px;
       border-radius: 8px;
       cursor: pointer;
-      transition: all .15s
+      border: 1px solid var(--border);
+      background: #181d2a;
+      color: var(--text);
+      transition: background .15s, transform .1s, opacity .15s;
+      white-space: nowrap;
     }
 
-    button:hover {
-      background: #1e2438;
-      border-color: var(--accent)
+    button:hover:not(:disabled) {
+      background: #1e2638;
+      transform: translateY(-1px);
     }
 
-    #btn-next {
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    button.primary {
       background: var(--accent);
       color: #0b0d12;
       border-color: var(--accent);
-      font-size: .9rem;
-      padding: 9px 22px
     }
 
-    #btn-next:hover {
-      background: #6dbeff
+    button.primary:hover:not(:disabled) {
+      background: #4fffaa;
     }
 
-    #btn-restart {
+    button.danger {
+      border-color: var(--red);
       color: var(--red);
-      border-color: var(--red)
     }
 
-    #btn-tts {
-      color: var(--yellow);
+    button.warn {
       border-color: var(--yellow);
-      font-size: .8rem;
-      padding: 7px 14px
+      color: var(--yellow);
     }
 
-    #btn-tts.off {
-      color: var(--muted);
-      border-color: var(--border)
+    button.active-auto {
+      background: #2a1a20;
+      border-color: var(--red);
+      color: var(--red);
     }
 
     #prog {
       font-family: 'JetBrains Mono', monospace;
       font-size: .72rem;
       color: var(--muted);
-      margin-left: 4px
+      white-space: nowrap;
     }
 
-    /* MAIN AREA */
-    #main {
-      display: flex;
-      gap: 12px;
+    /* ── PROGRESS BAR ───────────────────────────────────── */
+    #progress-bar-wrap {
       width: 100%;
       max-width: 980px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--blue));
+      border-radius: 2px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+
+    /* ── MAIN ──────────────────────────────────────────── */
+    #main {
+      width: 100%;
+      max-width: 980px;
+      display: flex;
+      gap: 14px;
       align-items: flex-start;
-      flex-wrap: wrap
     }
 
     #canvas-wrap {
-      flex: 1 1 580px;
-      position: relative
-    }
-
-    canvas {
-      width: 100%;
-      background: var(--panel);
-      border: 1px solid var(--border);
+      flex: 1;
       border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #0d111a;
+      position: relative;
+    }
+
+    #canvas-wrap canvas {
       display: block;
-      cursor: default
+      width: 100%;
+      height: auto;
+      cursor: default;
     }
 
-    canvas.drag {
-      cursor: grabbing
+    #canvas-wrap canvas.drag {
+      cursor: grabbing;
     }
 
-    /* INFO BOX */
+    /* ── INFO PANEL ─────────────────────────────────────── */
     #info {
       width: 100%;
       max-width: 980px;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 13px 18px;
-      min-height: 80px
+      padding: 14px 18px;
+      min-height: 72px;
     }
 
     #step-title {
-      font-size: .95rem;
+      font-size: 1rem;
       font-weight: 700;
       color: var(--accent);
-      margin-bottom: 4px
+      margin-bottom: 6px;
+      letter-spacing: .02em;
     }
 
     #step-desc {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .78rem;
-      line-height: 1.8;
-      color: var(--text)
+      font-size: .875rem;
+      line-height: 1.55;
+      color: #a0aac8;
     }
 
-    /* BOTTOM CONTROLS (sliders) */
+    #step-desc code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8rem;
+      background: #1a2035;
+      color: var(--blue);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* ── LEGEND ─────────────────────────────────────────── */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: .78rem;
+      font-weight: 600;
+      justify-content: center;
+    }
+
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend span::before {
+      content: '';
+      width: 22px;
+      height: 3px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .lr::before {
+      background: #3ddc84;
+    }
+
+    .li::before {
+      background: #ff8c42;
+    }
+
+    .lt::before {
+      background: #4da6ff;
+    }
+
+    .lp::before {
+      background: #b48eff;
+      background: repeating-linear-gradient(90deg, #b48eff 0 4px, transparent 4px 8px);
+    }
+
+    .lc::before {
+      background: #ff4d6d;
+    }
+
+    .lf::before {
+      background: #ffd166;
+    }
+
+    /* ── BOTTOM CONTROLS ─────────────────────────────────── */
     #bottom-controls {
       width: 100%;
       max-width: 980px;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 10px;
-      overflow: hidden
+      overflow: hidden;
     }
 
     #ctrl-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
+      padding: 12px 18px;
       cursor: pointer;
-      font-size: .8rem;
+      font-size: .85rem;
       font-weight: 600;
       color: var(--muted);
       user-select: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color .2s
+      transition: color .15s;
     }
 
     #ctrl-toggle:hover {
-      color: var(--text)
+      color: var(--text);
     }
 
     #ctrl-toggle.open {
-      border-bottom-color: var(--border);
-      color: var(--text)
+      color: var(--accent);
     }
 
     #ctrl-body {
       display: none;
-      padding: 14px 16px
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 4px 18px 18px;
     }
 
     #ctrl-body.open {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap
-    }
-
-    .ctrl-group {
-      flex: 1 1 200px
+      display: grid;
     }
 
     .ctrl-group h4 {
-      font-size: .68rem;
+      font-size: .8rem;
       font-weight: 700;
       color: var(--muted);
+      margin-bottom: 10px;
       text-transform: uppercase;
-      letter-spacing: .09em;
-      margin-bottom: 10px
+      letter-spacing: .06em;
     }
 
     .srow {
-      margin-bottom: 7px
+      margin-bottom: 8px;
     }
 
     .srow label {
-      font-size: .7rem;
-      color: var(--muted);
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 2px
-    }
-
-    .srow label span {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--accent)
+      font-size: .78rem;
+      color: #7a88a8;
+      display: block;
+      margin-bottom: 3px;
     }
 
     .srow input[type=range] {
       width: 100%;
-      accent-color: var(--accent)
+      accent-color: var(--accent);
+      height: 4px;
     }
 
-    .legend {
+    /* ── STEP INDICATOR DOTS ──────────────────────────────── */
+    #step-dots {
       display: flex;
-      gap: 12px;
+      gap: 5px;
       flex-wrap: wrap;
       justify-content: center;
-      font-size: .7rem;
-      color: var(--muted);
+      max-width: 980px;
       width: 100%;
-      max-width: 980px
     }
 
-    .legend span {
-      display: flex;
-      align-items: center;
-      gap: 4px
+    .sdot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background .3s, transform .3s;
+      cursor: pointer;
     }
 
-    .legend span::before {
-      content: '';
-      display: inline-block;
-      width: 16px;
-      height: 3px;
-      border-radius: 2px
+    .sdot.done {
+      background: var(--muted);
     }
 
-    .lr::before {
-      background: var(--green)
+    .sdot.active {
+      background: var(--accent);
+      transform: scale(1.4);
     }
 
-    .li::before {
-      background: var(--orange)
+    /* ── PHASE BADGE ──────────────────────────────────────── */
+    #phase-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 5px;
+      background: #1a2035;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      transition: background .3s, color .3s, border-color .3s;
     }
 
-    .lt::before {
-      background: var(--blue)
-    }
+    @media (max-width: 600px) {
+      #ctrl-body {
+        grid-template-columns: 1fr;
+      }
 
-    .lp::before {
-      background: var(--purple)
-    }
-
-    .lc::before {
-      background: var(--red)
-    }
-
-    .lf::before {
-      background: var(--yellow)
+      .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -307,31 +395,29 @@
 
   <h1>Edge Clipping — Interactive Visual Tutorial</h1>
 
-  <!-- TOP: next/prev always visible -->
-  <div class="toolbar"
-    style="width:100%;max-width:980px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
-    <div class="toolbar-group" style="display:flex;align-items:center;gap:12px;">
-      <div class="ctrl" style="display:flex;gap:8px;">
-        <button id="btnPrev" disabled
-          style="background:#181d2a;border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">←
-          Prev</button>
-        <button id="btnNext" class="primary"
-          style="background:var(--accent);color:#0b0d12;border:1px solid var(--accent);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">Next
-          →</button>
-        <button id="btnAuto"
-          style="background:#181d2a;border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">▶
-          Auto</button>
-        <button id="btnReset"
-          style="background:#181d2a;border:1px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">↺</button>
-        <button id="btnMute" title="Toggle narration"
-          style="background:#181d2a;border:1px solid var(--yellow);color:var(--yellow);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">🔊</button>
-        <button id="btnMuteMusic" title="Toggle music"
-          style="background:#181d2a;border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;padding:8px 18px;border-radius:8px;cursor:pointer;">🎵</button>
+  <!-- PROGRESS BAR -->
+  <div id="progress-bar-wrap">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <div class="ctrl">
+        <button id="btnPrev" disabled>← Prev</button>
+        <button id="btnNext" class="primary">Next →</button>
+        <button id="btnAuto">▶ Auto</button>
+        <button id="btnReset" class="danger">↺ Reset</button>
+        <button id="btnMute" class="warn">🔊</button>
+        <button id="btnMuteMusic">🎵</button>
       </div>
-      <div id="prog" style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);">Step 1 of —
-      </div>
+      <div id="prog">Step 0 / —</div>
+      <div id="phase-badge">Ready</div>
     </div>
   </div>
+
+  <!-- STEP DOTS -->
+  <div id="step-dots"></div>
 
   <!-- CANVAS -->
   <div id="main">
@@ -340,11 +426,11 @@
     </div>
   </div>
 
-  <!-- INFO -->
+  <!-- INFO PANEL -->
   <div id="info">
     <div id="step-title">Ready to Start</div>
     <div id="step-desc">Drag the <b style="color:#3ddc84">green</b> or <b style="color:#ff8c42">orange</b> vertices on
-      the canvas to reposition them, then press <b>Next Step</b> to begin the tutorial. Or expand <b>Edge Controls</b>
+      the canvas to reposition them, then press <b>Next →</b> to begin the tutorial. Or expand <b>Edge Controls</b>
       below.</div>
   </div>
 
@@ -388,17 +474,17 @@
   </div>
 
   <script>
-    // ─────────────────────────────────────────────────────────────────────────────
-    // CANVAS
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    // CANVAS SETUP
+    // ═══════════════════════════════════════════════════════════════════
     const CV = document.getElementById('c');
     const cx = CV.getContext('2d');
     const W = 700, H = 460;
     CV.width = W; CV.height = H;
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // VECTOR MATH
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     const vm = {
       sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y }),
       add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y }),
@@ -406,13 +492,13 @@
       dot: (a, b) => a.x * b.x + a.y * b.y,
       len: (a) => Math.sqrt(a.x * a.x + a.y * a.y),
       norm: (a) => { const l = Math.sqrt(a.x * a.x + a.y * a.y) || 1; return { x: a.x / l, y: a.y / l }; },
-      perp: (a) => ({ x: -a.y, y: a.x }),  // 90° CCW
+      perp: (a) => ({ x: -a.y, y: a.x }),
       proj: (pt, anc, t) => { const d = vm.dot(vm.sub(pt, anc), t); return vm.add(anc, vm.sc(t, d)); },
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // GEOMETRY — recomputed live
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     let G = {};
 
     function computeGeo() {
@@ -424,16 +510,12 @@
 
       const tang = vm.norm(vm.sub(refV2, refV1));
       const negT = vm.sc(tang, -1);
-      // refNormal points "inward" (downward for horizontal ref edge = positive Y in canvas coords)
-      // For a horizontal edge going left→right, the inward normal points down: perp of tang CLOCKWISE = (tang.y, -tang.x)... incorrect per user request.
-      // USER REQUEST: visual was opposite. Let's make normal point DOWN (perp CCW = -y, x).
-      // tang=(1,0) -> perp=(-0, 1) = (0,1). This is DOWN.
-      const refNormal = vm.norm({ x: -tang.y, y: tang.x }); // points "down" (into the solid body below)
+      const refNormal = vm.norm({ x: -tang.y, y: tang.x });
 
-      // ── LEFT clip (anchor=refV1, tang=tang) ──
+      // LEFT clip (anchor=refV1, direction=tang)
       const d0L = vm.dot(vm.sub(incV1, refV1), tang);
       const d1L = vm.dot(vm.sub(incV2, refV1), tang);
-      const tL = isFinite(d0L / (d0L - d1L)) ? d0L / (d0L - d1L) : null;
+      const tL = (d0L - d1L !== 0) ? d0L / (d0L - d1L) : null;
       let leftClipPt = null, leftOut = [];
       if (d0L >= 0 && d1L >= 0) { leftOut = [{ ...incV1 }, { ...incV2 }]; }
       else if (d0L < 0 && d1L < 0) { leftOut = []; }
@@ -443,13 +525,13 @@
         else leftOut = [{ ...leftClipPt }, { ...incV2 }];
       }
 
-      // ── RIGHT clip (anchor=refV2, tang=negT) ──
+      // RIGHT clip (anchor=refV2, direction=negT)
       let d0R = null, d1R = null, tR = null, rightClipPt = null, rightOut = [];
       if (leftOut.length === 2) {
         const lo0 = leftOut[0], lo1 = leftOut[1];
         d0R = vm.dot(vm.sub(lo0, refV2), negT);
         d1R = vm.dot(vm.sub(lo1, refV2), negT);
-        tR = isFinite(d0R / (d0R - d1R)) ? d0R / (d0R - d1R) : null;
+        tR = (d0R - d1R !== 0) ? d0R / (d0R - d1R) : null;
         if (d0R >= 0 && d1R >= 0) { rightOut = [{ ...lo0 }, { ...lo1 }]; }
         else if (d0R < 0 && d1R < 0) { rightOut = []; }
         else {
@@ -459,17 +541,14 @@
         }
       }
 
-      // ── DEPTH FILTER: keep only points at or below the reference edge ──
-      // refNormal points "inward" (down).
-      // Inside = Positive depth. distance along normal.
+      // DEPTH FILTER
       const refDist = vm.dot(refV1, refNormal);
       const candidatePoints = [...rightOut];
-      const contactPoints = [];
-      const depthValues = [];
+      const contactPoints = [], depthValues = [];
       for (const p of candidatePoints) {
         const d = vm.dot(p, refNormal) - refDist;
         depthValues.push(d);
-        if (d >= 0) contactPoints.push(p); // POSITIVE = INSIDE
+        if (d >= 0) contactPoints.push(p);
       }
 
       G = {
@@ -480,15 +559,15 @@
       };
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // EASING
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     const eO = t => 1 - (1 - t) * (1 - t);
     const eIO = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // DRAW PRIMITIVES
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     function dDot(p, r, col, a = 1) {
       if (!p) return;
       cx.save(); cx.globalAlpha = a; cx.fillStyle = col;
@@ -502,8 +581,7 @@
     }
     function dArrow(f, t, col, w = 2, al = 1, hs = 10) {
       if (!f || !t) return;
-      const d = Math.hypot(t.x - f.x, t.y - f.y);
-      if (d < 2) return;
+      const d = Math.hypot(t.x - f.x, t.y - f.y); if (d < 2) return;
       cx.save(); cx.globalAlpha = al; cx.strokeStyle = col; cx.fillStyle = col; cx.lineWidth = w; cx.lineCap = 'round';
       cx.beginPath(); cx.moveTo(f.x, f.y); cx.lineTo(t.x, t.y); cx.stroke();
       const a = Math.atan2(t.y - f.y, t.x - f.x);
@@ -515,128 +593,136 @@
     function pill(txt, p, bg, fg = '#fff', al = 1) {
       if (!p) return;
       cx.save();
-      cx.shadowColor = 'transparent';
-      cx.shadowBlur = 0;
+      cx.shadowColor = 'transparent'; cx.shadowBlur = 0;
       cx.font = 'bold 11px "JetBrains Mono",monospace';
-      cx.textAlign = 'left';
-      cx.textBaseline = 'alphabetic';
+      cx.textAlign = 'left'; cx.textBaseline = 'alphabetic';
       const tw = cx.measureText(txt).width;
       const pad = 6, h = 20, r = 5;
       const bx = p.x - pad, by = p.y - 15, bw = tw + pad * 2, bh = h;
-      // 1. Draw background at requested alpha
-      cx.globalAlpha = al;
-      cx.fillStyle = bg;
+      cx.globalAlpha = al; cx.fillStyle = bg;
       cx.beginPath();
-      if (cx.roundRect) {
-        cx.roundRect(bx, by, bw, bh, r);
-      } else {
+      if (cx.roundRect) { cx.roundRect(bx, by, bw, bh, r); }
+      else {
         cx.moveTo(bx + r, by); cx.lineTo(bx + bw - r, by);
-        cx.arcTo(bx + bw, by, bx + bw, by + r, r);
-        cx.lineTo(bx + bw, by + bh - r);
-        cx.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
-        cx.lineTo(bx + r, by + bh);
-        cx.arcTo(bx, by + bh, bx, by + bh - r, r);
-        cx.lineTo(bx, by + r);
-        cx.arcTo(bx, by, bx + r, by, r);
-        cx.closePath();
+        cx.arcTo(bx + bw, by, bx + bw, by + r, r); cx.lineTo(bx + bw, by + bh - r);
+        cx.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r); cx.lineTo(bx + r, by + bh);
+        cx.arcTo(bx, by + bh, bx, by + bh - r, r); cx.lineTo(bx, by + r);
+        cx.arcTo(bx, by, bx + r, by, r); cx.closePath();
       }
       cx.fill();
-      // 2. Draw text ALWAYS at full opacity so it's always crisp and readable
-      cx.globalAlpha = 1;
-      cx.fillStyle = fg;
+      cx.globalAlpha = 1; cx.fillStyle = fg;
       cx.fillText(txt, p.x, p.y - 1);
       cx.restore();
     }
-    function dShadeHalfPlane(p, n, col, al, label) {
-      // Draw a large polygon representing the half-plane defined by point p and normal n.
-      // We want to shade the side where dot(v-p, n) > 0.
-      // Because we want to shade the "outside" or "above" region.
-      // Actually the specific functions below decide what "outside" means.
-      // Let's just draw a huge rectangle aligned with the edge.
-      const w = 2000;
-      const h = 2000;
-      cx.save();
-      cx.translate(p.x, p.y);
-      // rotate so X axis aligns with the edge direction (perp to n).
-      // n = (nx, ny). edge direction = (-ny, nx) if n is to our 'left' or 'right'?
-      // We want to fill the region in direction n.
-      // angle of n
-      const ang = Math.atan2(n.y, n.x);
-      cx.rotate(ang);
-      // now we are in a frame where X is along n. We want to fill X > 0.
+    function dShadeHalfPlane(p, n, col, al) {
+      const w = 2000, h = 2000;
+      cx.save(); cx.translate(p.x, p.y);
+      const ang = Math.atan2(n.y, n.x); cx.rotate(ang);
       cx.globalAlpha = al * .2; cx.fillStyle = col;
-      cx.fillRect(0, -h / 2, w, h);
-      cx.restore();
-
-      // draw boundary line
-      // line is perpendicular to n, passing through p
+      cx.fillRect(0, -h / 2, w, h); cx.restore();
       const edgeDir = { x: -n.y, y: n.x };
       const p1 = vm.add(p, vm.sc(edgeDir, -1000));
       const p2 = vm.add(p, vm.sc(edgeDir, 1000));
       dLine(p1, p2, col, 1.5, [6, 4], al * .6);
+    }
 
-      // label
-      if (label) {
-        // position label slightly "into" the shaded region
-        const lp = vm.add(p, vm.sc(n, 40));
-        pill(label, lp, col, '#fff', al * .9);
+    // Draw a two-line zone label at a fixed canvas position
+    function zoneLabel(outsideTxt, insideTxt, outsideAnchor, insideAnchor, col, al) {
+      // outsideAnchor / insideAnchor: {x,y} in canvas coords — fixed corners
+      function banner(txt, anchor, bg, fg, a) {
+        cx.save();
+        cx.font = 'bold 11px "JetBrains Mono",monospace';
+        cx.textAlign = 'left'; cx.textBaseline = 'alphabetic';
+        const tw = cx.measureText(txt).width;
+        const pad = 7, h = 22, r = 5;
+        const bx = anchor.x, by = anchor.y - 16, bw = tw + pad * 2, bh = h;
+        cx.globalAlpha = a;
+        cx.fillStyle = bg;
+        cx.beginPath();
+        if (cx.roundRect) { cx.roundRect(bx, by, bw, bh, r); }
+        else {
+          cx.moveTo(bx + r, by); cx.lineTo(bx + bw - r, by);
+          cx.arcTo(bx + bw, by, bx + bw, by + r, r); cx.lineTo(bx + bw, by + bh - r);
+          cx.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r); cx.lineTo(bx + r, by + bh);
+          cx.arcTo(bx, by + bh, bx, by + bh - r, r); cx.lineTo(bx, by + r);
+          cx.arcTo(bx, by, bx + r, by, r); cx.closePath();
+        }
+        cx.fill();
+        cx.globalAlpha = 1; cx.fillStyle = fg;
+        cx.fillText(txt, anchor.x + pad, anchor.y - 1);
+        cx.restore();
       }
+      banner(outsideTxt, outsideAnchor, col, '#fff', al);
+      banner(insideTxt, insideAnchor, '#1e3a28', '#3ddc84', al);
     }
 
     function dShadeLeft(al) {
-      // Left boundary at RefV1. Normal is -Tangent. "Outside" is direction of -Tangent.
-      // We want to shade the region "behind" RefV1.
-      dShadeHalfPlane(G.refV1, G.negT, '#ff4d6d', al, 'OUTSIDE (Back)');
+      dShadeHalfPlane(G.refV1, G.negT, '#ff4d6d', al);
+      // Outside = left side (x≈0), Inside = right side
+      zoneLabel('✗ OUTSIDE', '✓ INSIDE',
+        { x: 6, y: 18 },   // top-left corner
+        { x: W / 2 + 20, y: 18 }, // top-center-right
+        '#ff4d6d', al);
     }
     function dShadeRight(al) {
-      // Right boundary at RefV2. Normal is Tangent. "Outside" is direction of Tangent.
-      dShadeHalfPlane(G.refV2, G.tang, '#ff4d6d', al, 'OUTSIDE (Front)');
+      dShadeHalfPlane(G.refV2, G.tang, '#ff4d6d', al);
+      // Outside = right side, Inside = left side
+      zoneLabel('✗ OUTSIDE', '✓ INSIDE',
+        { x: W - 130, y: 18 },  // top-right corner
+        { x: 20, y: 18 },  // top-left
+        '#ff4d6d', al);
     }
-    // Shade ABOVE ref edge (for depth filter visual)
     function dShadeAbove(al) {
-      // Reference Edge Plane. Normal is RefNormal.
-      // We want to shade the "outside" region.
-      // Our refNormal points "inward" (valid).
-      // So we want to shade the opposite direction: -refNormal.
       const outN = vm.sc(G.refNormal, -1);
-      dShadeHalfPlane(G.refV1, outN, '#ff4d6d', al, 'ABOVE EDGE — outside');
+      dShadeHalfPlane(G.refV1, outN, '#ff4d6d', al);
+      // Outside = above ref edge (small y), Inside = below (large y)
+      // Determine which half is "above" by checking where outN points
+      const aboveIsTop = outN.y < 0;
+      const outsideY = aboveIsTop ? 18 : H - 8;
+      const insideY = aboveIsTop ? H - 8 : 18;
+      zoneLabel('✗ OUTSIDE (above edge)', '✓ INSIDE (below edge)',
+        { x: W / 2 - 100, y: outsideY },
+        { x: W / 2 - 80, y: insideY },
+        '#ff4d6d', al);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // ANIMATED STATE
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    // ANIMATED STATE  — one flat object, all keys 0→1
+    // ═══════════════════════════════════════════════════════════════════
+    const STATE_KEYS = [
+      'ref', 'inc',
+      'shL', 'tang',
+      'tI1', 'tI2',
+      'pI1', 'd0', 'pI2', 'd1',
+      'pf',
+      'showFullVec', 'tFrac',
+      'cpL', 'lOut',
+      'newInc',
+      'shR', 'negT',
+      'tI1R', 'tI2R',
+      'pI1R', 'd0R', 'pI2R', 'd1R',
+      'pfR',
+      'pfR',
+      'showFullVecR', 'tFracR',
+      'cpR',
+      'showCandidates',
+      'showRefNorm',
+      'showDepthShade',
+      'showDepth0', 'showDepth1',
+      'showKept',
+      'final',
+    ];
+
     let S = {};
     function resetS() {
-      S = {
-        ref: 0, inc: 0,
-        shL: 0, tang: 0,
-        tI1: 0, tI2: 0,
-        pI1: 0, d0: 0, pI2: 0, d1: 0,
-        pf: 0,
-        // t animation: showFullVec = show the full ghost I1→I2, tFrac = animated 0→1 scaling
-        showFullVec: 0, tFrac: 0,
-        cpL: 0, lOut: 0,
-        newInc: 0,
-        shR: 0, negT: 0,
-        tI1R: 0, tI2R: 0,
-        pI1R: 0, d0R: 0, pI2R: 0, d1R: 0,
-        pfR: 0,
-        showFullVecR: 0, tFracR: 0,
-        cpR: 0,
-        // depth filter
-        showCandidates: 0,
-        showRefNorm: 0,
-        showDepthShade: 0,
-        showDepth0: 0, showDepth1: 0,
-        showKept: 0,
-        final: 0,
-      };
+      S = {};
+      for (const k of STATE_KEYS) S[k] = 0;
     }
     resetS();
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // MAIN DRAW SCENE
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     function drawScene() {
       cx.clearRect(0, 0, W, H);
       // grid
@@ -650,12 +736,12 @@
         d0R, d1R, tR, rightClipPt, rightOut,
         candidatePoints, depthValues, contactPoints } = G;
 
-      // shade zones
+      // shades
       if (S.shL > 0) dShadeLeft(S.shL);
       if (S.shR > 0) dShadeRight(S.shR);
       if (S.showDepthShade > 0) dShadeAbove(S.showDepthShade);
 
-      // ── original incident edge ──
+      // incident edge
       if (S.inc > 0) {
         dLine(incV1, incV2, '#ff8c42', 2.5, [], S.inc);
         dDot(incV1, 7, '#ff8c42', S.inc); dDot(incV2, 7, '#ff8c42', S.inc);
@@ -663,7 +749,7 @@
         pill('IncV2', { x: incV2.x + 10, y: incV2.y + 18 }, '#ff8c42', '#fff', S.inc);
       }
 
-      // ── reference edge ──
+      // reference edge
       if (S.ref > 0) {
         dLine(refV1, refV2, '#3ddc84', 3, [], S.ref);
         dDot(refV1, 7, '#3ddc84', S.ref); dDot(refV2, 7, '#3ddc84', S.ref);
@@ -671,17 +757,17 @@
         pill('RefV2', { x: refV2.x + 10, y: refV2.y - 14 }, '#3ddc84', '#fff', S.ref);
       }
 
-      // ── tangent arrow ──
+      // tangent arrow
       if (S.tang > 0) {
         dArrow(refV1, vm.add(refV1, vm.sc(tang, 85)), '#4da6ff', 2.5, S.tang, 10);
         pill('T̂  (tangent)', { x: refV1.x + 18, y: refV1.y - 18 }, '#4da6ff', '#fff', S.tang);
       }
 
-      // ── vectors RefV1 → incident vertices ──
+      // vectors RefV1 → inc verts
       if (S.tI1 > 0) dArrow(refV1, incV1, '#b48eff', 1.8, S.tI1, 8);
       if (S.tI2 > 0) dArrow(refV1, incV2, '#b48eff', 1.8, S.tI2, 8);
 
-      // ── projections + d labels (left phase) ──
+      // projections + d labels (left)
       if (S.pI1 > 0) { const p = vm.proj(incV1, refV1, tang); dLine(incV1, p, '#b48eff', 1.5, [4, 4], S.pI1); dDot(p, 5, '#b48eff', S.pI1); }
       if (S.d0 > 0) {
         const p = vm.proj(incV1, refV1, tang);
@@ -695,7 +781,7 @@
         pill(`d1 = ${sg}${d1L.toFixed(1)}`, { x: p.x + 6, y: p.y + 20 }, d1L >= 0 ? '#3ddc84' : '#ff4d6d', '#fff', S.d1);
       }
 
-      // ── pass/fail rings (left) ──
+      // pass/fail rings (left)
       if (S.pf > 0) {
         const c0 = d0L >= 0 ? '#3ddc84' : '#ff4d6d', c1 = d1L >= 0 ? '#3ddc84' : '#ff4d6d';
         dDot(incV1, 16, c0, S.pf * .22); dDot(incV2, 16, c1, S.pf * .22);
@@ -706,42 +792,38 @@
         cx.restore();
       }
 
-      // ── t ANIMATION (left) — full vector first, then animated shrinking ──
+      // t animation (left)
       if (S.showFullVec > 0) {
-        // ghost of the full I1→I2 vector
-        dLine(incV1, incV2, '#ff4d6d', 1.5, [], S.showFullVec * .45);
-        dArrow(incV1, incV2, '#ff4d6d', 1, S.showFullVec * .4, 7);
-        pill('IncV1 → IncV2 (full edge)', { x: incV1.x + 10, y: incV1.y + 18 }, '#ff4d6d', '#fff', S.showFullVec * .8);
+        dLine(incV1, incV2, '#00d4ff', 1.5, [], S.showFullVec * .45);
+        dArrow(incV1, incV2, '#00d4ff', 1, S.showFullVec * .4, 7);
+        pill('IncV1 → IncV2 (full edge)', { x: incV1.x + 10, y: incV1.y + 18 }, '#00d4ff', '#0b0d12', S.showFullVec * .8);
       }
       if (S.tFrac > 0 && tL !== null) {
-        // growing arrow from I1, scaled by t
         const end = vm.add(incV1, vm.sc(vm.sub(incV2, incV1), S.tFrac * tL));
-        dArrow(incV1, end, '#ff4d6d', 3, Math.min(1, S.tFrac * 3), 11);
+        dArrow(incV1, end, '#00d4ff', 3, Math.min(1, S.tFrac * 3), 11);
         const tv = (S.tFrac * tL).toFixed(3);
-        pill(`t = ${tv}  →  growing...`, { x: incV1.x + 12, y: incV1.y - 26 }, '#ff4d6d', '#fff', Math.min(1, S.tFrac * 3));
+        pill(`t = ${tv}  →  growing...`, { x: incV1.x + 12, y: incV1.y - 26 }, '#00d4ff', '#0b0d12', Math.min(1, S.tFrac * 3));
       }
 
-      // ── left clip point ──
+      // left clip point
       if (S.cpL > 0 && leftClipPt) {
         dDot(leftClipPt, 9, '#ff4d6d', S.cpL);
         pill('Clip Point (Left)', { x: leftClipPt.x + 10, y: leftClipPt.y + 20 }, '#ff4d6d', '#fff', S.cpL);
       }
 
-      // ── left clip output (dashed) ──
+      // left clip output
       if (S.lOut > 0 && leftOut.length === 2) {
         dLine(leftOut[0], leftOut[1], '#ff4d6d', 2.5, [8, 5], S.lOut);
         dDot(leftOut[0], 7, '#ff4d6d', S.lOut); dDot(leftOut[1], 7, '#ff4d6d', S.lOut);
       }
 
-      // ══ RIGHT CLIP PHASE ══════════════════════════════════════════════════
-      // new clean incident
+      // ── RIGHT CLIP PHASE ──────────────────────────────────────────────
       if (S.newInc > 0 && leftOut.length === 2) {
         dLine(leftOut[0], leftOut[1], '#ff8c42', 3, [], S.newInc);
         dDot(leftOut[0], 8, '#ff8c42', S.newInc); dDot(leftOut[1], 8, '#ff8c42', S.newInc);
         pill('NewV1', { x: leftOut[0].x + 10, y: leftOut[0].y + 20 }, '#ff8c42', '#fff', S.newInc);
         pill('NewV2', { x: leftOut[1].x + 10, y: leftOut[1].y - 14 }, '#ff8c42', '#fff', S.newInc);
       }
-      // neg tang
       if (S.negT > 0) {
         dArrow(refV2, vm.add(refV2, vm.sc(negT, 85)), '#4da6ff', 2.5, S.negT, 10);
         pill('−T̂  (reversed)', { x: refV2.x - 100, y: refV2.y - 18 }, '#4da6ff', '#fff', S.negT);
@@ -769,24 +851,23 @@
       }
       // t animation RIGHT
       if (S.showFullVecR > 0 && leftOut.length === 2) {
-        dLine(leftOut[0], leftOut[1], '#ff4d6d', 1.5, [], S.showFullVecR * .45);
-        dArrow(leftOut[0], leftOut[1], '#ff4d6d', 1, S.showFullVecR * .4, 7);
-        pill('NewV1 → NewV2 (full edge)', { x: leftOut[0].x + 10, y: leftOut[0].y - 26 }, '#ff4d6d', '#fff', S.showFullVecR * .8);
+        dLine(leftOut[0], leftOut[1], '#00d4ff', 1.5, [], S.showFullVecR * .45);
+        dArrow(leftOut[0], leftOut[1], '#00d4ff', 1, S.showFullVecR * .4, 7);
+        pill('NewV1 → NewV2 (full edge)', { x: leftOut[0].x + 10, y: leftOut[0].y - 26 }, '#00d4ff', '#0b0d12', S.showFullVecR * .8);
       }
       if (S.tFracR > 0 && tR !== null && leftOut.length === 2) {
         const lo0 = leftOut[0], lo1 = leftOut[1];
         const end = vm.add(lo0, vm.sc(vm.sub(lo1, lo0), S.tFracR * tR));
-        dArrow(lo0, end, '#ff4d6d', 3, Math.min(1, S.tFracR * 3), 11);
-        pill(`t = ${(S.tFracR * tR).toFixed(3)}  →  growing...`, { x: lo0.x + 12, y: lo0.y - 26 }, '#ff4d6d', '#fff', Math.min(1, S.tFracR * 3));
+        dArrow(lo0, end, '#00d4ff', 3, Math.min(1, S.tFracR * 3), 11);
+        pill(`t = ${(S.tFracR * tR).toFixed(3)}  →  growing...`, { x: lo0.x + 12, y: lo0.y - 26 }, '#00d4ff', '#0b0d12', Math.min(1, S.tFracR * 3));
       }
       if (S.cpR > 0 && rightClipPt) {
         dDot(rightClipPt, 9, '#ff4d6d', S.cpR);
         pill('Clip Point (Right)', { x: rightClipPt.x + 10, y: rightClipPt.y + 20 }, '#ff4d6d', '#fff', S.cpR);
       }
 
-      // ══ DEPTH FILTER PHASE ════════════════════════════════════════════════
+      // ── DEPTH FILTER PHASE ───────────────────────────────────────────
       if (S.showCandidates > 0) {
-        // show the right-clip output as candidate points
         for (let i = 0; i < candidatePoints.length; i++) {
           const p = candidatePoints[i];
           dDot(p, 10, '#b48eff', S.showCandidates);
@@ -795,21 +876,16 @@
         if (rightOut.length === 2) dLine(rightOut[0], rightOut[1], '#b48eff', 2, [4, 4], S.showCandidates * .7);
       }
 
-      // show Normal
       if (S.showRefNorm > 0) {
-        // midpoint
-        const mx = (refV1.x + refV2.x) * 0.5;
-        const my = (refV1.y + refV2.y) * 0.5;
+        const mx = (refV1.x + refV2.x) * .5, my = (refV1.y + refV2.y) * .5;
         const mid = { x: mx, y: my };
         const end = vm.add(mid, vm.sc(refNormal, 50));
         dArrow(mid, end, '#ffd166', 3, S.showRefNorm, 12);
         pill('n (normal)', { x: end.x, y: end.y + 20 }, '#ffd166', '#0b0d12', S.showRefNorm);
       }
 
-      // depth measurements
       if (S.showDepth0 > 0 && candidatePoints.length > 0) {
         const p = candidatePoints[0], d = depthValues[0];
-        // draw a vertical line from the point down to the reference line (or up)
         const refY = refV1.y;
         dLine(p, { x: p.x, y: refY }, '#ffd166', 1.5, [4, 4], S.showDepth0);
         dDot({ x: p.x, y: refY }, 5, '#ffd166', S.showDepth0);
@@ -827,7 +903,6 @@
         pill(`depth = ${d.toFixed(1)} (${sign})`, { x: p.x + 8, y: (p.y + refY) / 2 }, col, '#fff', S.showDepth1);
       }
 
-      // kept contact points
       if (S.showKept > 0) {
         for (const p of contactPoints) {
           dDot(p, 12, '#ffd166', S.showKept);
@@ -837,7 +912,7 @@
         }
       }
 
-      // ── FINAL ──
+      // FINAL
       if (S.final > 0 && contactPoints.length === 2) {
         cx.save(); cx.globalAlpha = S.final * .2; cx.strokeStyle = '#ffd166'; cx.lineWidth = 16; cx.lineCap = 'round';
         cx.beginPath(); cx.moveTo(contactPoints[0].x, contactPoints[0].y);
@@ -854,14 +929,14 @@
         pill('No Contact — edges do not intersect', { x: W / 2 - 110, y: H / 2 }, '#ff4d6d', '#fff', S.final);
       }
 
-      // ── DRAG HANDLES on ready screen ──
+      // drag handles (ready screen)
       if (curStep < 0) {
+        dLine(G.refV1, G.refV2, '#3ddc84', 2, [], 0.6);
+        dLine(G.incV1, G.incV2, '#ff8c42', 2, [], 0.6);
         const pts = [
           { p: G.refV1, c: '#3ddc84' }, { p: G.refV2, c: '#3ddc84' },
           { p: G.incV1, c: '#ff8c42' }, { p: G.incV2, c: '#ff8c42' }
         ];
-        dLine(G.refV1, G.refV2, '#3ddc84', 2, [], 0.6);
-        dLine(G.incV1, G.incV2, '#ff8c42', 2, [], 0.6);
         for (const { p, c } of pts) {
           cx.save(); cx.globalAlpha = .55; cx.strokeStyle = c; cx.lineWidth = 2; cx.setLineDash([3, 3]);
           cx.beginPath(); cx.arc(p.x, p.y, 17, 0, Math.PI * 2); cx.stroke(); cx.restore();
@@ -871,16 +946,15 @@
         pill('RefV2', { x: G.refV2.x + 10, y: G.refV2.y - 14 }, '#3ddc84', '#fff', .85);
         pill('IncV1', { x: G.incV1.x + 10, y: G.incV1.y - 14 }, '#ff8c42', '#fff', .85);
         pill('IncV2', { x: G.incV2.x + 10, y: G.incV2.y + 18 }, '#ff8c42', '#fff', .85);
-        // hint text
         cx.save(); cx.globalAlpha = .45; cx.fillStyle = '#5a6480';
         cx.font = 'bold 11px "JetBrains Mono",monospace'; cx.textAlign = 'center';
         cx.fillText('← drag vertices to reposition →', W / 2, H - 12); cx.restore();
       }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // DRAG ON CANVAS
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     let dragV = null;
     const dragMap = [
       { get: () => G.refV1, sx: 'rv1x', sy: 'rv1y' },
@@ -897,32 +971,26 @@
       if (curStep >= 0) return;
       const { x, y } = cXY(e);
       let found = null;
-      for (const vm of dragMap) {
-        const p = vm.get();
-        if (Math.hypot(p.x - x, p.y - y) < 30) { found = vm; break; }
-      }
+      for (const m of dragMap) { const p = m.get(); if (Math.hypot(p.x - x, p.y - y) < 30) { found = m; break; } }
       if (found) { dragV = found; CV.classList.add('drag'); }
     });
     CV.addEventListener('mousemove', e => {
       if (!dragV) return;
       const { x, y } = cXY(e);
-      // X
       const sx = document.getElementById(dragV.sx);
       sx.value = Math.min(+sx.max, Math.max(+sx.min, Math.round(x)));
       document.getElementById(dragV.sx + '-v').textContent = sx.value;
-      // Y
       const sy = document.getElementById(dragV.sy);
       sy.value = Math.min(+sy.max, Math.max(+sy.min, Math.round(y)));
       document.getElementById(dragV.sy + '-v').textContent = sy.value;
-
       computeGeo(); drawScene();
     });
     CV.addEventListener('mouseup', () => { dragV = null; CV.classList.remove('drag'); });
     CV.addEventListener('mouseleave', () => { dragV = null; CV.classList.remove('drag'); });
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // SLIDERS
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     ['rv1x', 'rv1y', 'rv2x', 'rv2y', 'iv1x', 'iv1y', 'iv2x', 'iv2y'].forEach(id => {
       const el = document.getElementById(id);
       const vl = document.getElementById(id + '-v');
@@ -930,7 +998,6 @@
       el.addEventListener('input', () => { vl.textContent = el.value; computeGeo(); if (curStep < 0) drawScene(); });
     });
 
-    // collapsible
     document.getElementById('ctrl-toggle').addEventListener('click', () => {
       const tog = document.getElementById('ctrl-toggle');
       const bod = document.getElementById('ctrl-body');
@@ -939,22 +1006,16 @@
       tog.textContent = open ? '▼ Edge Controls (collapse)' : '▶ Edge Controls (expand to adjust positions)';
     });
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // TTS — Best available male voice, clear for tutorials
-    // Priority: Google UK English Male > Daniel (en-GB) > Google US English >
-    //           any name containing 'male' > any en-GB > any en-US
-    // Pitch set low (0.85) to sound male even on fallback voices.
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    // TTS
+    // ═══════════════════════════════════════════════════════════════════
     let ttsOn = true;
     let chosenVoice = null;
 
-    const MALE_VOICE_PRIORITY = [
-      'Microsoft Aria Online (Natural) - English (United States)',
-      'Microsoft Jenny Online (Natural) - English (United States)',
+    const VOICE_PRIORITY = [
       'Microsoft Guy Online (Natural) - English (United States)',
       'Google US English',
       'Samantha',
-      'Google UK English Female',
       'Google UK English Male',
       'Daniel',
       'Microsoft Zira Desktop - English (United States)'
@@ -963,361 +1024,535 @@
     function pickVoice() {
       const voices = speechSynthesis.getVoices();
       if (!voices.length) return;
-
-      // 1. Exact name match from priority list
-      for (const name of MALE_VOICE_PRIORITY) {
+      for (const name of VOICE_PRIORITY) {
         const found = voices.find(v => v.name.includes(name) || v.name === name);
         if (found) { chosenVoice = found; return; }
       }
-      // 2. Name contains 'natural' or 'online' (case-insensitive)
-      const naturalName = voices.find(v => v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online'));
-      if (naturalName) { chosenVoice = naturalName; return; }
-      // 3. en-US any
       const enUS = voices.find(v => v.lang === 'en-US');
       if (enUS) { chosenVoice = enUS; return; }
-      // 4. en-GB any
-      const enGB = voices.find(v => v.lang === 'en-GB');
-      if (enGB) { chosenVoice = enGB; return; }
-      // 5. Any English
       const en = voices.find(v => v.lang.startsWith('en'));
-      if (en) { chosenVoice = en; return; }
+      if (en) { chosenVoice = en; }
     }
-
-    // voices load async in many browsers
     if (typeof speechSynthesis !== 'undefined') {
       speechSynthesis.onvoiceschanged = pickVoice;
       pickVoice();
-      // retry after a tick — some browsers need this
       setTimeout(pickVoice, 200);
       setTimeout(pickVoice, 1000);
     }
 
-
-
     function speak(txt) {
       const descBox = document.getElementById('step-desc');
-      if (descBox && txt) {
-        descBox.innerHTML = txt;
-      }
-
+      if (descBox && txt) descBox.innerHTML = txt;
       if (!ttsOn || !window.speechSynthesis) return;
       speechSynthesis.cancel();
-      // re-attempt voice pick in case voices loaded late
       if (!chosenVoice) pickVoice();
       const clean = txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const u = new SpeechSynthesisUtterance(clean);
       if (chosenVoice) u.voice = chosenVoice;
-      u.lang = 'en-US';
-      u.rate = 1.0;
-      u.pitch = 1.0;
-
-      // Duck background music
+      u.lang = 'en-US'; u.rate = 1.0; u.pitch = 1.0;
       if (window.bgMusicDuck) window.bgMusicDuck();
-
-      u.onend = () => {
-        if (window.bgMusicRestore) window.bgMusicRestore();
-      };
-      u.onerror = () => {
-        if (window.bgMusicRestore) window.bgMusicRestore();
-      };
-
+      u.onend = () => { if (window.bgMusicRestore) window.bgMusicRestore(); };
+      u.onerror = () => { if (window.bgMusicRestore) window.bgMusicRestore(); };
       speechSynthesis.speak(u);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // STEP BUILDER
-    // Names spoken in full: "Reference Vertex 1", "Incident Vertex 1", etc.
-    // ─────────────────────────────────────────────────────────────────────────────
+    // Returns an array where each step has:
+    //   .title  .desc  .say  .dur  .targets  .phase
+    //
+    // FIX: Instead of `enter(t)` functions that mutate S in complex
+    // overlapping ways, each step declares `targets` — a dict of
+    // STATE_KEYS → final values (0 or 1). On playback we lerp from
+    // the PREVIOUS snapshot to these targets. On Prev we reconstruct
+    // the snapshot by replaying targets[0..i-1] instantaneously, then
+    // animate from that into targets[i]. This makes Prev perfectly
+    // reliable regardless of how many steps there are.
+    // ═══════════════════════════════════════════════════════════════════
     function buildSteps() {
       const { d0L, d1L, tL, leftClipPt, leftOut, d0R, d1R, tR, rightClipPt, rightOut,
         candidatePoints, depthValues, contactPoints } = G;
 
       const crossesL = (d0L >= 0) !== (d1L >= 0);
       const crossesR = d0R !== null && ((d0R >= 0) !== (d1R >= 0));
-
-      // Helper: human readable names
-      const incV1name = 'Incident Vertex 1', incV2name = 'Incident Vertex 2';
-      const refV1name = 'Reference Vertex 1', refV2name = 'Reference Vertex 2';
       const iv1in = d0L >= 0, iv2in = d1L >= 0;
 
-      let stepNum = 0;
-      const S_ = () => `Step ${++stepNum}`;
+      // Shorthand helpers
+      const lo0in = d0R >= 0, lo1in = d1R >= 0;
 
-      const steps = [
-        // ── 1: Introduction ──────────────────────────────────────────────────────
-        {
-          title: `${S_()} — The Two Edges`,
-          say: `Let us get started. Here we have two edges. The green one is the Reference Edge. In a physics collision, this is the edge on the polygon that has the least penetration depth — meaning it's the face being hit first. It acts as our solid boundary wall. The orange one is the Incident Edge — the edge from the other polygon that is crashing into it.`,
-          desc: `<b style="color:#3ddc84">Green = Reference Edge</b> — the edge with least penetration (the face being hit).<br><b style="color:#ff8c42">Orange = Incident Edge</b> — the edge crashing into the reference face.`,
-          dur: 1100, enter(t) { S.ref = eO(t); S.inc = eO(t); }
-        },
-        // ── 2: Tangent ────────────────────────────────────────────────────────────
-        {
-          title: `${S_()} — The Tangent Vector`,
-          say: `First, we compute the tangent vector of the reference edge. The tangent just points in the same direction as the edge — from ${refV1name} toward ${refV2name}. We then normalize it, which means we shrink it so its length becomes exactly 1. Now it is just a direction arrow. We call this T-hat.`,
-          desc: `<code>T̂ = normalize(${refV2name} − ${refV1name})</code><br>A unit vector pointing along the reference edge — tells us the "forward" direction.`,
-          dur: 950, enter(t) { S.tang = eO(t); }
-        },
-        // ── 3: Vectors to incident verts ─────────────────────────────────────────
-        {
-          title: `${S_()} — Draw Vectors to Incident Vertices`,
-          say: `Now we draw a vector from ${refV1name} to each endpoint of the incident edge. These arrows help us measure how far "along" the reference boundary each incident point is. Think of it as asking: is this point ahead of ${refV1name} or behind it?`,
-          desc: `Arrows from <b style="color:#3ddc84">${refV1name}</b> → <b style="color:#ff8c42">${incV1name}</b> and <b style="color:#ff8c42">${incV2name}</b>.<br>These let us measure each vertex against the boundary anchor.`,
-          dur: 950, enter(t) { S.tI1 = eO(Math.min(1, t * 2)); S.tI2 = eO(Math.max(0, t * 2 - 1)); }
-        },
-        // ── 4: Project I1 ─────────────────────────────────────────────────────────
-        {
-          title: `${S_()} — Measure ${incV1name}: dot product d0`,
-          say: `We now project ${incV1name} onto the tangent using the dot product. The dot product gives us a single number called d0. If d0 is positive, ${incV1name} is ahead of ${refV1name} — meaning it is inside the left boundary. If d0 is negative, ${incV1name} is behind ${refV1name} — it is outside. The dashed line shows where ${incV1name} drops perpendicularly onto the reference line.`,
-          desc: `<code>d0 = dot(${incV1name} − ${refV1name},  T̂) = ${d0L.toFixed(1)}</code><br>Dashed line = perpendicular drop to the reference line.<br><b style="color:${d0L >= 0 ? '#3ddc84' : '#ff4d6d'}">${d0L >= 0 ? `d0 > 0  →  ${incV1name} is INSIDE the left boundary ✓` : `d0 < 0  →  ${incV1name} is OUTSIDE the left boundary ✗`}</b>`,
-          dur: 1100, enter(t) { S.pI1 = eO(t); S.d0 = eO(t); }
-        },
-        // ── 5: Project I2 ─────────────────────────────────────────────────────────
-        {
-          title: `${S_()} — Measure ${incV2name}: dot product d1`,
-          say: `Same process for ${incV2name}. We drop it perpendicularly onto the reference line and compute d1 using the dot product. Check the sign — positive means inside, negative means outside.`,
-          desc: `<code>d1 = dot(${incV2name} − ${refV1name},  T̂) = ${d1L.toFixed(1)}</code><br><b style="color:${d1L >= 0 ? '#3ddc84' : '#ff4d6d'}">${d1L >= 0 ? `d1 > 0  →  ${incV2name} is INSIDE ✓` : `d1 < 0  →  ${incV2name} is OUTSIDE ✗`}</b>`,
-          dur: 1000, enter(t) { S.pI2 = eO(t); S.d1 = eO(t); }
-        },
-        // ── 6: Left boundary check ───────────────────────────────────────────────
-        {
-          title: `${S_()} — Left Boundary: Pass or Fail?`,
-          say: `The red shaded region on the left is the outside zone — anything there is beyond ${refV1name} and needs to be removed. ${incV1name} ${iv1in ? 'passes because d0 is positive' : 'fails because d0 is negative'}, and ${incV2name} ${iv2in ? 'passes because d1 is positive' : 'fails because d1 is negative'}. ${crossesL ? 'Since one is inside and one is outside, the edge must cross the left boundary somewhere in the middle. We need to find exactly where.' : iv1in && iv2in ? 'Both pass! No left clipping is needed.' : 'Both fail! The entire edge is outside the left boundary — nothing survives.'}`,
-          desc: `Red zone = outside (behind ${refV1name}).<br><b style="color:${iv1in ? '#3ddc84' : '#ff4d6d'}">${incV1name}: ${iv1in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b>   <b style="color:${iv2in ? '#3ddc84' : '#ff4d6d'}">${incV2name}: ${iv2in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b>`,
-          dur: 1150, enter(t) { S.shL = eO(t); S.pf = eO(t); }
-        },
-      ];
+      // Each step: title, say, desc, dur, phase, targets (partial — keys not listed keep their value from previous step)
+      const steps = [];
+
+      function addStep(s) { steps.push(s); }
+
+      // STEP 1
+      addStep({
+        title: 'Step 1 — The Two Edges',
+        phase: 'Introduction',
+        say: `Let us get started. Here we have two edges. The green one is the Reference Edge — the face being hit first. The orange one is the Incident Edge — the edge crashing into it.`,
+        desc: `<b style="color:#3ddc84">Green = Reference Edge</b> — the face with least penetration.<br><b style="color:#ff8c42">Orange = Incident Edge</b> — the edge crashing into the reference face.`,
+        dur: 1100,
+        targets: { ref: 1, inc: 1 }
+      });
+
+      // STEP 2
+      addStep({
+        title: 'Step 2 — The Tangent Vector',
+        phase: 'Left Clip',
+        say: `We compute the tangent vector of the reference edge — a normalized direction from Reference Vertex 1 toward Reference Vertex 2. We call this T-hat.`,
+        desc: `<code>T̂ = normalize(RefV2 − RefV1)</code><br>Unit vector pointing along the reference edge — the "forward" direction.`,
+        dur: 950,
+        targets: { tang: 1 }
+      });
+
+      // STEP 3
+      addStep({
+        title: 'Step 3 — Vectors to Incident Vertices',
+        phase: 'Left Clip',
+        say: `Now we draw vectors from Reference Vertex 1 to each endpoint of the incident edge. These help us measure how far along the boundary each point is.`,
+        desc: `Arrows from <b style="color:#3ddc84">RefV1</b> → <b style="color:#ff8c42">IncV1</b> and <b style="color:#ff8c42">IncV2</b>.<br>These measure each vertex against the left boundary anchor.`,
+        dur: 950,
+        targets: { tI1: 1, tI2: 1 }
+      });
+
+      // STEP 4
+      addStep({
+        title: 'Step 4 — Measure IncV1: dot product d0',
+        phase: 'Left Clip',
+        say: `We project Incident Vertex 1 onto the tangent. The result, d0, is ${d0L.toFixed(1)}. ${d0L >= 0 ? 'Positive — it is inside the left boundary.' : 'Negative — it is outside the left boundary.'}`,
+        desc: `<code>d0 = dot(IncV1 − RefV1, T̂) = ${d0L.toFixed(1)}</code><br><b style="color:${d0L >= 0 ? '#3ddc84' : '#ff4d6d'}">${d0L >= 0 ? 'd0 > 0  →  IncV1 is INSIDE ✓' : 'd0 < 0  →  IncV1 is OUTSIDE ✗'}</b>`,
+        dur: 1100,
+        targets: { pI1: 1, d0: 1 }
+      });
+
+      // STEP 5
+      addStep({
+        title: 'Step 5 — Measure IncV2: dot product d1',
+        phase: 'Left Clip',
+        say: `Same process for Incident Vertex 2. d1 equals ${d1L.toFixed(1)}. ${d1L >= 0 ? 'Positive — inside.' : 'Negative — outside.'}`,
+        desc: `<code>d1 = dot(IncV2 − RefV1, T̂) = ${d1L.toFixed(1)}</code><br><b style="color:${d1L >= 0 ? '#3ddc84' : '#ff4d6d'}">${d1L >= 0 ? 'd1 > 0  →  IncV2 is INSIDE ✓' : 'd1 < 0  →  IncV2 is OUTSIDE ✗'}</b>`,
+        dur: 1000,
+        targets: { pI2: 1, d1: 1 }
+      });
+
+      // STEP 6
+      addStep({
+        title: 'Step 6 — Left Boundary: Pass or Fail?',
+        phase: 'Left Clip',
+        say: `The left boundary at Reference Vertex 1. ${iv1in ? 'IncV1 passes' : 'IncV1 fails'}, and ${iv2in ? 'IncV2 passes' : 'IncV2 fails'}. ${crossesL ? 'One is outside — we must clip.' : iv1in && iv2in ? 'Both pass — no clipping needed!' : 'Both fail — entire edge is discarded.'}`,
+        desc: `Red zone = outside (behind RefV1).<br><b style="color:${iv1in ? '#3ddc84' : '#ff4d6d'}">IncV1: ${iv1in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b>   <b style="color:${iv2in ? '#3ddc84' : '#ff4d6d'}">IncV2: ${iv2in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b>`,
+        dur: 1150,
+        targets: { shL: 1, pf: 1 }
+      });
 
       if (crossesL) {
-        steps.push(
-          // ── 7: Show full vector first ────────────────────────────────────────
-          {
-            title: `${S_()} — The Incident Edge as a Vector`,
-            say: `Before we find the crossing, let us look at the incident edge as a vector — an arrow starting at ${incV1name} and pointing toward ${incV2name}. This arrow represents the full path from one vertex to the other. In the next step, we will use a fraction called t to travel along this arrow and find exactly where it crosses the boundary.`,
-            desc: `The full incident edge seen as a vector: <b style="color:#ff4d6d">${incV1name} → ${incV2name}</b>.<br>We will walk along this arrow using a fraction t (0 = start, 1 = end) to find the boundary crossing.`,
-            dur: 1000, enter(t) { S.showFullVec = eO(t); }
-          },
-          // ── 8: t animation ───────────────────────────────────────────────────
-          {
-            title: `${S_()} — Find the Crossing Point with t`,
-            say: `Here is the key insight. We compute a number t using this formula: t equals d0 divided by the quantity d0 minus d1. Because d0 and d1 have opposite signs — one positive, one negative — their difference makes t land between 0 and 1. Think of t as a percentage: 0% means we are at ${incV1name}, 100% means we are at ${incV2name}. So t tells us exactly how far along the edge the boundary crossing happens. Watch the red arrow grow from ${incV1name} toward ${incV2name} — it stops right at the boundary!`,
-            desc: `<code>t = d0 / (d0 − d1) = ${tL !== null ? tL.toFixed(4) : 'N/A'}</code><br>Since d0 and d1 have <b>opposite signs</b>, t is always between 0 and 1.<br>t is the <b>percentage along the edge</b> where it crosses the boundary.<br>Watch the arrow grow and stop at the crossing!`,
-            dur: 2200, enter(t) { S.showFullVec = 1; S.tFrac = eIO(t); }
-          },
-          // ── 9: Place clip point ───────────────────────────────────────────────
-          {
-            title: `${S_()} — Compute & Place the Clip Point`,
-            say: `Now we use t to compute the actual clip point. The formula is: ${incV1name} plus t times the difference from ${incV1name} to ${incV2name}. Because t is between 0 and 1, this new point lies exactly on the boundary line. It replaces the vertex that was outside.`,
-            desc: `<code>ClipPoint = ${incV1name} + t × (${incV2name} − ${incV1name})</code><br>This new point lies exactly on the left boundary.`,
-            dur: 850, enter(t) { S.cpL = eO(t); }
-          }
-        );
-      }
-
-      steps.push(
-        // ── Left clip result ─────────────────────────────────────────────────────
-        {
-          title: `${S_()} — Left Clip Result`,
-          say: `After the left clip, we discard the vertex that was outside and keep the one that was inside, plus the new clip point we just created. ${leftOut.length === 0 ? 'In this case both vertices were outside, so the entire incident edge is clipped away — nothing remains.' : 'The dashed red line shows our new incident edge. This becomes the starting point for the right clip.'}`,
-          desc: `Left clip complete. Keeping: <b style="color:#ff4d6d">${leftOut.length === 0 ? 'nothing (fully clipped away)' : crossesL ? '[surviving vertex + Clip Point]' : '[both vertices — no clip needed]'}</b><br>${leftOut.length === 2 ? 'Dashed red = new incident edge going into the right clip phase.' : ''}`,
-          dur: 950, enter(t) { S.lOut = eO(t); }
-        }
-      );
-
-      if (leftOut.length === 2) {
-        const lo0in = d0R >= 0, lo1in = d1R >= 0;
-        steps.push(
-          // ── Transition to right clip ─────────────────────────────────────────
-          {
-            title: `${S_()} — Start Right Clip: New Incident Edge`,
-            say: `Now we begin the right clip. The output from the left clip — the two vertices we kept — becomes our brand new incident edge. We completely forget the original orange edge. The question now is: does any part of this trimmed edge go past ${refV2name} on the right side?`,
-            desc: `Left-clip output becomes the <b style="color:#ff8c42">new incident edge</b> for the right clip.<br>We work only with these two vertices from here on.`,
-            dur: 1050, enter(t) {
-              const fade = Math.max(0, 1 - t * 2.8);
-              S.inc = fade; S.lOut = fade; S.pf = fade; S.shL = fade;
-              S.pI1 = fade; S.d0 = fade; S.pI2 = fade; S.d1 = fade;
-              S.tI1 = fade; S.tI2 = fade; S.tang = fade;
-              S.showFullVec = fade; S.tFrac = fade; S.cpL = fade;
-              S.newInc = eO(Math.max(0, t * 2 - .6));
-            }
-          },
-          // ── Reverse tangent ──────────────────────────────────────────────────
-          {
-            title: `${S_()} — Flip the Tangent for the Right Clip`,
-            say: `For the right clip, we reverse the tangent direction. We multiply T-hat by negative 1. Now the arrow points from right to left. This flipping means the "inside" direction becomes everything to the left of ${refV2name}. We also switch our anchor from ${refV1name} to ${refV2name}.`,
-            desc: `<code>−T̂ = T̂ × −1</code> — now points right to left. Anchor = <b style="color:#3ddc84">${refV2name}</b>.<br>Anything past ${refV2name} on the right is now the outside zone.`,
-            dur: 950, enter(t) { S.negT = eO(t); S.shR = eO(t); }
-          },
-          // ── Vectors from RefV2 ───────────────────────────────────────────────
-          {
-            title: `${S_()} — Vectors from ${refV2name} to New Vertices`,
-            say: `We draw vectors from ${refV2name} to each vertex of the new incident edge. We will then project these onto the reversed tangent to get dot products d0 and d1 for the right clip.`,
-            desc: `Arrows from <b style="color:#3ddc84">${refV2name}</b> to each vertex of the new incident edge.<br>Project onto −T̂ to measure each vertex.`,
-            dur: 950, enter(t) { S.tI1R = eO(Math.min(1, t * 2)); S.tI2R = eO(Math.max(0, t * 2 - 1)); }
-          },
-          // ── Right boundary check ─────────────────────────────────────────────
-          {
-            title: `${S_()} — Right Boundary: Pass or Fail?`,
-            say: `We project both new vertices onto the reversed tangent and compute d0 and d1. ${lo0in ? 'New Vertex 1 is inside the right boundary — d0 is positive.' : 'New Vertex 1 is outside the right boundary — d0 is negative.'} ${lo1in ? 'New Vertex 2 is inside — d1 is positive.' : 'New Vertex 2 is outside — d1 is negative.'} ${crossesR ? 'One is outside, so we need to clip again.' : 'Both are inside — no right clipping needed! The edge fits perfectly.'}`,
-            desc: `<code>d0 = dot(New Vertex 1 − ${refV2name}, −T̂) = ${d0R !== null ? d0R.toFixed(1) : '?'}</code> → <b style="color:${lo0in ? '#3ddc84' : '#ff4d6d'}">${lo0in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b><br><code>d1 = dot(New Vertex 2 − ${refV2name}, −T̂) = ${d1R !== null ? d1R.toFixed(1) : '?'}</code> → <b style="color:${lo1in ? '#3ddc84' : '#ff4d6d'}">${lo1in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b>`,
-            dur: 1150, enter(t) {
-              S.pI1R = eO(Math.min(1, t * 2)); S.d0R = eO(Math.min(1, t * 2));
-              S.pI2R = eO(Math.max(0, t * 2 - 1)); S.d1R = eO(Math.max(0, t * 2 - 1));
-              S.pfR = eO(t);
-            }
-          }
-        );
-
-        if (crossesR) {
-          steps.push(
-            // ── Show full right vector ──────────────────────────────────────────
-            {
-              title: `${S_()} — The New Edge as a Vector (Right Clip)`,
-              say: `We look at the new incident edge as a vector arrow from New Vertex 1 to New Vertex 2. We will walk along this arrow using a new t value to find exactly where it crosses the right boundary at ${refV2name}.`,
-              desc: `New incident edge as a vector: <b style="color:#ff4d6d">New Vertex 1 → New Vertex 2</b>.<br>We will compute t again to find the right boundary crossing.`,
-              dur: 950, enter(t) { S.showFullVecR = eO(t); }
-            },
-            // ── t animation right ───────────────────────────────────────────────
-            {
-              title: `${S_()} — Find the Right Crossing with t`,
-              say: `We complete t using the formula: t equals d0 divided by d0 minus d1. Since the two dot products have opposite signs, t lands between 0 and 1. Watch the arrow grow from New Vertex 1 toward New Vertex 2, stopping exactly where the edge crosses ${refV2name}.`,
-              desc: `<code>t = d0 / (d0 − d1) = ${tR !== null ? tR.toFixed(4) : 'N/A'}</code><br>t is a fraction 0→1 along the edge.<br>Watch the arrow grow and stop at the right boundary!`,
-              dur: 2200, enter(t) { S.showFullVecR = 1; S.tFracR = eIO(t); }
-            },
-            // ── Right clip point ────────────────────────────────────────────────
-            {
-              title: `${S_()} — Place the Right Clip Point`,
-              say: `Using t, we compute the right clip point as New Vertex 1 plus t times the direction from New Vertex 1 to New Vertex 2. This new point lands exactly on the right boundary at ${refV2name}. We now have both endpoints of our clipped edge.`,
-              desc: `<code>ClipPoint = New Vertex 1 + t × (New Vertex 2 − New Vertex 1)</code><br>This point lies exactly on the right boundary.`,
-              dur: 850, enter(t) { S.cpR = eO(t); }
-            }
-          );
-        }
-
-        // ── Depth filter phase ───────────────────────────────────────────────────
-        steps.push(
-          {
-            title: `${S_()} — After Clipping: Show Candidate Points`,
-            say: `After both left and right clipping, we have up to two candidate points — the survivors. But we are not done yet! We need one final check. Some of these surviving points might be above the reference edge, meaning they are not actually touching it. We need to remove any points that are above the boundary — we only want to keep the ones that are at or below the reference edge.`,
-            desc: `Clipping done! Here are the <b style="color:#b48eff">candidate contact points</b>.<br>Final step: filter out any points that are <b>above</b> the reference edge — they don't actually touch it.`,
-            dur: 1000, enter(t) {
-              S.showCandidates = eO(t);
-              // Visual cleanup of Right Clip stage
-              const fade = Math.max(0, 1 - t * 2.8);
-              S.shR = fade; S.negT = fade;
-              S.newInc = fade;
-              S.tI1R = fade; S.tI2R = fade;
-              S.pI1R = fade; S.d0R = fade; S.pI2R = fade; S.d1R = fade;
-              S.pfR = fade;
-              S.showFullVecR = fade; S.tFracR = fade;
-              S.cpR = fade;
-            }
-          },
-          {
-            title: `${S_()} — The Reference Normal`,
-            say: `To check which side of the reference edge each point is on, we use the Reference Normal. This is a vector that points perpendicular to the edge — straight 'down' into the solid object. It defines the "inside" direction.`,
-            desc: `<code>refNormal</code> = vector perpendicular to the reference edge, pointing "inward".<br>This tells us which way is "inside" the reference face.`,
-            dur: 1000, enter(t) { S.showRefNorm = eO(t); S.showCandidates = 1; }
-          },
-          {
-            title: `${S_()} — The Clipping Boundary`,
-            say: `Think of the reference edge as a boundary line. Anything "below" this line (in the direction of the normal) is inside. Anything "above" it is outside. We need to filter out any candidate points that are floating above this boundary.`,
-            desc: `The <b style="color:#ff4d6d">red zone</b> is "above" the reference edge.<br>Any point in this zone is not touching the reference face and must be discarded.`,
-            dur: 1000, enter(t) { S.showDepthShade = eO(t); S.showRefNorm = 1; }
-          },
-          {
-            title: `${S_()} — The Depth Check`,
-            say: `We measure the depth of each point using the dot product giving us a single number. Positive depth means the point is inside or on the boundary — we keep it! Negative depth means it is outside — we discard it.`,
-            desc: `<code>depth = dot(point, refNormal) − refDist</code><br>if depth ≥ 0 → <b style="color:#3ddc84">KEEP (contacting)</b><br>if depth < 0 → <b style="color:#ff4d6d">DISCARD (no contact)</b>`,
-            dur: 1000, enter(t) { S.showDepth0 = eO(t); }
-          }
-        );
-
-        if (candidatePoints.length >= 2) {
-          steps.push({
-            title: `${S_()} — Measure Depth of Candidate 2`,
-            say: `Now we measure the depth of the second candidate point, using the same formula. Is it inside the reference boundary?`,
-            desc: `Measuring candidate 2: <code>depth = ${depthValues[1] !== undefined ? depthValues[1].toFixed(2) : '?'}</code><br><b style="color:${depthValues[1] !== undefined && depthValues[1] >= 0 ? '#3ddc84' : '#ff4d6d'}">${depthValues[1] !== undefined ? depthValues[1] >= 0 ? 'depth ≥ 0  →  KEEP ✓' : 'depth < 0  →  DISCARD ✗' : ''}</b>`,
-            dur: 1050, enter(t) { S.showDepth1 = eO(t); }
-          });
-        }
-
-        steps.push({
-          title: `${S_()} — Keep Only Valid Contact Points`,
-          say: `We now keep only the points whose depth is zero or positive — the ones that are inside the reference boundary. These are the valid contact points. ${contactPoints.length === 0 ? 'In this case no points survived — there is no contact.' : contactPoints.length === 1 ? 'One point survived — this is a single contact point.' : 'Two points survived — these form the final contact edge.'}`,
-          desc: `<code>if (depth ≥ 0) → keep the point</code><br><b style="color:#ffd166">${contactPoints.length} valid contact point${contactPoints.length !== 1 ? 's' : ''} survived.</b>`,
-          dur: 1000, enter(t) { S.showKept = eO(t); }
+        addStep({
+          title: 'Step 7 — The Incident Edge as a Vector',
+          phase: 'Left Clip',
+          say: `We view the incident edge as a vector arrow from IncV1 to IncV2. A fraction t will walk along this arrow to find the boundary crossing.`,
+          desc: `The full incident edge as vector: <b style="color:#ff4d6d">IncV1 → IncV2</b>.<br>t=0 means start, t=1 means end. We will solve for the t where the edge crosses the boundary.`,
+          dur: 1000,
+          targets: { showFullVec: 1 }
+        });
+        addStep({
+          title: 'Step 8 — Find the Crossing with t',
+          phase: 'Left Clip',
+          say: `t equals d0 divided by d0 minus d1. Because d0 and d1 have opposite signs, t lands between 0 and 1. Watch the arrow grow and stop at the crossing!`,
+          desc: `<code>t = d0 / (d0 − d1) = ${tL !== null ? tL.toFixed(4) : 'N/A'}</code><br>t is the <b>fraction along the edge</b> where it crosses the left boundary.`,
+          dur: 2200,
+          targets: { showFullVec: 1, tFrac: 1 }
+        });
+        addStep({
+          title: 'Step 9 — Compute & Place the Clip Point',
+          phase: 'Left Clip',
+          say: `The clip point is IncV1 plus t times the vector from IncV1 to IncV2. This lands exactly on the boundary.`,
+          desc: `<code>ClipPoint = IncV1 + t × (IncV2 − IncV1)</code><br>This new point lies exactly on the left boundary.`,
+          dur: 850,
+          targets: { cpL: 1 }
         });
       }
 
-      // ── FINAL ─────────────────────────────────────────────────────────────────
-      steps.push({
-        title: `🎉 ${S_()} — Final Result!`,
-        say: `And there it is — the final answer shown in yellow. ${contactPoints.length === 2 ? 'We have two contact points forming the final clipped contact edge. These are the actual points where the two edges touch or intersect.' : contactPoints.length === 1 ? 'We have one contact point — the edges touch at a single location.' : 'There are no contact points — the edges do not actually intersect within the boundary.'}`,
-        desc: `<b style="color:#ffd166">Yellow = final clipped edge</b> — the true intersection region of the two edges!`,
-        dur: 1100, enter(t) { S.final = eO(t); }
+      addStep({
+        title: `Step ${steps.length + 1} — Left Clip Result`,
+        phase: 'Left Clip',
+        say: `After the left clip: ${leftOut.length === 0 ? 'both were outside — nothing remains.' : crossesL ? 'we kept the surviving vertex plus the clip point.' : 'both pass — no clipping needed.'}`,
+        desc: `Left clip complete. Keeping: <b style="color:#ff4d6d">${leftOut.length === 0 ? 'nothing (fully clipped)' : crossesL ? '[surviving vertex + Clip Point]' : '[both vertices — no clip]'}</b>${leftOut.length === 2 ? '<br>Dashed red = new incident edge.' : ''}`,
+        dur: 950,
+        targets: { lOut: 1 }
       });
 
-      steps.push({
-        title: `🎉 ${S_()} — Finished!`,
-        say: `This concludes the complete Sutherland-Hodgman edge clipping process. Left clip, right clip, depth filter — done! We now have the exact points needed to calculate physics impulses and push shapes apart.`,
-        desc: `Left clip → Right clip → Depth filter → Result.`,
-        dur: 1100, enter(t) { S.final = 1; }
+      if (leftOut.length === 2) {
+        // Transition — fade left phase, show new incident
+        addStep({
+          title: `Step ${steps.length + 1} — Start Right Clip`,
+          phase: 'Right Clip',
+          say: `The left clip output becomes our new incident edge. We now check: does any part of it extend past Reference Vertex 2 on the right?`,
+          desc: `Left-clip output → <b style="color:#ff8c42">new incident edge</b> for the right clip.`,
+          dur: 1050,
+          // Fade out left-phase state, fade in newInc
+          targets: {
+            inc: 0, lOut: 0, pf: 0, shL: 0,
+            pI1: 0, d0: 0, pI2: 0, d1: 0,
+            tI1: 0, tI2: 0, tang: 0,
+            showFullVec: 0, tFrac: 0, cpL: 0,
+            newInc: 1
+          }
+        });
+
+        addStep({
+          title: `Step ${steps.length + 1} — Flip the Tangent`,
+          phase: 'Right Clip',
+          say: `We reverse T-hat to get negative T-hat. Now it points right to left, and our anchor switches to Reference Vertex 2. Anything past it is outside.`,
+          desc: `<code>−T̂ = T̂ × −1</code> — now points right to left. Anchor = <b style="color:#3ddc84">RefV2</b>.<br>Right zone = outside.`,
+          dur: 950,
+          targets: { negT: 1, shR: 1 }
+        });
+
+        addStep({
+          title: `Step ${steps.length + 1} — Vectors from RefV2`,
+          phase: 'Right Clip',
+          say: `Vectors from Reference Vertex 2 to each vertex of the new incident edge. We project these onto negative T-hat.`,
+          desc: `Arrows from <b style="color:#3ddc84">RefV2</b> to each vertex.<br>Project onto −T̂ to measure each vertex.`,
+          dur: 950,
+          targets: { tI1R: 1, tI2R: 1 }
+        });
+
+        addStep({
+          title: `Step ${steps.length + 1} — Right Boundary: Pass or Fail?`,
+          phase: 'Right Clip',
+          say: `d0 is ${d0R !== null ? d0R.toFixed(1) : '?'}, ${lo0in ? 'positive — inside.' : 'negative — outside.'} d1 is ${d1R !== null ? d1R.toFixed(1) : '?'}, ${lo1in ? 'positive — inside.' : 'negative — outside.'} ${crossesR ? 'One is outside — we clip again.' : 'Both are inside — no right clipping needed!'}`,
+          desc: `<code>d0 = ${d0R !== null ? d0R.toFixed(1) : '?'}</code> → <b style="color:${lo0in ? '#3ddc84' : '#ff4d6d'}">${lo0in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b><br><code>d1 = ${d1R !== null ? d1R.toFixed(1) : '?'}</code> → <b style="color:${lo1in ? '#3ddc84' : '#ff4d6d'}">${lo1in ? 'INSIDE ✓' : 'OUTSIDE ✗'}</b>`,
+          dur: 1150,
+          targets: { pI1R: 1, d0R: 1, pI2R: 1, d1R: 1, pfR: 1 }
+        });
+
+        if (crossesR) {
+          addStep({
+            title: `Step ${steps.length + 1} — Right Edge as a Vector`,
+            phase: 'Right Clip',
+            say: `The new incident edge as a vector arrow from NewV1 to NewV2. We compute t again to find where it crosses the right boundary.`,
+            desc: `New incident edge as vector: <b style="color:#ff4d6d">NewV1 → NewV2</b>.<br>Compute t to find the right boundary crossing.`,
+            dur: 950,
+            targets: { showFullVecR: 1 }
+          });
+          addStep({
+            title: `Step ${steps.length + 1} — Find the Right Crossing`,
+            phase: 'Right Clip',
+            say: `t equals d0 divided by d0 minus d1 again. Watch the arrow grow and stop at Reference Vertex 2.`,
+            desc: `<code>t = d0 / (d0 − d1) = ${tR !== null ? tR.toFixed(4) : 'N/A'}</code><br>Watch the arrow grow and stop at the right boundary!`,
+            dur: 2200,
+            targets: { showFullVecR: 1, tFracR: 1 }
+          });
+          addStep({
+            title: `Step ${steps.length + 1} — Place the Right Clip Point`,
+            phase: 'Right Clip',
+            say: `Using t, we place the right clip point exactly on the right boundary at Reference Vertex 2.`,
+            desc: `<code>ClipPoint = NewV1 + t × (NewV2 − NewV1)</code><br>This point lies exactly on the right boundary.`,
+            dur: 850,
+            targets: { cpR: 1 }
+          });
+        }
+
+        // Depth filter
+        addStep({
+          title: `Step ${steps.length + 1} — Candidate Points`,
+          phase: 'Depth Filter',
+          say: `After both clips, we have candidate contact points. But we need one final check — some might be above the reference edge and not actually touching it.`,
+          desc: `Clipping done! Here are the <b style="color:#b48eff">candidate contact points</b>.<br>Final step: filter out any points <b>above</b> the reference edge.`,
+          dur: 1000,
+          targets: {
+            showCandidates: 1,
+            shR: 0, negT: 0, newInc: 0,
+            tI1R: 0, tI2R: 0, pI1R: 0, d0R: 0, pI2R: 0, d1R: 0, pfR: 0,
+            showFullVecR: 0, tFracR: 0, cpR: 0
+          }
+        });
+
+        addStep({
+          title: `Step ${steps.length + 1} — The Reference Normal`,
+          phase: 'Depth Filter',
+          say: `The Reference Normal is a vector perpendicular to the edge, pointing inward into the solid object. It defines the "inside" direction.`,
+          desc: `<code>refNormal</code> = perpendicular to the reference edge, pointing inward.<br>Tells us which way is "inside" the reference face.`,
+          dur: 1000,
+          targets: { showRefNorm: 1 }
+        });
+
+        addStep({
+          title: `Step ${steps.length + 1} — The Clipping Boundary`,
+          phase: 'Depth Filter',
+          say: `Anything below the reference edge — in the direction of the normal — is inside. Anything above is outside.`,
+          desc: `The <b style="color:#ff4d6d">red zone</b> is "above" the reference edge.<br>Points there don't touch the face and must be discarded.`,
+          dur: 1000,
+          targets: { showDepthShade: 1 }
+        });
+
+        addStep({
+          title: `Step ${steps.length + 1} — Depth Check`,
+          phase: 'Depth Filter',
+          say: `We measure each point's depth. Positive depth — inside, keep it. Negative depth — outside, discard it.`,
+          desc: `<code>depth = dot(point, refNormal) − refDist</code><br>depth ≥ 0 → <b style="color:#3ddc84">KEEP</b> | depth < 0 → <b style="color:#ff4d6d">DISCARD</b>`,
+          dur: 1000,
+          targets: { showDepth0: 1 }
+        });
+
+        if (candidatePoints.length >= 2) {
+          addStep({
+            title: `Step ${steps.length + 1} — Depth of Candidate 2`,
+            phase: 'Depth Filter',
+            say: `Measuring the second candidate. depth equals ${depthValues[1] !== undefined ? depthValues[1].toFixed(2) : '?'}. ${depthValues[1] !== undefined ? depthValues[1] >= 0 ? 'Positive — keep it!' : 'Negative — discard it.' : ''}`,
+            desc: `Candidate 2: <code>depth = ${depthValues[1] !== undefined ? depthValues[1].toFixed(2) : '?'}</code><br><b style="color:${depthValues[1] !== undefined && depthValues[1] >= 0 ? '#3ddc84' : '#ff4d6d'}">${depthValues[1] !== undefined ? depthValues[1] >= 0 ? 'depth ≥ 0  →  KEEP ✓' : 'depth < 0  →  DISCARD ✗' : ''}</b>`,
+            dur: 1050,
+            targets: { showDepth1: 1 }
+          });
+        }
+
+        addStep({
+          title: `Step ${steps.length + 1} — Keep Valid Contact Points`,
+          phase: 'Depth Filter',
+          say: `Keeping only depth ≥ 0 points. ${contactPoints.length === 0 ? 'None survived.' : contactPoints.length === 1 ? 'One point survived — single contact.' : 'Two points survived — final contact edge.'}`,
+          desc: `<code>if (depth ≥ 0) keep</code><br><b style="color:#ffd166">${contactPoints.length} valid contact point${contactPoints.length !== 1 ? 's' : ''} survived.</b>`,
+          dur: 1000,
+          targets: { showKept: 1 }
+        });
+      }
+
+      // FINAL
+      addStep({
+        title: `🎉 Step ${steps.length + 1} — Final Result!`,
+        phase: 'Done',
+        say: `And there it is — shown in yellow. ${contactPoints.length === 2 ? 'Two contact points forming the final contact edge.' : contactPoints.length === 1 ? 'One contact point — the edges touch at a single location.' : 'No contact — the edges do not intersect.'}`,
+        desc: `<b style="color:#ffd166">Yellow = final clipped edge</b> — the true intersection region!`,
+        dur: 1100,
+        targets: { final: 1 }
+      });
+
+      addStep({
+        title: `🎉 Done! — Sutherland-Hodgman Complete`,
+        phase: 'Done',
+        say: `Left clip, right clip, depth filter — all done! These contact points drive the physics impulse calculations.`,
+        desc: `Left clip → Right clip → Depth filter → <b style="color:#ffd166">Result!</b>`,
+        dur: 1100,
+        targets: { final: 1 }
       });
 
       return steps;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // ANIMATION ENGINE
-    // ─────────────────────────────────────────────────────────────────────────────
-    let steps = [], curStep = -1, anim = false, rafID = null, animT = null;
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP PLAYBACK ENGINE — FIX
+    //
+    // Core idea:
+    //  - `stateSnapshots[i]` = the full S after step i completes (all keys at final value).
+    //  - When we go to step i, we tween from stateSnapshots[i-1] (or all-zero for step 0)
+    //    to stateSnapshots[i].
+    //  - For steps with special animated keys (tFrac, tFracR) we still run a special
+    //    in-between animation.
+    //  - Prev simply goes to i-1, which is already correct because the snapshot is pre-built.
+    // ═══════════════════════════════════════════════════════════════════
+    let steps = [], curStep = -1;
+    let stateSnapshots = []; // stateSnapshots[i] = final S after step i
 
-    function runAnim(ts) {
-      if (!animT) animT = ts;
-      const el = ts - animT;
-      const step = steps[curStep];
-      const t = Math.min(1, el / step.dur);
-      step.enter(eIO(t));
-      drawScene();
-      if (t < 1) { rafID = requestAnimationFrame(runAnim); }
-      else { anim = false; step.enter(1); drawScene(); }
+    // These keys animate specially (grow 0→1 during the step, but their SNAPSHOT value is 1)
+    const ANIM_KEYS_TWEEN = ['tFrac', 'tFracR'];
+
+    // Build snapshots from steps
+    function buildSnapshots(stps) {
+      const snaps = [];
+      let cur = {};
+      for (const k of STATE_KEYS) cur[k] = 0;
+      for (const step of stps) {
+        // apply targets
+        if (step.targets) {
+          for (const [k, v] of Object.entries(step.targets)) {
+            cur[k] = v;
+          }
+        }
+        snaps.push({ ...cur });
+      }
+      return snaps;
     }
 
-    function startStep(i) {
-      if (rafID) cancelAnimationFrame(rafID);
-      curStep = i; animT = null; anim = true;
+    function applySnapshot(snap) {
+      for (const k of STATE_KEYS) S[k] = snap[k] ?? 0;
+    }
+
+    // RAF state
+    let rafID = null, animT = null, animFrom = null, animTo = null, animDur = 0;
+    let isAnimating = false;
+
+    function cancelAnim() {
+      if (rafID) { cancelAnimationFrame(rafID); rafID = null; }
+      isAnimating = false; animT = null;
+    }
+
+    function lerpState(from, to, t) {
+      for (const k of STATE_KEYS) {
+        const fv = from[k] ?? 0, tv = to[k] ?? 0;
+        S[k] = fv + (tv - fv) * t;
+      }
+    }
+
+    // Special case: tFrac and tFracR need to animate 0→their-target, not just lerp
+    // The targets for those in the snapshot will be the final value (1 if the step sets them)
+    // During animation we want them to sweep from 0 to 1 (eased), which equals their target anyway.
+    // So regular lerp is actually correct! The arrow grows from 0→target value.
+    // No special case needed.
+
+    function runAnimFrame(ts) {
+      if (!animT) animT = ts;
+      const el = ts - animT;
+      const raw = Math.min(1, el / animDur);
+      const t = eIO(raw);
+      lerpState(animFrom, animTo, t);
+      drawScene();
+      if (raw < 1) {
+        rafID = requestAnimationFrame(runAnimFrame);
+      } else {
+        applySnapshot(animTo); // ensure exact final state
+        drawScene();
+        isAnimating = false;
+        rafID = null;
+        updateButtons();
+        // auto-advance if in auto mode
+        if (autoOn) scheduleAutoNext();
+      }
+    }
+
+    function goToStep(i) {
+      cancelAnim();
+      if (window.speechSynthesis) speechSynthesis.cancel();
+
+      curStep = i;
       const step = steps[i];
+      const from = i === 0 ? Object.fromEntries(STATE_KEYS.map(k => [k, 0])) : stateSnapshots[i - 1];
+      const to = stateSnapshots[i];
+
       document.getElementById('step-title').textContent = step.title;
       document.getElementById('step-desc').innerHTML = step.desc;
       document.getElementById('prog').textContent = `Step ${i + 1} / ${steps.length}`;
+      document.getElementById('phase-badge').textContent = step.phase || '';
+      updateDots();
+      updateProgressBar();
+      updateButtons();
       speak(step.say);
-      rafID = requestAnimationFrame(runAnim);
+
+      animFrom = { ...from };
+      animTo = { ...to };
+      animDur = step.dur;
+      animT = null;
+      isAnimating = true;
+      rafID = requestAnimationFrame(runAnimFrame);
     }
 
-    function fullReset() {
-      if (rafID) cancelAnimationFrame(rafID);
-      speechSynthesis.cancel();
-      resetS(); anim = false; curStep = -1; animT = null;
-      computeGeo(); steps = buildSteps();
-      document.getElementById('step-title').textContent = 'Ready to Start';
-      document.getElementById('step-desc').innerHTML = 'Drag the <b style="color:#3ddc84">green</b> or <b style="color:#ff8c42">orange</b> vertices on the canvas, then press <b>Next Step</b> to begin.';
-      document.getElementById('prog').textContent = `Step 0 / ${steps.length}`;
-      drawScene();
+    function updateButtons() {
+      document.getElementById('btnPrev').disabled = curStep <= 0;
+      document.getElementById('btnNext').disabled = curStep >= steps.length - 1 || isAnimating;
     }
 
-    document.getElementById('btnNext').onclick = () => {
-      if (anim) return;
-      if (curStep < 0) { computeGeo(); steps = buildSteps(); }
-      if (curStep < steps.length - 1) startStep(curStep + 1);
-    };
-    document.getElementById('btnPrev').onclick = () => {
-      if (anim || curStep <= 0) return;
+    function updateProgressBar() {
+      const pct = steps.length > 1 ? (curStep / (steps.length - 1)) * 100 : 0;
+      document.getElementById('progress-bar').style.width = pct + '%';
+    }
+
+    function updateDots() {
+      const container = document.getElementById('step-dots');
+      // rebuild dots if count changed
+      if (container.children.length !== steps.length) {
+        container.innerHTML = '';
+        for (let i = 0; i < steps.length; i++) {
+          const d = document.createElement('div');
+          d.className = 'sdot';
+          d.title = `Step ${i + 1}`;
+          d.addEventListener('click', () => {
+            if (isAnimating) return;
+            if (i === curStep) return;
+            if (i < curStep) { goPrev(curStep - i); }
+            else { goNext(i - curStep); }
+          });
+          container.appendChild(d);
+        }
+      }
+      const dots = container.querySelectorAll('.sdot');
+      dots.forEach((d, i) => {
+        d.classList.toggle('active', i === curStep);
+        d.classList.toggle('done', i < curStep);
+      });
+    }
+
+    // Sequential jump helpers
+    function goNext(n = 1) {
+      if (isAnimating) return;
+      const target = Math.min(curStep + n, steps.length - 1);
+      if (target <= curStep) return;
+      goToStep(target);
+    }
+    function goPrev(n = 1) {
+      if (isAnimating) return;
+      const target = Math.max(curStep - n, 0);
+      if (target === curStep) return;
+      // Instantly apply snapshot for target, then animate one step back to that snapshot
+      // Actually since snapshots are pre-built, just go directly
+      goToStep(target);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // AUTO PLAY
+    // ═══════════════════════════════════════════════════════════════════
+    let autoOn = false, autoTimer = null;
+
+    function scheduleAutoNext() {
+      if (!autoOn) return;
+      if (curStep >= steps.length - 1) { stopAuto(); return; }
+      // Wait a bit after animation finishes, then go next
+      autoTimer = setTimeout(() => {
+        if (!autoOn) return;
+        goNext();
+      }, 1800);
+    }
+
+    function stopAuto() {
+      autoOn = false;
+      clearTimeout(autoTimer); autoTimer = null;
+      const btn = document.getElementById('btnAuto');
+      btn.textContent = '▶ Auto';
+      btn.classList.remove('active-auto');
+    }
+
+    function startAuto() {
+      autoOn = true;
+      const btn = document.getElementById('btnAuto');
+      btn.textContent = '■ Stop';
+      btn.classList.add('active-auto');
+      if (!isAnimating) {
+        if (curStep >= steps.length - 1) { stopAuto(); return; }
+        goNext();
+      }
+      // if animating, scheduleAutoNext will be called at animation end
+    }
+
+    document.getElementById('btnNext').onclick = () => { if (!isAnimating) goNext(); };
+    document.getElementById('btnPrev').onclick = () => { if (!isAnimating) goPrev(); };
+    document.getElementById('btnAuto').onclick = () => { autoOn ? stopAuto() : startAuto(); };
+
+    document.getElementById('btnReset').onclick = () => {
+      stopAuto();
+      cancelAnim();
+      if (window.speechSynthesis) speechSynthesis.cancel();
       resetS();
-      for (let i = 0; i < curStep - 1; i++) steps[i].enter(1);
-      startStep(curStep - 1);
+      curStep = -1;
+      computeGeo();
+      steps = buildSteps();
+      stateSnapshots = buildSnapshots(steps);
+      document.getElementById('step-title').textContent = 'Ready to Start';
+      document.getElementById('step-desc').innerHTML = 'Drag the <b style="color:#3ddc84">green</b> or <b style="color:#ff8c42">orange</b> vertices on the canvas, then press <b>Next →</b> to begin.';
+      document.getElementById('prog').textContent = `Step 0 / ${steps.length}`;
+      document.getElementById('phase-badge').textContent = 'Ready';
+      document.getElementById('progress-bar').style.width = '0%';
+      updateDots();
+      document.getElementById('btnPrev').disabled = true;
+      document.getElementById('btnNext').disabled = false;
+      drawScene();
     };
-    document.getElementById('btnReset').onclick = fullReset;
 
     document.getElementById('btnMute').onclick = () => {
       ttsOn = !ttsOn;
@@ -1335,34 +1570,15 @@
       };
     }
 
-    let autoOn = false, autoTimer = null;
-    function stopAuto() {
-      autoOn = false; clearTimeout(autoTimer);
-      document.getElementById('btnAuto').textContent = '▶ Auto';
-    }
-
-    document.getElementById('btnAuto').onclick = () => {
-      if (autoOn) { stopAuto(); return; }
-      autoOn = true;
-      document.getElementById('btnAuto').textContent = '■ Stop';
-      async function tick() {
-        if (!autoOn) return;
-        if (curStep >= steps.length - 1) { stopAuto(); return; }
-        startStep(curStep + 1);
-        // We need a way to wait for the speech to finish if possible, 
-        // but startStep(i) handles speak() internally.
-        // For auto-play consistency with other sims, we'll just use a fixed delay after the step starts.
-        autoTimer = setTimeout(tick, 3000);
-      }
-      tick();
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     // INIT
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
     computeGeo();
     steps = buildSteps();
+    stateSnapshots = buildSnapshots(steps);
     document.getElementById('prog').textContent = `Step 0 / ${steps.length}`;
+    document.getElementById('btnPrev').disabled = true;
+    updateDots();
     drawScene();
   </script>
   <script src="bg-music.js"></script>

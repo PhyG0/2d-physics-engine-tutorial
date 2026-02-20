@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="350" viewBox="0 0 600 350" xmlns="http://www.w3.org/2000/svg">
+            <!-- Separated shapes -->
+            <g transform="translate(0, 0)">
+                <text x="150" y="20" fill="#ffffff" font-size="14" text-anchor="middle">Separating Axis Found</text>
+
+                <!-- Two rectangles -->
+                <rect x="40" y="50" width="60" height="40" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff"
+                    stroke-width="2" />
+                <rect x="180" y="50" width="60" height="40" fill="rgba(255, 148, 55, 0.3)" stroke="#ff9437"
+                    stroke-width="2" />
+
+                <!-- Axis -->
+                <line x1="0" y1="140" x2="300" y2="140" stroke="#ffffff" stroke-width="1" stroke-dasharray="5,5" />
+                <text x="150" y="135" fill="#ffffff" font-size="11" text-anchor="middle">Test Axis</text>
+
+                <!-- Projections -->
+                <line x1="40" y1="140" x2="100" y2="140" stroke="#3794ff" stroke-width="4" />
+                <line x1="180" y1="140" x2="240" y2="140" stroke="#ff9437" stroke-width="4" />
+
+                <!-- Gap -->
+                <line x1="100" y1="150" x2="180" y2="150" stroke="#00ff88" stroke-width="2" />
+                <text x="140" y="165" fill="#00ff88" font-size="11" text-anchor="middle">Gap!</text>
+
+                <text x="150" y="190" fill="#00ff88" font-size="12" text-anchor="middle">✓ Not Colliding</text>
+            </g>
+
+            <!-- Overlapping shapes -->
+            <g transform="translate(300, 0)">
+                <text x="150" y="20" fill="#ffffff" font-size="14" text-anchor="middle">All Axes Overlap</text>
+
+                <!-- Two overlapping rectangles -->
+                <rect x="80" y="50" width="60" height="40" fill="rgba(55, 148, 255, 0.3)" stroke="#3794ff"
+                    stroke-width="2" />
+                <rect x="120" y="50" width="60" height="40" fill="rgba(255, 148, 55, 0.3)" stroke="#ff9437"
+                    stroke-width="2" />
+
+                <!-- Axis -->
+                <line x1="0" y1="140" x2="300" y2="140" stroke="#ffffff" stroke-width="1" stroke-dasharray="5,5" />
+                <text x="150" y="135" fill="#ffffff" font-size="11" text-anchor="middle">Test Axis</text>
+
+                <!-- Projections -->
+                <line x1="80" y1="140" x2="140" y2="140" stroke="#3794ff" stroke-width="4" />
+                <line x1="120" y1="140" x2="180" y2="140" stroke="#ff9437" stroke-width="4" />
+
+                <!-- Overlap -->
+                <line x1="120" y1="150" x2="140" y2="150" stroke="#ff3333" stroke-width="3" />
+                <text x="130" y="165" fill="#ff3333" font-size="11" text-anchor="middle">Overlap</text>
+
+                <text x="150" y="190" fill="#ff3333" font-size="12" text-anchor="middle">✗ Check More Axes...</text>
+            </g>
+
+            <!-- Visual explanation -->
+            <g transform="translate(0, 220)">
+                <text x="300" y="0" fill="#ffffff" font-size="13" text-anchor="middle" font-weight="bold">SAT in
+                    Action</text>
+                <text x="300" y="20" fill="#cccccc" font-size="11" text-anchor="middle">We project both shapes onto each
+                    edge's perpendicular (normal)</text>
+                <text x="300" y="35" fill="#cccccc" font-size="11" text-anchor="middle">If projections overlap on ALL
+                    axes → Collision</text>
+                <text x="300" y="50" fill="#cccccc" font-size="11" text-anchor="middle">If projections separate on ANY
+                    axis → No Collision</text>
+            </g>
+        </svg>
