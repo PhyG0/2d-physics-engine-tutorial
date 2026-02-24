@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://phyg0.github.io/2d-physics-engine-tutorial/sitemap.xml

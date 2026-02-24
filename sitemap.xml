@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Homepage -->
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Tutorial Pages (highest SEO value) -->
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/part1/tutorial.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/part2/tutorial.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/part3/tutorial.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- IDE Pages -->
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/part1/index.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/part2/index.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/part3/index.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Interactive Simulations -->
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/simulations/dot-product-tutorial.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/simulations/dot-product-sandbox.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/simulations/sat-visualizer.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/simulations/sat-shadow.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://phyg0.github.io/2d-physics-engine-tutorial/simulations/clipping-tutorial.html</loc>
+    <lastmod>2026-02-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>

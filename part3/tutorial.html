@@ -4,7 +4,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Engine - Part 3: Collision Resolution</title>
+    <title>Part 3: Collision Resolution & Impulse Physics — 2D Physics Engine Tutorial | Phygo</title>
+    <meta name="description"
+        content="Learn impulse-based collision resolution for 2D physics engines: normal impulses (bouncing), Coulomb friction, angular velocity, effective mass, position correction, and iterative solvers. Step-by-step with code and diagrams.">
+    <meta name="keywords"
+        content="impulse resolution tutorial, collision response, physics engine solver, friction physics, restitution, angular velocity, inertia, torque, impulse based physics, sequential impulse solver, position correction, 2d physics engine, rigid body dynamics">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://phyg0.github.io/2d-physics-engine-tutorial/part3/tutorial.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://phyg0.github.io/2d-physics-engine-tutorial/part3/tutorial.html">
+    <meta property="og:title" content="Part 3: Collision Resolution & Impulse Physics — 2D Physics Engine Tutorial">
+    <meta property="og:description"
+        content="Learn impulse-based collision resolution: bouncing, friction, angular velocity, and iterative solvers for 2D physics engines.">
+    <meta property="og:image" content="https://phyg0.github.io/2d-physics-engine-tutorial/phygo-logo.png">
+    <meta property="og:site_name" content="Phygo">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Part 3: Impulse Resolution — 2D Physics Engine Tutorial">
+    <meta name="twitter:description"
+        content="Step-by-step impulse-based collision resolution: bouncing, friction, angular velocity, and iterative constraint solvers.">
+
+    <!-- JSON-LD Article -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Impulse-Based Collision Resolution — Part 3: 2D Physics Engine Tutorial",
+        "description": "Comprehensive tutorial on impulse-based collision resolution for 2D physics engines covering normal impulses, Coulomb friction, angular velocity, effective mass, and iterative solvers.",
+        "url": "https://phyg0.github.io/2d-physics-engine-tutorial/part3/tutorial.html",
+        "image": "https://phyg0.github.io/2d-physics-engine-tutorial/phygo-logo.png",
+        "author": { "@type": "Organization", "name": "Phygo" },
+        "publisher": { "@type": "Organization", "name": "Phygo" },
+        "mainEntityOfPage": "https://phyg0.github.io/2d-physics-engine-tutorial/part3/tutorial.html",
+        "articleSection": "Physics Engine Tutorial",
+        "keywords": ["impulse resolution", "collision response", "friction", "angular velocity", "2D physics engine"]
+    }
+    </script>
     <!-- Highlight.js -->
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
