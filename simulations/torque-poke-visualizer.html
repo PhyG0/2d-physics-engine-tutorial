@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torque & Spin Visualizer | Physics Tutorial</title>
+    <style>
+        :root {
+            --bg: #09090b;
+            --panel: rgba(24, 24, 27, 0.8);
+            --accent: #3b82f6;
+            --torque: #f97316;
+            --radius: #00ff88;
+            --text: #e4e4e7;
+            --border: #27272a;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* --- UI Overlay --- */
+        .overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 210px;
+            background: var(--panel);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            pointer-events: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: 15px;
+            color: var(--accent);
+        }
+
+        p {
+            margin: 0 0 12px;
+            font-size: 11px;
+            color: #a1a1aa;
+            line-height: 1.4;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #71717a;
+            margin-bottom: 3px;
+        }
+
+        .stat-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .torque-val {
+            color: var(--torque);
+        }
+
+        .radius-val {
+            color: var(--radius);
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            margin-top: 12px;
+            width: 100%;
+            pointer-events: auto;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: #71717a;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="overlay">
+        <h1>Torque Visualizer</h1>
+        <p>Drag on the object to apply an impulse. Observe how the impact point (radius) determines the spin.</p>
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-label">Radius (rA.x)</div>
+                <div id="rax-display" class="stat-value radius-val">0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Radius (rA.y)</div>
+                <div id="ray-display" class="stat-value radius-val">0.00</div>
+            </div>
+            <div class="stat-card" style="grid-column: span 2;">
+                <div class="stat-label">Calculated Torque (rA × P)</div>
+                <div id="torque-display" class="stat-value torque-val">0.00</div>
+            </div>
+            <div class="stat-card" style="grid-column: span 2;">
+                <div class="stat-label">Angular Velocity</div>
+                <div id="angvel-display" class="stat-value">0.00 deg/s</div>
+            </div>
+        </div>
+        <button onclick="resetBody()">Reset Body</button>
+    </div>
+
+    <div class="hint">Click and Drag to Poke</div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const UI = {
+            rax: document.getElementById('rax-display'),
+            ray: document.getElementById('ray-display'),
+            torque: document.getElementById('torque-display'),
+            angvel: document.getElementById('angvel-display')
+        };
+
+        // --- Basic Vector Class ---
+        class Vector {
+            constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+            set(x, y) { this.x = x; this.y = y; return this; }
+            copy() { return new Vector(this.x, this.y); }
+            add(v) { this.x += v.x; this.y += v.y; return this; }
+            sub(v) { this.x -= v.x; this.y -= v.y; return this; }
+            mult(n) { this.x *= n; this.y *= n; return this; }
+            mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+            rotate(angle) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                const nx = (cos * this.x) - (sin * this.y);
+                const ny = (sin * this.x) + (cos * this.y);
+                this.x = nx; this.y = ny;
+                return this;
+            }
+            static sub(a, b) { return new Vector(a.x - b.x, a.y - b.y); }
+        }
+
+        // --- Simplified Body Class ---
+        class Body {
+            constructor(x, y, w, h) {
+                this.pos = new Vector(x, y);
+                this.vel = new Vector(0, 0);
+                this.angle = 0;
+                this.angVel = 0;
+                this.w = w;
+                this.h = h;
+
+                this.mass = 10;
+                this.invMass = 1 / this.mass;
+                // Inertia for a box: (1/12) * mass * (w^2 + h^2)
+                this.inertia = (1 / 12) * this.mass * (w * w + h * h);
+                this.invInertia = 1 / this.inertia;
+            }
+
+            // Apply an instant impulse at a specific world-space point
+            applyImpulse(impulse, point) {
+                // 1. Linear velocity change
+                this.vel.x += impulse.x * this.invMass;
+                this.vel.y += impulse.y * this.invMass;
+
+                // 2. Angular velocity change (Torque)
+                const r = Vector.sub(point, this.pos);
+                const torque = (r.x * impulse.y) - (r.y * impulse.x);
+                this.angVel += torque * this.invInertia;
+
+                // Update UI for the last impact
+                UI.rax.innerText = r.x.toFixed(2);
+                UI.ray.innerText = r.y.toFixed(2);
+                UI.torque.innerText = torque.toFixed(2);
+            }
+
+            update(dt) {
+                this.pos.add(new Vector(this.vel.x * dt, this.vel.y * dt));
+                this.angle += this.angVel * dt;
+
+                // Friction/Damping
+                this.vel.mult(0.995);
+                this.angVel *= 0.995;
+
+                // Screen Wrap
+                if (this.pos.x < 0) this.pos.x = canvas.width;
+                if (this.pos.x > canvas.width) this.pos.x = 0;
+                if (this.pos.y < 0) this.pos.y = canvas.height;
+                if (this.pos.y > canvas.height) this.pos.y = 0;
+
+                UI.angvel.innerText = (this.angVel * (180 / Math.PI)).toFixed(1) + " deg/s";
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.pos.x, this.pos.y);
+                ctx.rotate(this.angle);
+
+                // Main Shape
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h);
+
+                // Translucent fill
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+                ctx.fillRect(-this.w / 2, -this.h / 2, this.w, this.h);
+
+                // Center Point
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Direction line
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(this.w / 2, 0);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            containsPoint(p) {
+                // To check if a point is inside a rotated rectangle:
+                // 1. Move point into local space (undo translate)
+                // 2. Rotate point back (undo rotate)
+                const localP = Vector.sub(p, this.pos);
+                localP.rotate(-this.angle);
+                return (localP.x >= -this.w / 2 && localP.x <= this.w / 2 &&
+                    localP.y >= -this.h / 2 && localP.y <= this.h / 2);
+            }
+        }
+
+        const body = new Body(0, 0, 150, 100);
+        let isDragging = false;
+        let dragStart = new Vector();
+        let dragCurrent = new Vector();
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            body.pos.set(canvas.width / 2, canvas.height / 2);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- Interaction ---
+        canvas.addEventListener('mousedown', (e) => {
+            const mouse = new Vector(e.clientX, e.clientY);
+            if (body.containsPoint(mouse)) {
+                isDragging = true;
+                dragStart = mouse;
+                dragCurrent = mouse.copy();
+
+                // Stop the body so the user can aim the "poke" easily
+                body.vel.set(0, 0);
+                body.angVel = 0;
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                dragCurrent.x = e.clientX;
+                dragCurrent.y = e.clientY;
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (isDragging) {
+                const impulse = Vector.sub(dragCurrent, dragStart);
+                // Scale impulse for visibility
+                impulse.mult(5);
+                body.applyImpulse(impulse, dragStart);
+                isDragging = false;
+            }
+        });
+
+        function resetBody() {
+            body.pos.set(canvas.width / 2, canvas.height / 2);
+            body.vel.set(0, 0);
+            body.angle = 0;
+            body.angVel = 0;
+            UI.rax.innerText = "0.00";
+            UI.ray.innerText = "0.00";
+            UI.torque.innerText = "0.00";
+        }
+
+        function drawImpulseLine() {
+            if (!isDragging) return;
+
+            // Draw Radius (rA)
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.5)';
+            ctx.beginPath();
+            ctx.moveTo(body.pos.x, body.pos.y);
+            ctx.lineTo(dragStart.x, dragStart.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Impulse Vector
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(dragStart.x, dragStart.y);
+            ctx.lineTo(dragCurrent.x, dragCurrent.y);
+            ctx.stroke();
+
+            // Arrow Head
+            const dir = Vector.sub(dragCurrent, dragStart);
+            const mag = dir.mag();
+            if (mag > 10) {
+                const angle = Math.atan2(dir.y, dir.x);
+                ctx.save();
+                ctx.translate(dragCurrent.x, dragCurrent.y);
+                ctx.rotate(angle);
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-10, -5);
+                ctx.lineTo(-10, 5);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function loop(time) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            body.update(1 / 60);
+            body.draw(ctx);
+            drawImpulseLine();
+
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

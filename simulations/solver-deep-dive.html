@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solver Deep Dive — Step-by-Step Collision Resolution | Phygo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: #07080f;
+            color: #c9d1d9;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            overflow: hidden
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            padding: 9px 18px 6px;
+            border-bottom: 1px solid #1a1a2e
+        }
+
+        header h1 {
+            font-size: 1rem;
+            color: #58a6ff;
+            letter-spacing: .06em
+        }
+
+        header span {
+            font-size: .6rem;
+            color: #3a3a5c
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 38px);
+            max-width: 900px;
+            margin: 0 auto
+        }
+
+        .toolbar {
+            padding: 5px 14px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #111124;
+            align-items: center
+        }
+
+        button {
+            background: #111124;
+            border: 1px solid #1e1e40;
+            color: #a0aec0;
+            border-radius: 5px;
+            padding: 4px 11px;
+            font-family: 'Space Mono', monospace;
+            font-size: .62rem;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        button:hover:not(:disabled) {
+            background: #1a1a40;
+            border-color: #3a3a6a;
+            color: #e2e8f0
+        }
+
+        button.primary {
+            background: #0d2d5e;
+            border-color: #2563eb;
+            color: #58a6ff
+        }
+
+        button.primary:hover:not(:disabled) {
+            background: #1a3d7e
+        }
+
+        button:disabled {
+            opacity: .3;
+            cursor: not-allowed
+        }
+
+        .sep {
+            width: 1px;
+            height: 22px;
+            background: #1e1e40;
+            margin: 0 2px
+        }
+
+        .canvas-wrap {
+            flex: 1;
+            position: relative;
+            min-height: 0
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 3fr 1fr 1fr 1.4fr;
+            gap: 7px;
+            padding: 7px 14px;
+            background: #050509;
+            border-top: 1px solid #111124
+        }
+
+        .card {
+            background: #0a0b17;
+            border: 1px solid #141428;
+            border-radius: 6px;
+            padding: 7px 12px
+        }
+
+        .step-card {
+            padding: 7px 13px
+        }
+
+        .snum {
+            font-size: .55rem;
+            color: #3a3a6a;
+            margin-bottom: 2px
+        }
+
+        .stitle {
+            font-size: .82rem;
+            font-weight: 700;
+            color: #58a6ff;
+            margin-bottom: 3px
+        }
+
+        .sdesc {
+            font-size: .62rem;
+            color: #8892a4;
+            line-height: 1.6
+        }
+
+        .sdesc em {
+            color: #ffd166;
+            font-style: normal
+        }
+
+        .sdesc strong {
+            color: #c9d1d9
+        }
+
+        .sdesc code {
+            background: #0f0f25;
+            color: #a8ff78;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: .58rem
+        }
+
+        .mbox {
+            font-size: .62rem;
+            color: #c77dff;
+            font-style: italic;
+            margin-top: 3px
+        }
+
+        .sec {
+            font-size: .52rem;
+            color: #3a3a6a;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-bottom: 5px
+        }
+
+        .leg-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .58rem;
+            color: #8892a4;
+            margin-bottom: 3px
+        }
+
+        .dot-lg {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        .prog-bar-bg {
+            background: #111124;
+            border-radius: 10px;
+            height: 5px;
+            overflow: hidden;
+            margin-bottom: 4px
+        }
+
+        .prog-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #7c3aed);
+            border-radius: 10px;
+            transition: width .4s ease
+        }
+
+        .prog-lbl {
+            display: flex;
+            justify-content: space-between;
+            font-size: .52rem;
+            color: #3a3a6a
+        }
+
+        .chapter-lbl {
+            font-size: .52rem;
+            color: #c77dff;
+            margin-top: 5px
+        }
+
+        select {
+            width: 100%;
+            background: #080810;
+            color: #c9d1d9;
+            border: 1px solid #1e1e2e;
+            border-radius: 4px;
+            padding: .28rem .45rem;
+            font-family: 'Space Mono', monospace;
+            font-size: .58rem;
+            margin-bottom: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Solver Deep Dive</h1>
+        <span>solveManifold() — Interactive Tutorial</span>
+    </header>
+    <div class="main">
+        <div class="toolbar">
+            <button id="btnPrev" disabled>← Prev</button>
+            <button id="btnNext" class="primary">Next →</button>
+            <button id="btnAuto">▶ Auto</button>
+            <button id="btnReset">↺ Reset</button>
+            <div class="sep"></div>
+            <button id="btnMute" title="Toggle narration">🔊</button>
+        </div>
+        <div class="canvas-wrap"><canvas id="c"></canvas></div>
+        <div class="info-grid">
+            <div class="card step-card">
+                <div class="snum" id="sNum">–</div>
+                <div class="stitle" id="sTitle">Welcome</div>
+                <div class="sdesc" id="sDesc">Press Next to begin.</div>
+                <div class="mbox" id="mBox"></div>
+            </div>
+            <div class="card">
+                <div class="sec">Legend</div>
+                <div class="leg-item">
+                    <div class="dot-lg" style="background:#58a6ff"></div>Normal
+                </div>
+                <div class="leg-item">
+                    <div class="dot-lg" style="background:#da70d6"></div>Tangent
+                </div>
+                <div class="leg-item">
+                    <div class="dot-lg" style="background:#00ff88"></div>Contact
+                </div>
+                <div class="leg-item">
+                    <div class="dot-lg" style="background:#f97316"></div>Impulse
+                </div>
+                <div class="leg-item">
+                    <div class="dot-lg" style="background:#fbbf24"></div>Velocity
+                </div>
+            </div>
+            <div class="card">
+                <div class="sec">Progress</div>
+                <div class="prog-bar-bg">
+                    <div class="prog-bar-fill" id="pFill" style="width:0%"></div>
+                </div>
+                <div class="prog-lbl"><span id="pL">Step 1</span><span id="pR">of –</span></div>
+                <div class="chapter-lbl" id="chapterLbl"></div>
+            </div>
+            <div class="card">
+                <div class="sec">Narration</div>
+                <select id="ttsVoice">
+                    <option value="">Default voice</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <script>
+        // === CANVAS ===
+        const C = document.getElementById('c'), X = C.getContext('2d'), WR = C.parentElement;
+        function resize() { C.width = WR.clientWidth; C.height = WR.clientHeight }
+        resize(); window.addEventListener('resize', resize);
+
+        // === MATH ===
+        const Vec = (x, y) => ({ x, y });
+        const vadd = (a, b) => Vec(a.x + b.x, a.y + b.y);
+        const vsub = (a, b) => Vec(a.x - b.x, a.y - b.y);
+        const vmul = (a, s) => Vec(a.x * s, a.y * s);
+        const vdot = (a, b) => a.x * b.x + a.y * b.y;
+        const vmag = a => Math.sqrt(a.x * a.x + a.y * a.y);
+        const vhat = a => { const m = vmag(a) || 1; return Vec(a.x / m, a.y / m) };
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const lerpV = (a, b, t) => Vec(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
+        const clamp = (v, mn, mx) => Math.max(mn, Math.min(mx, v));
+        const f = n => typeof n === 'number' ? n.toFixed(1) : String(n);
+        function getOrigin() { return Vec(C.width * .5, C.height * .46) }
+
+        // === SCENE STATE (animated) ===
+        const scene = { posA: Vec(0, 0), posB: Vec(0, 0), contact: Vec(0, 0), velA: Vec(0, 0), velB: Vec(0, 0), normal: Vec(1, 0), tangent: Vec(0, 1), rA: Vec(0, 0), rB: Vec(0, 0), impulseN: Vec(0, 0), impulseT: Vec(0, 0) };
+        const tgt = { ...scene };
+        for (const k of Object.keys(scene)) tgt[k] = Vec(scene[k].x, scene[k].y);
+        const SM = 0.12;
+        function setT(k, v) { tgt[k] = v }
+        function updateScene() { for (const k of Object.keys(scene)) scene[k] = lerpV(scene[k], tgt[k], SM) }
+
+        // Body data (not animated, just values)
+        let bA = { mass: 5, invMass: 1 / 5, inertia: 0, invInertia: 0, w: 120, h: 80, e: 0.5, mu: 0.4, angVel: 0 };
+        let bB = { mass: 8, invMass: 1 / 8, inertia: 0, invInertia: 0, w: 100, h: 100, e: 0.5, mu: 0.4, angVel: 0 };
+        bA.inertia = (1 / 12) * bA.mass * (bA.w * bA.w + bA.h * bA.h); bA.invInertia = 1 / bA.inertia;
+        bB.inertia = (1 / 12) * bB.mass * (bB.w * bB.w + bB.h * bB.h); bB.invInertia = 1 / bB.inertia;
+
+        // Solver values
+        let dvx = 0, dvy = 0, vn = 0, e_val = 0, jn = 0, pnx = 0, pny = 0;
+        let dvx2 = 0, dvy2 = 0, vt = 0, jt = 0, ptx = 0, pty = 0, maxF_v = 0;
+        let rAxN = 0, rBxN = 0, massN = 0, rAxT = 0, rBxT = 0, massT = 0;
+        let velA_after = Vec(0, 0), velB_after = Vec(0, 0), angA_after = 0, angB_after = 0;
+        let velA_final = Vec(0, 0), velB_final = Vec(0, 0), angA_final = 0, angB_final = 0;
+
+        // Initial conditions
+        const initVelA = Vec(80, -15), initVelB = Vec(-50, 10), initAngA = 0.3, initAngB = -0.1;
+        function initSolver() {
+            const o = getOrigin();
+            setT('posA', Vec(o.x - 40, o.y + 5)); setT('posB', Vec(o.x + 55, o.y - 8));
+            setT('contact', Vec(o.x + 12, o.y - 2));
+            const n = vhat(Vec(1, -0.15)); setT('normal', n); setT('tangent', Vec(-n.y, n.x));
+            setT('velA', initVelA); setT('velB', initVelB);
+            bA.angVel = initAngA; bB.angVel = initAngB;
+            const rA_ = vsub(tgt.contact, tgt.posA), rB_ = vsub(tgt.contact, tgt.posB);
+            setT('rA', rA_); setT('rB', rB_);
+            rAxN = rA_.x * n.y - rA_.y * n.x; rBxN = rB_.x * n.y - rB_.y * n.x;
+            const kN = bA.invMass + bB.invMass + rAxN * rAxN * bA.invInertia + rBxN * rBxN * bB.invInertia;
+            massN = kN > 0 ? 1 / kN : 0;
+            const t = tgt.tangent;
+            rAxT = rA_.x * t.y - rA_.y * t.x; rBxT = rB_.x * t.y - rB_.y * t.x;
+            const kT = bA.invMass + bB.invMass + rAxT * rAxT * bA.invInertia + rBxT * rBxT * bB.invInertia;
+            massT = kT > 0 ? 1 / kT : 0;
+            // Compute all values upfront
+            const rA = rA_, rB = rB_;
+            dvx = (initVelB.x - initAngB * rB.y) - (initVelA.x - initAngA * rA.y);
+            dvy = (initVelB.y + initAngB * rB.x) - (initVelA.y + initAngA * rA.x);
+            vn = dvx * n.x + dvy * n.y;
+            e_val = (-vn > 1) ? Math.min(bA.e, bB.e) : 0;
+            jn = massN * (-(1 + e_val) * vn); if (jn < 0) jn = 0;
+            pnx = n.x * jn; pny = n.y * jn;
+            velA_after = Vec(initVelA.x - pnx * bA.invMass, initVelA.y - pny * bA.invMass);
+            velB_after = Vec(initVelB.x + pnx * bB.invMass, initVelB.y + pny * bB.invMass);
+            angA_after = initAngA - (rA.x * pny - rA.y * pnx) * bA.invInertia;
+            angB_after = initAngB + (rB.x * pny - rB.y * pnx) * bB.invInertia;
+            dvx2 = (velB_after.x - angB_after * rB.y) - (velA_after.x - angA_after * rA.y);
+            dvy2 = (velB_after.y + angB_after * rB.x) - (velA_after.y + angA_after * rA.x);
+            vt = dvx2 * t.x + dvy2 * t.y;
+            jt = massT * (-vt);
+            const mu = Math.sqrt(bA.mu * bB.mu); maxF_v = jn * mu;
+            if (jt > maxF_v) jt = maxF_v; if (jt < -maxF_v) jt = -maxF_v;
+            ptx = t.x * jt; pty = t.y * jt;
+            velA_final = Vec(velA_after.x - ptx * bA.invMass, velA_after.y - pty * bA.invMass);
+            velB_final = Vec(velB_after.x + ptx * bB.invMass, velB_after.y + pty * bB.invMass);
+            angA_final = angA_after - (rA.x * pty - rA.y * ptx) * bA.invInertia;
+            angB_final = angB_after + (rB.x * pty - rB.y * ptx) * bB.invInertia;
+            setT('impulseN', Vec(0, 0)); setT('impulseT', Vec(0, 0));
+        }
+
+        // === DRAW HELPERS ===
+        function drawArrow(x1, y1, x2, y2, col, lw = 3, hs = 14, alpha = 1) {
+            X.save(); X.globalAlpha = alpha; X.strokeStyle = col; X.fillStyle = col; X.lineWidth = lw; X.lineCap = 'round';
+            const dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy);
+            if (d < 1) { X.restore(); return }
+            X.beginPath(); X.moveTo(x1, y1); X.lineTo(x2, y2); X.stroke();
+            const ux = dx / d, uy = dy / d;
+            X.beginPath(); X.moveTo(x2, y2); X.lineTo(x2 - hs * ux + hs * .4 * (-uy), y2 - hs * uy + hs * .4 * ux);
+            X.lineTo(x2 - hs * ux - hs * .4 * (-uy), y2 - hs * uy - hs * .4 * ux); X.closePath(); X.fill(); X.restore();
+        }
+        function drawVec(origin, dir, len, col, lbl, lw = 3) {
+            if (len < 2) return;
+            const ex = origin.x + dir.x * len, ey = origin.y + dir.y * len;
+            drawArrow(origin.x, origin.y, ex, ey, col, lw);
+            if (lbl) pill(lbl, ex + (dir.x >= 0 ? 16 : -16), ey - 12, col);
+        }
+        function pill(text, x, y, col, bg = 'rgba(10,11,23,0.92)', alpha = 1) {
+            X.save(); X.globalAlpha = alpha;
+            X.font = "bold 10px 'Space Mono',monospace"; X.textBaseline = 'middle'; X.textAlign = 'center';
+            const m = X.measureText(text), w = m.width + 12, h = 18, r = 4;
+            X.shadowColor = 'rgba(0,0,0,.6)'; X.shadowBlur = 4;
+            X.fillStyle = bg; X.beginPath(); X.roundRect(x - w / 2, y - h / 2, w, h, r); X.fill();
+            X.shadowColor = 'transparent'; X.fillStyle = col; X.fillText(text, x, y + 1);
+            X.restore();
+        }
+        function drawBox(pos, w, h, angle, col, lbl) {
+            X.save(); X.translate(pos.x, pos.y); X.rotate(angle || 0);
+            X.strokeStyle = col; X.lineWidth = 1.5; X.strokeRect(-w / 2, -h / 2, w, h);
+            X.fillStyle = col.replace(')', ',0.08)').replace('rgb', 'rgba'); X.fillRect(-w / 2, -h / 2, w, h);
+            X.fillStyle = col; X.beginPath(); X.arc(0, 0, 3, 0, Math.PI * 2); X.fill();
+            if (lbl) { X.fillStyle = '#fff'; X.font = 'bold 11px Inter,sans-serif'; X.fillText(lbl, 8, -h / 2 + 13) }
+            X.restore();
+        }
+        function drawContactDot() {
+            X.save(); X.fillStyle = '#00ff88'; X.shadowColor = '#00ff88'; X.shadowBlur = 8;
+            X.beginPath(); X.arc(scene.contact.x, scene.contact.y, 5, 0, Math.PI * 2); X.fill();
+            X.shadowBlur = 0; X.restore();
+        }
+        function drawSpinArc(pos, angVel, col) {
+            if (Math.abs(angVel) < 0.02) return;
+            X.save(); X.strokeStyle = col; X.lineWidth = 2;
+            const r = 22, s = -0.3, e = angVel > 0 ? 1.2 : -1.2;
+            X.beginPath(); X.arc(pos.x, pos.y, r, s, s + e, angVel < 0); X.stroke();
+            const ta = s + e, tx = pos.x + r * Math.cos(ta), ty = pos.y + r * Math.sin(ta);
+            X.fillStyle = col; X.save(); X.translate(tx, ty); X.rotate(ta + (angVel > 0 ? Math.PI / 2 : -Math.PI / 2));
+            X.beginPath(); X.moveTo(0, 0); X.lineTo(-5, -3); X.lineTo(-5, 3); X.fill(); X.restore(); X.restore();
+        }
+        function bg() {
+            X.fillStyle = '#07080f'; X.fillRect(0, 0, C.width, C.height);
+            X.strokeStyle = 'rgba(255,255,255,.016)'; X.lineWidth = 1;
+            for (let x = 0; x < C.width; x += 44) { X.beginPath(); X.moveTo(x, 0); X.lineTo(x, C.height); X.stroke() }
+            for (let y = 0; y < C.height; y += 44) { X.beginPath(); X.moveTo(0, y); X.lineTo(C.width, y); X.stroke() }
+        }
+
+        // === CHAPTERS ===
+        const CHAPTERS = { 0: 'Introduction', 3: 'Pre-Compute', 7: 'Normal Impulse', 14: 'Friction', 19: 'Result' };
+
+        // === STEP DEFINITIONS (22 micro-steps) ===
+        let tutCur = 0;
+        const S = [
+            // 0
+            {
+                title: 'Welcome', chapter: 'Introduction',
+                narrate: 'Welcome to the Solver Deep Dive. In this tutorial, we will walk through the entire solve manifold function, line by line. This is the function that makes objects bounce, slide, and spin realistically. Press Next to begin.',
+                desc: 'This tutorial breaks down <em>solveManifold()</em> — the heart of collision resolution — into tiny, digestible steps.',
+                enter() { initSolver() },
+                draw(o) {
+                    pill('solveManifold() — Deep Dive', o.x, o.y - 50, '#fff');
+                    pill('22 narrated micro-steps', o.x, o.y - 24, '#484f58');
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                }
+            },
+            // 1
+            {
+                title: 'The Collision Report', chapter: 'Introduction',
+                narrate: 'Before the solver runs, collision detection has already found that these two boxes overlap. It produced a Manifold — a report containing which two bodies collided, a collision normal pointing from A toward B, and a contact point where they touch.',
+                desc: 'SAT found an overlap and built a <em>Manifold</em>: two bodies, a <em>normal</em>, and a <em>contact point</em>.',
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawContactDot();
+                    pill('Manifold', scene.contact.x, scene.contact.y - 18, '#00ff88');
+                }
+            },
+            // 2
+            {
+                title: 'Normal & Tangent', chapter: 'Introduction',
+                narrate: 'The normal is the direction we push objects apart — like the direction of the bounce. The tangent is perpendicular to the normal — it represents the sliding direction. Normal handles bouncing. Tangent handles friction.',
+                desc: '<em>Normal</em> = bounce direction. <em>Tangent</em> = slide direction. They are perpendicular.',
+                math: 't = new Vector(-n.y, n.x)',
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.contact, scene.normal, 55, '#58a6ff', 'n (normal)', 2.5);
+                    drawVec(scene.contact, scene.tangent, 45, '#da70d6', 't (tangent)', 2);
+                    drawContactDot();
+                }
+            },
+            // 3
+            {
+                title: 'Radius Vector rA', chapter: 'Pre-Compute',
+                narrate: 'Now we calculate the radius vector r A. This is a line from Body A center to the contact point. It tells us how far off-center the hit is. If r A is zero, the hit is dead center and creates no spin. The further from center, the more spin.',
+                desc: '<em>rA</em> = contact − A.pos. How far off-center is the hit on body A?',
+                math: 'const rA = Vector.sub(contact, a.pos)',
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, 'rgba(218,112,214,0.3)', 'B');
+                    const rA = scene.rA, rAm = vmag(rA);
+                    if (rAm > 2) drawVec(scene.posA, vhat(rA), rAm, '#00ff88', 'rA', 2);
+                    drawContactDot();
+                    pill(`rA = (${f(tgt.rA.x)}, ${f(tgt.rA.y)})`, o.x, o.y + 120, '#00ff88');
+                }
+            },
+            // 4
+            {
+                title: 'Radius Vector rB', chapter: 'Pre-Compute',
+                narrate: 'Same idea for Body B. r B goes from B center to the contact point. Together, r A and r B tell the solver how much each body should spin when the impulse is applied.',
+                desc: '<em>rB</em> = contact − B.pos. Same idea, for body B.',
+                math: 'const rB = Vector.sub(contact, b.pos)',
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, 'rgba(88,166,255,0.3)', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    const rA = scene.rA, rB = scene.rB;
+                    if (vmag(rA) > 2) drawVec(scene.posA, vhat(rA), vmag(rA), '#00ff88', 'rA', 1.5);
+                    if (vmag(rB) > 2) drawVec(scene.posB, vhat(rB), vmag(rB), '#fbbf24', 'rB', 2);
+                    drawContactDot();
+                    pill(`rB = (${f(tgt.rB.x)}, ${f(tgt.rB.y)})`, o.x, o.y + 120, '#fbbf24');
+                }
+            },
+            // 5
+            {
+                title: 'Cross Product: rA × n', chapter: 'Pre-Compute',
+                narrate: 'The 2D cross product of r A and the normal gives a single number. It measures how much torque — rotational force — the collision creates on body A. A big number means lots of spin. Zero means no spin at all.',
+                desc: '<code>rAxN = rA.x * n.y − rA.y * n.x</code> — measures <em>how much spin</em> this hit creates on A.',
+                math: `rAxN = ${f(rAxN)}`,
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, 'rgba(218,112,214,0.3)', 'B');
+                    if (vmag(scene.rA) > 2) drawVec(scene.posA, vhat(scene.rA), vmag(scene.rA), '#00ff88', 'rA', 2);
+                    drawVec(scene.contact, scene.normal, 50, '#58a6ff', 'n', 2);
+                    drawContactDot();
+                    pill(`rA × n = ${f(rAxN)}`, o.x, o.y + 100, '#f97316');
+                    pill(Math.abs(rAxN) > 5 ? 'Strong spin!' : 'Weak spin', o.x, o.y + 122, '#8b949e');
+                }
+            },
+            // 6
+            {
+                title: 'Effective Mass', chapter: 'Pre-Compute',
+                narrate: 'Effective mass combines everything: the linear masses of both bodies plus the rotational contribution from both cross products. It answers: how hard is it to change the velocity at this specific contact point? We invert it to get mass N, which we multiply by the impulse later.',
+                desc: '<code>kN = invMassA + invMassB + rAxN²·invInertiaA + rBxN²·invInertiaB</code>. Then <em>massN = 1/kN</em>.',
+                math: `massN = ${f(massN)}`,
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawContactDot();
+                    const cy = o.y + 80;
+                    pill(`invMassA=${f(bA.invMass)}  invMassB=${f(bB.invMass)}`, o.x, cy, '#ffd166');
+                    pill(`rAxN²·invI_A = ${f(rAxN * rAxN * bA.invInertia)}`, o.x, cy + 22, '#ffd166');
+                    pill(`rBxN²·invI_B = ${f(rBxN * rBxN * bB.invInertia)}`, o.x, cy + 44, '#ffd166');
+                    pill(`massN (1/kN) = ${f(massN)}`, o.x, cy + 72, '#a8ff78');
+                }
+            },
+            // 7
+            {
+                title: 'Body Velocities', chapter: 'Normal Impulse',
+                narrate: 'Before we compute the impulse, let us look at the velocities. Body A is moving to the right at 80 pixels per second and slightly up. Body B is moving to the left at 50 and slightly down. They are heading toward each other — a collision is happening.',
+                desc: 'A moves <em>right</em>, B moves <em>left</em>. They are approaching each other.',
+                enter() { setT('velA', initVelA); setT('velB', initVelB) },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.posA, vhat(scene.velA), clamp(vmag(scene.velA) * 0.7, 10, 55), '#fbbf24', 'vA', 2.5);
+                    drawVec(scene.posB, vhat(scene.velB), clamp(vmag(scene.velB) * 0.7, 10, 55), '#fbbf24', 'vB', 2.5);
+                    drawContactDot();
+                    pill(`A.vel = (${f(initVelA.x)}, ${f(initVelA.y)})`, o.x - 120, o.y + 110, '#fbbf24');
+                    pill(`B.vel = (${f(initVelB.x)}, ${f(initVelB.y)})`, o.x + 120, o.y + 110, '#fbbf24');
+                }
+            },
+            // 8
+            {
+                title: 'Relative Velocity', chapter: 'Normal Impulse',
+                narrate: 'Now we calculate the relative velocity at the contact point. This is not just B velocity minus A velocity — we also include the rotational speed. Angular velocity times the radius gives the contact point speed due to spin. The formula includes both linear and angular contributions.',
+                desc: '<code>dv = velB_at_contact − velA_at_contact</code>, including angular velocity × radius.',
+                math: `dvx=${f(dvx)}, dvy=${f(dvy)}`,
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.posA, vhat(scene.velA), clamp(vmag(scene.velA) * 0.5, 5, 40), '#fbbf24', 'vA', 1.5);
+                    drawVec(scene.posB, vhat(scene.velB), clamp(vmag(scene.velB) * 0.5, 5, 40), '#fbbf24', 'vB', 1.5);
+                    const dv = Vec(dvx, dvy), dm = vmag(dv);
+                    if (dm > 2) drawVec(scene.contact, vhat(dv), clamp(dm * 0.4, 5, 50), '#f97316', 'dv (relative)', 2.5);
+                    drawContactDot();
+                }
+            },
+            // 9
+            {
+                title: 'Normal Projection (vn)', chapter: 'Normal Impulse',
+                narrate: 'We project the relative velocity onto the normal using the dot product. This gives us v n — how fast the bodies approach each other along the collision direction. If v n is negative, they are approaching, which means we need an impulse. If positive, they are already separating and we skip.',
+                desc: '<code>vn = dv · n</code> — the <em>dot product</em>. Negative = approaching. Positive = separating.',
+                math: `vn = ${f(vn)} → ${vn < 0 ? 'approaching ✓' : 'separating'}`,
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, 'rgba(88,166,255,0.4)', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, 'rgba(218,112,214,0.4)', 'B');
+                    drawVec(scene.contact, scene.normal, 55, '#58a6ff', 'n', 2);
+                    const pl = Math.abs(vn * 0.4);
+                    if (pl > 3) drawVec(scene.contact, vmul(scene.normal, vn < 0 ? -1 : 1), pl, vn < 0 ? '#ef4444' : '#22c55e', `vn=${f(vn)}`, 3);
+                    drawContactDot();
+                    pill(vn < 0 ? 'Bodies APPROACHING → need impulse!' : 'Bodies separating → skip', o.x, o.y + 110, vn < 0 ? '#ef4444' : '#22c55e');
+                }
+            },
+            // 10
+            {
+                title: 'Restitution (Bounciness)', chapter: 'Normal Impulse',
+                narrate: 'Restitution controls how bouncy the collision is. Zero means no bounce — objects just stop. One means perfectly elastic, like a super ball. We use the minimum of the two bodies restitution values, so the least bouncy surface wins. For gentle contacts we set it to zero to prevent jitter.',
+                desc: '<code>e = min(A.restitution, B.restitution)</code>. 0 = no bounce, 1 = super bouncy. Small impacts get e=0.',
+                math: `e = ${f(e_val)}`,
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawContactDot();
+                    pill(`A.restitution = ${f(bA.e)}`, o.x - 100, o.y + 90, '#58a6ff');
+                    pill(`B.restitution = ${f(bB.e)}`, o.x + 100, o.y + 90, '#da70d6');
+                    pill(`e = min(${f(bA.e)}, ${f(bB.e)}) = ${f(e_val)}`, o.x, o.y + 118, '#a8ff78');
+                    pill(`-vn = ${f(-vn)} ${-vn > 1 ? '> 1 → use e' : '≤ 1 → e = 0 (no bounce)'}`, o.x, o.y + 140, '#ffd166');
+                }
+            },
+            // 11
+            {
+                title: 'Impulse Magnitude (jn)', chapter: 'Normal Impulse',
+                narrate: 'Now for the big formula. The impulse magnitude j n equals negative one plus e, times v n, times the effective mass. This is how hard we push. The negative sign ensures we push objects apart. The clamping to zero means we only push apart, never pull together.',
+                desc: '<code>jn = massN × (-(1+e) × vn)</code>. Clamped to ≥ 0 so we only push <em>apart</em>.',
+                math: `jn = ${f(massN)} × ${f(-(1 + e_val) * vn)} = ${f(jn)}`,
+                enter() { setT('impulseN', vmul(tgt.normal, clamp(jn * 0.08, 5, 60))) },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, 'rgba(88,166,255,0.4)', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, 'rgba(218,112,214,0.4)', 'B');
+                    const imp = vmul(scene.normal, clamp(jn * 0.08, 5, 60));
+                    drawVec(scene.contact, vhat(imp), vmag(imp), '#f97316', `jn = ${f(jn)}`, 3);
+                    drawContactDot();
+                    pill('This is the Normal Impulse!', o.x, o.y + 110, '#f97316');
+                }
+            },
+            // 12
+            {
+                title: 'Apply to Body A', chapter: 'Normal Impulse',
+                narrate: 'We apply the impulse to Body A. The velocity changes by impulse times inverse mass — lighter objects move more. The angular velocity changes by the cross product of r A and the impulse, times inverse inertia. This is exactly how torque works: off-center hits create spin.',
+                desc: 'A gets pushed <em>backward</em>. Cross product of rA and impulse creates <em>spin</em>.',
+                math: `A.vel: (${f(initVelA.x)}, ${f(initVelA.y)}) → (${f(velA_after.x)}, ${f(velA_after.y)})`,
+                enter() { setT('velA', velA_after) },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, 'rgba(218,112,214,0.3)', 'B');
+                    drawVec(scene.posA, vhat(scene.velA), clamp(vmag(scene.velA) * 0.7, 5, 55), '#fbbf24', 'vA\'', 2.5);
+                    drawSpinArc(scene.posA, angA_after, '#f97316');
+                    drawContactDot();
+                    pill(`A.vel = (${f(velA_after.x)}, ${f(velA_after.y)})`, o.x, o.y + 100, '#fbbf24');
+                    pill(`A.angVel = ${f(angA_after)} rad/s`, o.x, o.y + 122, '#f97316');
+                }
+            },
+            // 13
+            {
+                title: 'Apply to Body B', chapter: 'Normal Impulse',
+                narrate: 'Body B gets the opposite impulse — Newton third law, equal and opposite reaction. Body B velocity increases in the normal direction. Its angular velocity also changes based on the cross product of r B with the impulse.',
+                desc: 'B gets pushed <em>forward</em>. Newton\'s 3rd law: equal and opposite.',
+                math: `B.vel: (${f(initVelB.x)}, ${f(initVelB.y)}) → (${f(velB_after.x)}, ${f(velB_after.y)})`,
+                enter() { setT('velB', velB_after) },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, 'rgba(88,166,255,0.3)', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.posA, vhat(velA_after), clamp(vmag(velA_after) * 0.5, 5, 40), 'rgba(251,191,36,0.4)', 'vA\'', 1.5);
+                    drawVec(scene.posB, vhat(scene.velB), clamp(vmag(scene.velB) * 0.7, 5, 55), '#fbbf24', 'vB\'', 2.5);
+                    drawSpinArc(scene.posB, angB_after, '#f97316');
+                    drawContactDot();
+                    pill(`B.vel = (${f(velB_after.x)}, ${f(velB_after.y)})`, o.x, o.y + 100, '#fbbf24');
+                    pill(`B.angVel = ${f(angB_after)} rad/s`, o.x, o.y + 122, '#f97316');
+                }
+            },
+            // 14
+            {
+                title: 'Why Friction?', chapter: 'Friction',
+                narrate: 'The normal impulse handled bouncing. But objects also slide against each other. Imagine a box sliding across a floor — friction is what slows it down. Without friction, everything would be like ice. Now we handle the tangential, or sliding, component.',
+                desc: 'Normal handled <em>bouncing</em>. Now we handle <em>sliding</em>. Without friction, everything is ice.',
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.contact, scene.normal, 50, '#58a6ff33', 'n (bounce)', 1.5);
+                    drawVec(scene.contact, scene.tangent, 45, '#da70d6', 't (slide)', 2.5);
+                    drawContactDot();
+                    pill('Tangent = sliding direction', o.x, o.y + 110, '#da70d6');
+                }
+            },
+            // 15
+            {
+                title: 'Recalculate Velocity', chapter: 'Friction',
+                narrate: 'Since the normal impulse just changed both velocities, we must recalculate the relative velocity. This is important! The sliding speed after the bounce is different from before. We project this new relative velocity onto the tangent to get v t: the sliding speed.',
+                desc: 'Velocities changed after bounce! Recalculate dv, then <code>vt = dv · t</code> = sliding speed.',
+                math: `vt = ${f(vt)}`,
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.contact, scene.tangent, 45, '#da70d6', 't', 1.5);
+                    const sl = Math.abs(vt * 0.3);
+                    if (sl > 3) drawVec(scene.contact, vmul(scene.tangent, vt > 0 ? 1 : -1), sl, '#fbbf24', `vt=${f(vt)}`, 2.5);
+                    drawContactDot();
+                }
+            },
+            // 16
+            {
+                title: 'Friction Impulse (jt)', chapter: 'Friction',
+                narrate: 'The friction impulse j t equals the tangential effective mass times negative v t. This tries to completely stop the sliding. But physics limits how strong friction can be.',
+                desc: '<code>jt = massT × (−vt)</code> — tries to <em>stop</em> the slide completely.',
+                math: `jt (raw) = ${f(massT * (-vt))}`,
+                enter() { },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, 'rgba(88,166,255,0.4)', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, 'rgba(218,112,214,0.4)', 'B');
+                    const rawJt = massT * (-vt);
+                    const imp = vmul(scene.tangent, clamp(rawJt * 0.05, -40, 40));
+                    if (vmag(imp) > 2) drawVec(scene.contact, vhat(imp), vmag(imp), '#22c55e', `jt=${f(rawJt)}`, 2.5);
+                    drawContactDot();
+                }
+            },
+            // 17
+            {
+                title: 'Coulomb Clamp', chapter: 'Friction',
+                narrate: 'Coulomb friction law: friction force can never exceed mu times the normal force. Mu is the friction coefficient — think of it as roughness. We clamp j t to the range negative max F to positive max F. This prevents friction from being unrealistically strong.',
+                desc: '<code>maxF = jn × μ</code>. Clamp: <code>jt = clamp(jt, -maxF, maxF)</code>. Friction cannot overpower the push.',
+                math: `μ=${f(Math.sqrt(bA.mu * bB.mu))}, maxF=${f(maxF_v)}, jt(clamped)=${f(jt)}`,
+                enter() { setT('impulseT', vmul(tgt.tangent, clamp(jt * 0.05, -40, 40))) },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, 'rgba(88,166,255,0.4)', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, 'rgba(218,112,214,0.4)', 'B');
+                    const imp = vmul(scene.tangent, clamp(jt * 0.05, -40, 40));
+                    if (vmag(imp) > 2) drawVec(scene.contact, vhat(imp), vmag(imp), '#22c55e', `jt=${f(jt)}`, 2.5);
+                    drawContactDot();
+                    pill(`maxF = ${f(jn)} × ${f(Math.sqrt(bA.mu * bB.mu))} = ${f(maxF_v)}`, o.x, o.y + 100, '#ffd166');
+                    pill(`jt clamped to [${f(-maxF_v)}, ${f(maxF_v)}]`, o.x, o.y + 122, '#22c55e');
+                }
+            },
+            // 18
+            {
+                title: 'Apply Friction', chapter: 'Friction',
+                narrate: 'Apply friction impulse exactly like the normal impulse. Body A subtracts, Body B adds. Cross products create additional spin from friction. After this step, both velocities and angular velocities have their final post-collision values.',
+                desc: 'Same pattern: <em>A subtracts, B adds</em>. Cross product creates spin from friction too.',
+                enter() { setT('velA', velA_final); setT('velB', velB_final) },
+                draw(o) {
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.posA, vhat(scene.velA), clamp(vmag(scene.velA) * 0.7, 5, 55), '#fbbf24', 'vA final', 2.5);
+                    drawVec(scene.posB, vhat(scene.velB), clamp(vmag(scene.velB) * 0.7, 5, 55), '#fbbf24', 'vB final', 2.5);
+                    drawSpinArc(scene.posA, angA_final, '#22c55e');
+                    drawSpinArc(scene.posB, angB_final, '#22c55e');
+                    drawContactDot();
+                }
+            },
+            // 19
+            {
+                title: 'Before vs After', chapter: 'Result',
+                narrate: 'Lets compare. Before the solver: A was moving right, B was moving left. After: A bounces backward to the left. B bounces forward to the right. Both have gained angular velocity — they spin because the hit was off-center. The solver did its job in just a few lines of math.',
+                desc: 'Velocity <em>before</em> vs <em>after</em> — the solver flipped directions and added spin.',
+                enter() { },
+                draw(o) {
+                    const lx = o.x - 130, rx = o.x + 130;
+                    pill('BEFORE', lx, o.y - 80, '#484f58'); pill('AFTER', rx, o.y - 80, '#484f58');
+                    drawArrow(lx - 20, o.y - 40, lx + 30, o.y - 48, '#fbbf24', 2, 10, 0.5); pill('A→', lx + 45, o.y - 55, '#fbbf24', null, 0.5);
+                    drawArrow(lx + 60, o.y - 35, lx + 30, o.y - 30, '#fbbf24', 2, 10, 0.5); pill('←B', lx + 10, o.y - 22, '#fbbf24', null, 0.5);
+                    drawArrow(rx + 20, o.y - 40, rx - 30, o.y - 30, '#a8ff78', 2, 10); pill('←A', rx - 45, o.y - 38, '#a8ff78');
+                    drawArrow(rx - 40, o.y - 35, rx + 10, o.y - 43, '#a8ff78', 2, 10); pill('B→', rx + 25, o.y - 50, '#a8ff78');
+                    const cy = o.y + 20;
+                    pill(`A: (${f(initVelA.x)},${f(initVelA.y)}) → (${f(velA_final.x)},${f(velA_final.y)})`, o.x, cy, '#fbbf24');
+                    pill(`B: (${f(initVelB.x)},${f(initVelB.y)}) → (${f(velB_final.x)},${f(velB_final.y)})`, o.x, cy + 22, '#fbbf24');
+                    pill(`A spin: ${f(initAngA)} → ${f(angA_final)} rad/s`, o.x, cy + 50, '#f97316');
+                    pill(`B spin: ${f(initAngB)} → ${f(angB_final)} rad/s`, o.x, cy + 72, '#f97316');
+                }
+            },
+            // 20
+            {
+                title: 'Iterations', chapter: 'Result',
+                narrate: 'In our engine, solve manifold runs inside a loop. Ten iterations per frame. Each pass refines the velocities, converging on the most stable solution. More iterations means more accuracy, but costs more C P U. Ten is a great balance for real-time games.',
+                desc: 'The engine runs this <em>10 times</em> per frame for stability. More iterations = more accurate stacking.',
+                math: 'for (let i = 0; i < 10; i++) solver.solveManifold(m)',
+                enter() { },
+                draw(o) {
+                    for (let i = 0; i < 10; i++) {
+                        const x = o.x - 180 + i * 40, y = o.y - 30;
+                        const alpha = i < 3 ? 1 : i < 6 ? 0.6 : 0.3;
+                        X.save(); X.globalAlpha = alpha;
+                        X.strokeStyle = '#2563eb'; X.lineWidth = 1.5; X.strokeRect(x - 12, y - 12, 24, 24);
+                        X.fillStyle = '#58a6ff'; X.font = 'bold 10px Space Mono'; X.textAlign = 'center';
+                        X.fillText(String(i + 1), x, y + 4); X.restore();
+                    }
+                    pill('Each box = one full solveManifold() call', o.x, o.y + 30, '#8b949e');
+                    pill('Earlier passes do the heavy lifting', o.x, o.y + 52, '#58a6ff');
+                    pill('Later passes fine-tune for stability', o.x, o.y + 74, '#484f58');
+                }
+            },
+            // 21
+            {
+                title: 'Complete!', chapter: 'Result',
+                narrate: 'Congratulations! You have walked through every single line of the solve manifold function. You now understand: relative velocity, the dot product for projection, impulse magnitude, restitution, cross products for spin, and coulombs friction law. These concepts power every physics engine, from simple 2D games to triple A titles.',
+                desc: 'You now understand the <em>entire</em> collision resolver: bouncing, friction, spin, clamping, and iterations. 🎉',
+                enter() { setT('velA', velA_final); setT('velB', velB_final) },
+                draw(o) {
+                    pill('🎉 solveManifold() — Mastered!', o.x, o.y - 60, '#fff');
+                    pill('Bounce ✓  Friction ✓  Spin ✓  Clamp ✓  Iterate ✓', o.x, o.y - 34, '#a8ff78');
+                    drawBox(scene.posA, bA.w, bA.h, 0.15, '#58a6ff', 'A');
+                    drawBox(scene.posB, bB.w, bB.h, -0.1, '#da70d6', 'B');
+                    drawVec(scene.posA, vhat(scene.velA), clamp(vmag(scene.velA) * 0.7, 5, 55), '#fbbf24', '', 2);
+                    drawVec(scene.posB, vhat(scene.velB), clamp(vmag(scene.velB) * 0.7, 5, 55), '#fbbf24', '', 2);
+                    drawSpinArc(scene.posA, angA_final, '#22c55e');
+                    drawSpinArc(scene.posB, angB_final, '#22c55e');
+                }
+            }
+        ];
+
+        // === NAVIGATION ===
+        function getChapter(idx) { let ch = ''; for (const [k, v] of Object.entries(CHAPTERS)) if (idx >= parseInt(k)) ch = v; return ch }
+        function updateUI() {
+            const s = S[tutCur];
+            document.getElementById('sNum').textContent = `Step ${tutCur + 1} of ${S.length}`;
+            document.getElementById('sTitle').textContent = s.title;
+            document.getElementById('sDesc').innerHTML = s.narrate || s.desc;
+            document.getElementById('mBox').textContent = s.math || '';
+            document.getElementById('pFill').style.width = `${((tutCur + 1) / S.length) * 100}%`;
+            document.getElementById('pL').textContent = `Step ${tutCur + 1}`;
+            document.getElementById('pR').textContent = `of ${S.length}`;
+            document.getElementById('chapterLbl').textContent = getChapter(tutCur);
+            document.getElementById('btnPrev').disabled = tutCur === 0;
+            document.getElementById('btnNext').disabled = tutCur === S.length - 1;
+        }
+        function goTo(idx) { tutCur = clamp(idx, 0, S.length - 1); const s = S[tutCur]; if (s.enter) s.enter(); updateUI() }
+        function renderScene() { bg(); const s = S[tutCur]; if (s && s.draw) { const o = getOrigin(); s.draw(o) } }
+        function loop() { updateScene(); renderScene(); requestAnimationFrame(loop) }
+        loop();
+
+        // === TTS ===
+        let synth = window.speechSynthesis, voices = [];
+        const muteBtn = document.getElementById('btnMute'), voiceSel = document.getElementById('ttsVoice');
+        let muted = false, autoPlay = false, autoTimer = null;
+        function loadVoices() {
+            voices = synth.getVoices(); voiceSel.innerHTML = '<option value="">Default voice</option>';
+            voices.forEach((v, i) => { const opt = document.createElement('option'); opt.value = i; opt.textContent = `${v.name} (${v.lang})`; voiceSel.appendChild(opt) });
+            const pref = ['Microsoft Aria', 'Microsoft Jenny', 'Google US English', 'Samantha', 'Daniel'];
+            for (const n of pref) { const idx = voices.findIndex(v => v.name.includes(n)); if (idx !== -1) { voiceSel.value = idx; break } }
+        }
+        if (synth && synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices; loadVoices();
+        function stopAuto() { autoPlay = false; clearTimeout(autoTimer); document.getElementById('btnAuto').textContent = '▶ Auto'; document.getElementById('btnAuto').classList.remove('primary'); if (synth) synth.cancel() }
+        function speakStep() {
+            if (autoTimer) clearTimeout(autoTimer); if (!synth) return; synth.cancel();
+            const s = S[tutCur];
+            if (muted || !s.narrate) { if (autoPlay) { const dur = Math.max(2500, (s.narrate || '').split(' ').length / 200 * 60000); autoTimer = setTimeout(nextStep, dur) } return }
+            const u = new SpeechSynthesisUtterance(s.narrate);
+            if (voiceSel.value !== '') u.voice = voices[parseInt(voiceSel.value)]; u.rate = 1.0;
+            u.onend = () => { if (autoPlay) autoTimer = setTimeout(nextStep, 1800) };
+            synth.speak(u);
+        }
+        function nextStep() { if (tutCur < S.length - 1) { goTo(tutCur + 1); speakStep() } else stopAuto() }
+
+        // === BUTTONS ===
+        document.getElementById('btnNext').addEventListener('click', () => { stopAuto(); nextStep() });
+        document.getElementById('btnPrev').addEventListener('click', () => { stopAuto(); if (tutCur > 0) { goTo(tutCur - 1); speakStep() } });
+        document.getElementById('btnReset').addEventListener('click', () => { stopAuto(); goTo(0); if (synth) synth.cancel() });
+        document.getElementById('btnAuto').addEventListener('click', () => {
+            autoPlay = !autoPlay; const btn = document.getElementById('btnAuto');
+            if (autoPlay) { btn.textContent = '⏹ Stop'; btn.classList.add('primary'); if (!synth.speaking) speakStep() } else stopAuto();
+        });
+        muteBtn.addEventListener('click', () => { muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; if (muted && synth) synth.cancel(); else speakStep() });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); stopAuto(); nextStep() }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); stopAuto(); if (tutCur > 0) { goTo(tutCur - 1); speakStep() } }
+        });
+
+        // === INIT ===
+        goTo(0);
+    </script>
+</body>
+
+</html>
