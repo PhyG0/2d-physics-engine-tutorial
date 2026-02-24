@@ -1,0 +1,89 @@
+{
+  "code": "base-course-for-idea-json",
+  "title": "Base-course-for-ideal-json",
+  "description": "None",
+  "visible": false,
+  "lessons": [
+    {
+      "title": "Lesson",
+      "nodes": [
+        {
+          "type": 1,
+          "mode": 1,
+          "text": "**Markdown node**\n`This is markdown node`",
+          "index": 1,
+          "codeId": null,
+          "correctAnswer": ""
+        },
+        {
+          "type": 1,
+          "mode": 2,
+          "text": "<h1>Hello world!</h1>\n<p>This is html node.</p>",
+          "index": 2,
+          "codeId": null,
+          "correctAnswer": ""
+        },
+        {
+          "type": 2,
+          "mode": 1,
+          "text": "what is value of PI upto 2 digits ?",
+          "index": 3,
+          "codeId": null,
+          "correctAnswer": "",
+          "answers": [
+            {
+              "text": "3.14",
+              "correct": true
+            },
+            {
+              "text": "3.15",
+              "correct": false
+            },
+            {
+              "text": "3.16",
+              "correct": false
+            },
+            {
+              "text": "3.17",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "type": 3,
+          "mode": 1,
+          "text": "select all ovels from the given choices.",
+          "index": 4,
+          "codeId": null,
+          "correctAnswer": "",
+          "answers": [
+            {
+              "text": "a",
+              "correct": true
+            },
+            {
+              "text": "p",
+              "correct": false
+            },
+            {
+              "text": "o",
+              "correct": true
+            },
+            {
+              "text": "e",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "type": 5,
+          "mode": 1,
+          "text": "",
+          "index": 5,
+          "codeId": "6998328535c14b54fd9a5242",
+          "correctAnswer": ""
+        }
+      ]
+    }
+  ]
+}

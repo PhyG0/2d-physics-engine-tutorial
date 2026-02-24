@@ -49,6 +49,8 @@
             display: flex;
             flex-direction: column;
             height: calc(100vh - 38px);
+            max-width: 850px;
+            margin: 0 auto;
         }
 
         .toolbar {
@@ -110,6 +112,7 @@
             display: block;
             width: 100%;
             height: 100%;
+            touch-action: none;
         }
 
         .info-grid {
@@ -1019,10 +1022,14 @@
         // ═══════════════════════════════════════
         //  BUTTONS
         // ═══════════════════════════════════════
-        document.getElementById('btnNext').addEventListener('click', () => { stopAuto(); nextStep(); });
+        document.getElementById('btnNext').addEventListener('click', () => {
+            if (window.startBgMusic) window.startBgMusic();
+            stopAuto(); nextStep();
+        });
         document.getElementById('btnPrev').addEventListener('click', () => { stopAuto(); if (tutCur > 0) { goTo(tutCur - 1); speakStep(); } });
         document.getElementById('btnReset').addEventListener('click', () => { stopAuto(); goTo(0); if (synth) synth.cancel(); });
         document.getElementById('btnAuto').addEventListener('click', () => {
+            if (window.startBgMusic) window.startBgMusic();
             autoPlay = !autoPlay;
             const btn = document.getElementById('btnAuto');
             if (autoPlay) { btn.textContent = '⏹ Stop'; btn.classList.add('primary'); if (!synth.speaking) speakStep(); }

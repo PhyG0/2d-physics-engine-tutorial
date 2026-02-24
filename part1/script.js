@@ -573,7 +573,7 @@ canvas {
 }`,
     'main.js': `
 // Initialize Screen for responsive canvas
-const screen = new Screen(window.innerWidth, window.innerHeight);
+const screen = new Screen(1600, 900);
 const ctx = screen.getContext(); // 'ctx' is like our paintbrush.
 
 // Set the canvas size to fill most of the window.

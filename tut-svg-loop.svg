@@ -1,0 +1,33 @@
+<svg width="100%" height="auto" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="600" height="300" fill="#09090b" rx="12"/>
+    <g font-family="'Inter', sans-serif" font-weight="600" text-anchor="middle" font-size="14">
+        <!-- Nodes -->
+        <rect x="50" y="40" width="160" height="50" rx="8" fill="#1e1e1e" stroke="#3794ff" stroke-width="2"/>
+        <text x="130" y="70" fill="#fff">1. Apply Forces</text>
+
+        <rect x="390" y="40" width="160" height="50" rx="8" fill="#1e1e1e" stroke="#8b5cf6" stroke-width="2"/>
+        <text x="470" y="70" fill="#fff">2. Update Velocity</text>
+
+        <rect x="390" y="210" width="160" height="50" rx="8" fill="#1e1e1e" stroke="#10b981" stroke-width="2"/>
+        <text x="470" y="240" fill="#fff">3. Detect Collisions</text>
+
+        <rect x="220" y="125" width="160" height="50" rx="8" fill="#1e1e1e" stroke="#f59e0b" stroke-width="2"/>
+        <text x="300" y="155" fill="#fff">4. Solve Impulses</text>
+
+        <rect x="50" y="210" width="160" height="50" rx="8" fill="#1e1e1e" stroke="#ec4899" stroke-width="2"/>
+        <text x="130" y="240" fill="#fff">5. Update Position</text>
+
+        <!-- Arrows -->
+        <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#888" />
+            </marker>
+        </defs>
+        
+        <polyline points="210,65 390,65" fill="none" stroke="#888" stroke-width="2" marker-end="url(#arrow)"/>
+        <polyline points="470,90 470,210" fill="none" stroke="#888" stroke-width="2" marker-end="url(#arrow)"/>
+        <polyline points="390,235 300,235 300,175" fill="none" stroke="#888" stroke-width="2" marker-end="url(#arrow)"/>
+        <polyline points="300,125 300,105 130,105 130,210" fill="none" stroke="#888" stroke-width="2" marker-end="url(#arrow)"/>
+        <polyline points="50,235 20,235 20,65 50,65" fill="none" stroke="#888" stroke-width="2" marker-end="url(#arrow)"/>
+    </g>
+</svg>

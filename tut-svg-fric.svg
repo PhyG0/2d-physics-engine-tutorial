@@ -1,0 +1,34 @@
+<svg width="100%" height="auto" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="300" fill="#09090b" rx="12"/>
+    <!-- Ground -->
+    <rect x="50" y="200" width="300" height="20" fill="#333"/>
+    <!-- Box -->
+    <rect x="150" y="100" width="100" height="100" fill="rgba(55,148,255,0.2)" stroke="#3794ff" stroke-width="2"/>
+    
+    <defs>
+        <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff4466" />
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+        </marker>
+        <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#3794ff" />
+        </marker>
+    </defs>
+    
+    <!-- Velocity -->
+    <line x1="200" y1="150" x2="280" y2="150" stroke="#3794ff" stroke-width="3" marker-end="url(#arrowBlue)"/>
+    <text x="240" y="140" fill="#3794ff" font-family="'Inter', sans-serif" font-weight="600" font-size="12" text-anchor="middle">Velocity</text>
+    
+    <!-- Contact Point -->
+    <circle cx="200" cy="200" r="4" fill="#fff"/>
+    
+    <!-- Normal -->
+    <line x1="200" y1="200" x2="200" y2="100" stroke="#ff4466" stroke-width="3" marker-end="url(#arrowRed)"/>
+    <text x="180" y="120" fill="#ff4466" font-family="'Inter', sans-serif" font-weight="600" font-size="14" text-anchor="end">Normal Force (n)</text>
+    
+    <!-- Tangent Friction -->
+    <line x1="200" y1="200" x2="100" y2="200" stroke="#10b981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+    <text x="140" y="225" fill="#10b981" font-family="'Inter', sans-serif" font-weight="600" font-size="14" text-anchor="middle">Tangent Friction (t)</text>
+</svg>

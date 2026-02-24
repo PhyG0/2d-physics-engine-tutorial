@@ -1,92 +1,61 @@
 
 const initialFiles = {
     'screen.js': `class Screen {
-    // This class handles the canvas setup and makes it responsive.
-    // It ensures our physics simulation looks good on any screen size.
-    constructor(width = 1920, height = 1080) {
+    constructor(width = 1000, height = 1000){
         this.width = width;
         this.height = height;
-        this.aspectRatio = width / height;
-        
-        // Use a container div to manage layout and full-screen display.
-        this.container = document.createElement('div');
-        this.container.className = 'screen-container';
-        this._initializeContainer();
+        this.div = document.createElement("div");
+        this.div.style.position = "absolute";
+        this.div.style.top = "50%";
+        this.div.style.left = "50%";
+        this.Main = document.createElement("canvas");
+        this.Main.style.width = "100%";
+        this.Main.style.height = "100%";
+        this.Main.width = width;
+        this.Main.height = height;
+        this.Main.style.position = "absolute";
+        this.div.appendChild(this.Main);
+        document.body.appendChild(this.div);
 
-        this._createFullScreen();
-
-        document.body.appendChild(this.container);
-
-        // Resize the canvas whenever the window dimensions change.
         this._setupResponsive();
-        this._resize();
-        this._applyBodyStyles();
-    }
-
-    _initializeContainer() {
-        Object.assign(this.container.style, {
-            position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
-            background: '#000000', overflow: 'hidden', display: 'flex',
-        });
-    }
-
-    _createFullScreen() {
-        this.canvasWrapper = document.createElement('div');
-        this.canvasWrapper.className = 'canvas-wrapper';
-        Object.assign(this.canvasWrapper.style, {
-            flex: '1', position: 'relative', overflow: 'hidden', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', background: '#111' 
-        });
-
-        this.canvas = document.createElement('canvas');
-        this.canvas.className = 'screen-canvas';
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        this.canvas.style.border = "1px solid #333"; 
-
-        Object.assign(this.canvas.style, {
-            display: 'block', maxWidth: '100%', maxHeight: '100%',
-            objectFit: 'contain', 
-            boxShadow: '0 0 20px rgba(0,0,0,0.5)' 
-        });
-
-        this.canvasWrapper.appendChild(this.canvas);
-        this.container.appendChild(this.canvasWrapper);
-    }
-
-    // Prepare global CSS styles for the page.
-    _applyBodyStyles() {
-        Object.assign(document.body.style, {
-            margin: '0', padding: '0', overflow: 'hidden', background: '#000000',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            minHeight: '100vh', touchAction: 'none', userSelect: 'none', webkitUserSelect: 'none',
-        });
+        this._Resize();
     }
 
     _setupResponsive() {
         let resizeTimeout;
         const handleResize = () => {
             clearTimeout(resizeTimeout);
-            // Throttle resize events for better performance.
-            resizeTimeout = setTimeout(() => this._resize(), 16);
+            resizeTimeout = setTimeout(() => {
+                this._Resize();
+                const event = new CustomEvent('screen-resize', { detail: this.getCanvasDimensions() });
+                this.Main.dispatchEvent(event);
+            }, 16);
         };
         window.addEventListener('resize', handleResize);
     }
 
-    _resize() {
-        const event = new CustomEvent('screen-resize', { detail: this.getCanvasDimensions() });
-        this.canvas.dispatchEvent(event);
+    _Resize(){
+        var widthToHeight = this.width / this.height;
+        var newWidth = window.innerWidth;
+        var newHeight = window.innerHeight;
+        var newWidthToHeight = newWidth / newHeight;
+        if(newWidthToHeight > widthToHeight) newWidth = newHeight * widthToHeight;
+        else newHeight = newWidth / widthToHeight;
+        this.div.style.width = newWidth + "px";
+        this.div.style.height = newHeight + "px";
+        this.div.style.marginTop = (-newHeight / 2) + "px";
+        this.div.style.marginLeft = (-newWidth / 2) + "px";
     }
 
-    // Standard helper to get the 2D drawing context.
+    // Kept for compatibility with main.js
     getContext(type = '2d', options = {}) {
-        return this.canvas.getContext(type, { alpha: false, desynchronized: true, ...options });
+        return this.Main.getContext(type, { alpha: false, desynchronized: true, ...options });
     }
 
     getCanvasDimensions() {
         return {
-            width: this.canvas.width, height: this.canvas.height,
-            displayWidth: this.canvas.offsetWidth, displayHeight: this.canvas.offsetHeight,
+            width: this.Main.width, height: this.Main.height,
+            displayWidth: this.Main.offsetWidth, displayHeight: this.Main.offsetHeight,
         };
     }
 }`,
@@ -95,16 +64,21 @@ const initialFiles = {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Engine - Part 2</title>
+    <title>Physics Engine - Part 3</title>
 </head>
 <body>
+    <div id="scene-controls">
+        <button id="btn-scene-random" class="scene-btn active">Random Pool</button>
+        <button id="btn-scene-balls" class="scene-btn">Ball Pool</button>
+        <button id="btn-scene-stack" class="scene-btn">Stack of Boxes</button>
+    </div>
 </body>
 </html>`,
     'style.css': `body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: #f0f0f0;
+    background-color: #111;
 }
 
 canvas {
@@ -112,6 +86,39 @@ canvas {
     background-color: #fff;
     margin: 0;
     border: none;
+}
+
+#scene-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+}
+
+.scene-btn {
+    background: rgba(40, 40, 40, 0.8);
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-family: sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+}
+
+.scene-btn:hover {
+    background: rgba(60, 60, 60, 0.9);
+    color: #fff;
+}
+
+.scene-btn.active {
+    background: #3b82f6;
+    color: #fff;
+    border-color: #60a5fa;
 }`,
     'vector.js': `class Vector {
     // Basic vector class: holds x and y coordinates.
@@ -760,6 +767,216 @@ canvas {
         return { min, max };
     }
 }`,
+    'solver.js': `// ═══════════════════════════════════════════════════════════════
+// Solver — Iterative impulse-based collision resolution
+// This is the brain of our physics engine's collision response.
+// It takes manifolds from collision detection and makes objects
+// bounce, slide, and stop realistically.
+// ═══════════════════════════════════════════════════════════════
+
+class Solver {
+
+    constructor(iterations = 10) {
+        // More iterations = more accurate physics (but slower).
+        // 10 is a good balance for most scenes.
+        this.iterations = iterations;
+        this.manifolds = [];
+    }
+
+    // ── Step 1: Detect all collisions this frame ──────────────
+    // Uses brute-force O(n²) pair checking.
+    // (We'll optimize this with QuadTree in a later part.)
+    detectCollisions(bodies) {
+        this.manifolds = [];
+
+        for (let i = 0; i < bodies.length; i++) {
+            for (let j = i + 1; j < bodies.length; j++) {
+                const result = Collisions.findCollision(bodies[i], bodies[j]);
+                if (result) {
+                    const manifolds = Array.isArray(result) ? result : [result];
+                    for (const m of manifolds) {
+                        if (m.contacts.length > 0) {
+                            // Pre-compute values we'll reuse during solving
+                            this.preCompute(m);
+                            this.manifolds.push(m);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Step 2: Pre-compute contact data ──────────────────────
+    // Before solving, we cache expensive calculations that don't
+    // change between solver iterations for each contact.
+    preCompute(m) {
+        const a = m.bodyA, b = m.bodyB;
+        const n = m.normal;
+
+        // Tangent: perpendicular to the normal.
+        // Normal handles bouncing, tangent handles friction/sliding.
+        const t = new Vector(-n.y, n.x);
+
+        // Combined material properties:
+        // Restitution (bounciness): use the MINIMUM — least bouncy surface wins.
+        m.e = Math.min(a.restitution, b.restitution);
+        // Friction: geometric mean gives a balanced combination.
+        m.mu = Math.sqrt(a.friction * b.friction);
+        m.tangent = t;
+
+        // For each contact point, pre-compute the "effective mass"
+        // along normal and tangent directions.
+        m.contactData = [];
+        for (let c of m.contacts) {
+            // rA / rB: vectors from each body's center to the contact point
+            const rA = Vector.sub(c, a.pos);
+            const rB = Vector.sub(c, b.pos);
+
+            // Cross products: rA × n and rB × n
+            // These capture how much rotational inertia affects the collision
+            const rAxN = rA.x * n.y - rA.y * n.x;
+            const rBxN = rB.x * n.y - rB.y * n.x;
+
+            // Effective mass along normal direction:
+            // Combines linear masses + rotational contribution
+            const kN = a.invMass + b.invMass
+                + rAxN * rAxN * a.invInertia
+                + rBxN * rBxN * b.invInertia;
+
+            // Same for tangent direction (for friction)
+            const rAxT = rA.x * t.y - rA.y * t.x;
+            const rBxT = rB.x * t.y - rB.y * t.x;
+            const kT = a.invMass + b.invMass
+                + rAxT * rAxT * a.invInertia
+                + rBxT * rBxT * b.invInertia;
+
+            m.contactData.push({
+                rA, rB,
+                massN: kN > 0 ? 1 / kN : 0,  // Inverse of effective mass (normal)
+                massT: kT > 0 ? 1 / kT : 0,  // Inverse of effective mass (tangent)
+                jnAcc: 0,  // Accumulated normal impulse (for clamping)
+                jtAcc: 0   // Accumulated tangential impulse (for friction clamping)
+            });
+        }
+    }
+
+    // ── Step 3: Iterative impulse solving ─────────────────────
+    // Run multiple passes to converge on a stable solution.
+    solve() {
+        for (let iter = 0; iter < this.iterations; iter++) {
+            for (let m of this.manifolds) {
+                this.solveManifold(m);
+            }
+        }
+    }
+
+    // ── The Core: Solve one manifold ──────────────────────────
+    // This is where the magic happens.
+    // For each contact point, we compute and apply impulses
+    // in both normal (bounce) and tangent (friction) directions.
+    solveManifold(m) {
+        const a = m.bodyA, b = m.bodyB;
+        const n = m.normal, t = m.tangent;
+
+        for (let cd of m.contactData) {
+            const { rA, rB } = cd;
+
+            // ── Calculate relative velocity at contact point ──
+            // This accounts for both linear velocity AND angular velocity
+            const dvx = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);
+            const dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);
+
+            // ══════════════════════════════════════════════════
+            // NORMAL IMPULSE (Bouncing)
+            // ══════════════════════════════════════════════════
+
+            // Project relative velocity onto normal direction
+            const vn = dvx * n.x + dvy * n.y;
+
+            // Only apply restitution (bounce) for significant impacts.
+            // Tiny velocities get no bounce (prevents jitter).
+            const e = (-vn > 1.0) ? m.e : 0;
+
+            // Impulse magnitude: j = -(1 + e) * vn / effectiveMass
+            let jn = cd.massN * (-(1 + e) * vn);
+
+            // Accumulated clamping: total impulse must be >= 0
+            // (we only push apart, never pull together)
+            const jnOld = cd.jnAcc;
+            cd.jnAcc = Math.max(jnOld + jn, 0);
+            jn = cd.jnAcc - jnOld;
+
+            // Apply the normal impulse to both bodies
+            const pnx = n.x * jn, pny = n.y * jn;
+            a.vel.x -= pnx * a.invMass;
+            a.vel.y -= pny * a.invMass;
+            a.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;
+            b.vel.x += pnx * b.invMass;
+            b.vel.y += pny * b.invMass;
+            b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;
+
+            // ══════════════════════════════════════════════════
+            // TANGENTIAL IMPULSE (Friction)
+            // ══════════════════════════════════════════════════
+
+            // Recalculate relative velocity (it changed after normal impulse)
+            const dvx2 = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);
+            const dvy2 = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);
+
+            // Project onto tangent direction (the sliding direction)
+            const vt = dvx2 * t.x + dvy2 * t.y;
+            let jt = cd.massT * (-vt);
+
+            // Coulomb's friction law: friction force <= mu * normal force
+            // This prevents friction from being stronger than gravity.
+            const maxF = cd.jnAcc * m.mu;
+            const jtOld = cd.jtAcc;
+            cd.jtAcc = Math.max(-maxF, Math.min(jtOld + jt, maxF));
+            jt = cd.jtAcc - jtOld;
+
+            // Apply the friction impulse
+            const ptx = t.x * jt, pty = t.y * jt;
+            a.vel.x -= ptx * a.invMass;
+            a.vel.y -= pty * a.invMass;
+            a.angVel -= (rA.x * pty - rA.y * ptx) * a.invInertia;
+            b.vel.x += ptx * b.invMass;
+            b.vel.y += pty * b.invMass;
+            b.angVel += (rB.x * pty - rB.y * ptx) * b.invInertia;
+        }
+    }
+
+    // ── Step 4: Position Correction ───────────────────────────
+    // After solving velocities, objects might still overlap.
+    // We directly nudge them apart to prevent sinking.
+    correctPositions() {
+        const percent = 0.4;  // How much to correct per frame (0-1)
+        const slop = 0.01;    // Allow tiny overlap to prevent jitter
+
+        for (let m of this.manifolds) {
+            const a = m.bodyA, b = m.bodyB;
+            const totalInv = a.invMass + b.invMass;
+            if (totalInv === 0) continue; // Both static — skip
+
+            // Only correct if penetration exceeds the slop threshold
+            const corr = Math.max(m.penetration - slop, 0) / totalInv * percent;
+
+            // Push each body proportional to its inverse mass
+            // (lighter objects move more, heavier objects move less)
+            a.pos.x -= m.normal.x * corr * a.invMass;
+            a.pos.y -= m.normal.y * corr * a.invMass;
+            b.pos.x += m.normal.x * corr * b.invMass;
+            b.pos.y += m.normal.y * corr * b.invMass;
+        }
+    }
+
+    // ── Debug Drawing ─────────────────────────────────────────
+    // Draws contact points and normals for all active collisions.
+    drawDebug(ctx) {
+        for (let m of this.manifolds) {
+            m.draw(ctx);
+        }
+    }
+}`,
     'main.js': `
 // -- Setup: Create the screen and get the drawing environment --
 const screen = new Screen(1600, 900);
@@ -767,172 +984,337 @@ const ctx = screen.getContext();
 const width = screen.width;
 const height = screen.height;
 
-// This array will hold all the objects in our world.
-const bodies = [];
+// ═══════════════════════════════════════════════════════════
+// PHYSICS ENGINE CONFIGURATION
+// ═══════════════════════════════════════════════════════════
 
-// -- Scene Setup: Create and configure all physical objects --
+// The Solver handles all collision resolution.
+// More iterations = more accurate stacking and responses.
+const solver = new Solver(10);
 
-// 1. PLAYER Object (Controlled with Arrow Keys / WASD)
-// We use a Triangle so it's easy to see which way it's facing.
-const player = new Polygon(width * 0.5, height * 0.5, [
-    new Vector(0, -40), new Vector(35, 30), new Vector(-35, 30)
-]);
-player.mass = 5;
-player.invMass = 1/5;
-player.friction = 0.5; 
-bodies.push(player);
+// Sub-steps: split each frame into smaller physics steps.
+// This makes collisions more stable, especially at high speeds.
+const SUB_STEPS = 4;
 
-// 2. STATIC Obstacles (Objects that don't move)
-// A static object has mass = 0 (infinite mass).
-const box1 = new Polygon(width * 0.2, height * 0.4, [
-    new Vector(-40, -40), new Vector(40, -40),
-    new Vector(40, 40), new Vector(-40, 40)
-], 0);
-box1.setStatic(); 
-bodies.push(box1);
+// Velocity damping: slightly reduce velocity each frame
+// to simulate air resistance and prevent infinite bouncing.
+const DAMPING = 0.999;
 
-const box2 = new Polygon(width * 0.8, height * 0.6, [
-    new Vector(-30, -50), new Vector(30, -50),
-    new Vector(50, 50), new Vector(-50, 50)
-], 0);
-box2.setStatic(); 
-box2.angle = Math.PI / 4; // Tilt the box by 45 degrees
-bodies.push(box2);
+// Gravity: pulls everything downward
+const GRAVITY = new Vector(0, 600);
 
-const tri = new Polygon(width * 0.3, height * 0.7, [
-    new Vector(0, -50), new Vector(50, 50), new Vector(-50, 50)
-]);
-tri.setStatic();
-bodies.push(tri);
+// This array holds all objects in our world.
+let bodies = [];
 
-const pent = new Polygon(width * 0.7, height * 0.2, [
-    new Vector(0, -40), new Vector(38, -12), 
-    new Vector(24, 32), new Vector(-24, 32), new Vector(-38, -12)
-]);
-pent.setStatic();
-bodies.push(pent);
-
-// 3. WORLD BOUNDARIES (Floor and Walls)
-const longWall = new Polygon(width * 0.5, height * 0.85, [
-    new Vector(-200, -10), new Vector(200, -10),
-    new Vector(200, 10), new Vector(-200, 10)
-]);
-longWall.setStatic();
-longWall.angle = -0.1;
-bodies.push(longWall);
-
-const ground = new Polygon(width * 0.5, height - 20, [
-    new Vector(-width/2, -20), new Vector(width/2, -20),
-    new Vector(width/2, 20), new Vector(-width/2, 20)
-]);
-ground.setStatic();
-bodies.push(ground);
-
-const wall = new Polygon(100, height/2, [
-    new Vector(-20, -height/2), new Vector(20, -height/2),
-    new Vector(20, height/2), new Vector(-20, height/2)
-]);
-wall.setStatic();
-bodies.push(wall);
-
-
-// 4. DYNAMIC Circles (Random bouncing objects)
-for (let i = 0; i < 10; i++) {
-    const r = 35 + Math.random() * 20;
-    const x = Math.random() * width;
-    const y = Math.random() * (height * 0.5);
-    const c = new Circle(x, y, r);
-    if (i === 0) {
-        c.setStatic();
-        c.pos.set(width/2, height/2); // One static circle in the center
-    } else {
-        // Give the circles a random starting speed.
-        c.vel.set((Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100);
-        c.restitution = 0.5;
-    }
-    bodies.push(c);
+// ═══════════════════════════════════════════════════════════
+// HELPER: Create a box polygon from center, width, and height
+// ═══════════════════════════════════════════════════════════
+function createBox(x, y, w, h, mass = 1) {
+    const hw = w / 2, hh = h / 2;
+    return new Polygon(x, y, [
+        new Vector(-hw, -hh), new Vector(hw, -hh),
+        new Vector(hw, hh), new Vector(-hw, hh)
+    ], mass);
 }
 
+// ═══════════════════════════════════════════════════════════
+// SCENE SETUP
+// ═══════════════════════════════════════════════════════════
 
-// -- Input Handling: Listen for keyboard state --
-const keys = {};
+function initBoundaries() {
+    // Ground
+    const ground = createBox(width / 2, height - 20, width + 100, 40, 0);
+    ground.setStatic();
+    ground.friction = 0.5;
+    bodies.push(ground);
 
-window.addEventListener('keydown', (e) => {
-    // Prevent Arrow keys from scrolling the browser window.
-    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
-        e.preventDefault();
+    // Left wall
+    const leftWall = createBox(-10, height / 2, 20, height + 100, 0);
+    leftWall.setStatic();
+    bodies.push(leftWall);
+
+    // Right wall
+    const rightWall = createBox(width + 10, height / 2, 20, height + 100, 0);
+    rightWall.setStatic();
+    bodies.push(rightWall);
+}
+
+function initRandomPool() {
+    bodies = [];
+    initBoundaries();
+
+    // -- Static Obstacle: A tilted platform --
+    const platform = createBox(width * 0.35, height * 0.55, 300, 20, 0);
+    platform.setStatic();
+    platform.angle = -0.2; // Slight tilt
+    platform.friction = 0.5;
+    bodies.push(platform);
+
+    // -- Static Obstacle: A triangle ramp --
+    const ramp = new Polygon(width * 0.75, height * 0.7, [
+        new Vector(-80, 40), new Vector(80, -40), new Vector(80, 40)
+    ], 0);
+    ramp.setStatic();
+    ramp.friction = 0.5;
+    bodies.push(ramp);
+
+    // -- Dynamic Circles --
+    for (let i = 0; i < 24; i++) {
+        const r = 25 + Math.random() * 20;
+        const x = 150 + Math.random() * (width - 300);
+        const y = 50 + Math.random() * (height * 0.3);
+        const c = new Circle(x, y, r, 1);
+        c.restitution = 0.3 + Math.random() * 0.4;
+        c.friction = 0.4;
+        bodies.push(c);
     }
-    keys[e.code] = true;
+
+    // -- Dynamic Boxes --
+    for (let i = 0; i < 18; i++) {
+        const size = 50 + Math.random() * 30;
+        const x = 200 + Math.random() * (width - 400);
+        const y = 100 + Math.random() * (height * 0.2);
+        const box = createBox(x, y, size, size, 1);
+        box.restitution = 0.1;
+        box.friction = 0.3;
+        box.angle = Math.random() * Math.PI;
+        bodies.push(box);
+    }
+
+    // -- A heavier big circle --
+    const bigBall = new Circle(width * 0.5, 80, 40, 5);
+    bigBall.restitution = 0.5;
+    bigBall.friction = 0.3;
+    bodies.push(bigBall);
+}
+
+function initBallPool() {
+    bodies = [];
+    initBoundaries();
+
+    // A funnel to push balls to the center
+    const leftFunnel = createBox(width * 0.2, height * 0.4, 400, 20, 0);
+    leftFunnel.setStatic();
+    leftFunnel.angle = 0.3;
+    bodies.push(leftFunnel);
+
+    const rightFunnel = createBox(width * 0.8, height * 0.4, 400, 20, 0);
+    rightFunnel.setStatic();
+    rightFunnel.angle = -0.3;
+    bodies.push(rightFunnel);
+
+    // Drop dozens of balls
+    for (let i = 0; i < 120; i++) {
+        const r = 15 + Math.random() * 15;
+        const x = width / 2 - 200 + Math.random() * 400;
+        const y = 50 + Math.random() * (height * 0.6) - 300;
+        const c = new Circle(x, y, r, 1);
+        c.restitution = 0.6; // Bouncy!
+        c.friction = 0.2;
+        bodies.push(c);
+    }
+}
+
+function initStackOfBoxes() {
+    bodies = [];
+    initBoundaries();
+
+    const boxSize = 40;
+    const startX = width / 2;
+    const startY = height - 50;
+
+    // Build a pyramid stack
+    const rows = 8;
+    for (let row = 0; row < rows; row++) {
+        const boxesInRow = rows - row;
+        const offsetX = startX - (boxesInRow * boxSize) / 2 + (boxSize / 2);
+        
+        for (let col = 0; col < boxesInRow; col++) {
+            const x = offsetX + col * boxSize;
+            const y = startY - row * boxSize;
+            const box = createBox(x, y, boxSize - 2, boxSize - 2, 1);
+            box.restitution = 0.05; // Low bounce for stability
+            box.friction = 0.8;    // High friction to grip
+            bodies.push(box);
+        }
+    }
+    
+    // Drop a heavy ball to smash it
+    const wreckingBall = new Circle(width * 0.2, height * 0.75, 50, 20);
+    wreckingBall.restitution = 0.2;
+    wreckingBall.vel.x = 2000; // Throw it hard to the right
+    bodies.push(wreckingBall);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCENE UI CONTROLS
+// ═══════════════════════════════════════════════════════════
+const btnRandom = document.getElementById('btn-scene-random');
+const btnBalls = document.getElementById('btn-scene-balls');
+const btnStack = document.getElementById('btn-scene-stack');
+
+function clearActiveButtons() {
+    if(btnRandom) btnRandom.classList.remove('active');
+    if(btnBalls) btnBalls.classList.remove('active');
+    if(btnStack) btnStack.classList.remove('active');
+}
+
+if(btnRandom) {
+    btnRandom.onclick = () => { clearActiveButtons(); btnRandom.classList.add('active'); initRandomPool(); };
+}
+if(btnBalls) {
+    btnBalls.onclick = () => { clearActiveButtons(); btnBalls.classList.add('active'); initBallPool(); };
+}
+if(btnStack) {
+    btnStack.onclick = () => { clearActiveButtons(); btnStack.classList.add('active'); initStackOfBoxes(); };
+}
+
+// Load default scene
+initRandomPool();
+
+// ═══════════════════════════════════════════════════════════
+// INPUT: Click/Tap to spawn a new object
+// ═══════════════════════════════════════════════════════════
+let spawnCount = 0;
+
+function getCanvasPos(clientX, clientY) {
+    const rect = screen.Main.getBoundingClientRect();
+    const scaleX = screen.width / rect.width;
+    const scaleY = screen.height / rect.height;
+    return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+    };
+}
+
+screen.Main.addEventListener('click', (e) => {
+    const pos = getCanvasPos(e.clientX, e.clientY);
+    spawnCount++;
+    
+    if (spawnCount % 2 === 0) {
+        // Spawn a circle
+        const r = 25 + Math.random() * 20;
+        const c = new Circle(pos.x, pos.y, r, 1);
+        c.restitution = 0.4;
+        c.friction = 0.3;
+        bodies.push(c);
+    } else {
+        // Spawn a box
+        const size = 40 + Math.random() * 30;
+        const box = createBox(pos.x, pos.y, size, size, 1);
+        box.restitution = 0.2;
+        box.friction = 0.3;
+        box.angle = Math.random() * Math.PI;
+        bodies.push(box);
+    }
 });
 
-window.addEventListener('keyup', (e) => {
-    keys[e.code] = false;
+// Touch support for mobile
+screen.Main.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const pos = getCanvasPos(touch.clientX, touch.clientY);
+    spawnCount++;
+    
+    if (spawnCount % 2 === 0) {
+        const r = 25 + Math.random() * 20;
+        const c = new Circle(pos.x, pos.y, r, 1);
+        c.restitution = 0.4;
+        bodies.push(c);
+    } else {
+        const size = 40 + Math.random() * 30;
+        const box = createBox(pos.x, pos.y, size, size, 1);
+        box.restitution = 0.2;
+        box.angle = Math.random() * Math.PI;
+        bodies.push(box);
+    }
 });
 
 
 let lastTime = 0;
 
-// -- Main Game Loop: Runs every frame (~60 times per second) --
+// ═══════════════════════════════════════════════════════════
+// MAIN SIMULATION LOOP
+// ═══════════════════════════════════════════════════════════
 function update(time) {
-    // Delta time (dt) is the number of seconds since the last frame.
-    const dt = (time - lastTime) / 1000;
+    // 1. Calculate time delta (dt) in seconds.
+    // We cap it at 0.016s (60fps) to prevent physics explosions 
+    // if the user switches tabs and the browser pauses the loop.
+    const dt = Math.min((time - lastTime) / 1000, 0.016);
     lastTime = time;
 
-    // Clear the canvas to prepare for new drawings.
-    ctx.clearRect(0, 0, width, height);
+    // Clear canvas
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, width, height);
 
-    // -- Handle Player Movement --
-    const moveSpeed = 200 * (dt || 0.016);
-    const rotateSpeed = 3 * (dt || 0.016);
+    // ── Sub-stepping: divide the frame into smaller steps ──
+    const subDt = dt / SUB_STEPS;
 
-    if (keys['ArrowUp'] || keys['KeyW']) player.pos.y -= moveSpeed;
-    if (keys['ArrowDown'] || keys['KeyS']) player.pos.y += moveSpeed;
-    if (keys['ArrowLeft'] || keys['KeyA']) player.pos.x -= moveSpeed;
-    if (keys['ArrowRight'] || keys['KeyD']) player.pos.x += moveSpeed;
-    
-    // Q/E to rotate the player triangle
-    if (keys['KeyQ']) player.angle -= rotateSpeed;
-    if (keys['KeyE']) player.angle += rotateSpeed;
+    for (let step = 0; step < SUB_STEPS; step++) {
 
-    // We manually control the player, so we reset its velocity to avoid interference.
-    player.vel.set(0, 0);
-    player.angVel = 0;
+        // 1. Apply gravity to all dynamic bodies
+        for (const body of bodies) {
+            if (body.invMass === 0) continue; // Skip static
+            body.applyForce(Vector.mult(GRAVITY, body.mass));
+        }
 
+        // 2. Integrate velocities (forces → velocity changes)
+        for (const body of bodies) {
+            body.integrateVelocity(subDt);
+        }
 
-    // 1. PHASE 1: INTEGRATION (Move bodies according to velocity)
-    for (const body of bodies) {
-        // Keep bodies within the screen boundaries (simple bounces).
-        if (body.pos.y > height) { body.pos.y = height; body.vel.y *= -0.5; }
-        if (body.pos.x < 0) { body.pos.x = 0; body.vel.x *= -0.5; }
-        if (body.pos.x > width) { body.pos.x = width; body.vel.x *= -0.5; }
-        if (body.pos.y < 0) { body.pos.y = 0; body.vel.y *= -0.5; }
+        // 3. Detect all collisions
+        solver.detectCollisions(bodies);
 
-        body.update(dt || 0.016);
-    }
+        // 4. Solve collisions (apply impulses — multiple iterations)
+        solver.solve();
 
-    // 2. PHASE 2: NARROW PHASE COLLISION DETECTION
-    // Loop through every unique pair of bodies.
-    for (let i = 0; i < bodies.length; i++) {
-        for (let j = i + 1; j < bodies.length; j++) {
-            const manifold = Collisions.findCollision(bodies[i], bodies[j]);
-                if (manifold) {
-                    // Draw the collision data (contact points and normal) for debugging.
-                    manifold.draw(ctx);
-                }
+        // 5. Integrate positions (velocity → position changes)
+        for (const body of bodies) {
+            body.integratePosition(subDt);
+        }
+
+        // 6. Correct any remaining overlap
+        solver.correctPositions();
+
+        // 7. Clear forces for next sub-step
+        for (const body of bodies) {
+            body.clearForces();
+        }
+
+        // 8. Apply damping (simulates air resistance)
+        for (const body of bodies) {
+            if (body.invMass === 0) continue;
+            body.vel.mult(DAMPING);
+            body.angVel *= DAMPING;
         }
     }
 
-    // 3. PHASE 3: DRAWING
+    // ── Remove bodies that fall off screen ──
+    for (let i = bodies.length - 1; i >= 0; i--) {
+        if (bodies[i].pos.y > height + 200) {
+            bodies.splice(i, 1);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // DRAWING
+    // ═══════════════════════════════════════════════════════
+
+    // Draw all bodies
     for (const body of bodies) {
         body.draw(ctx);
     }
 
-    // Draw UI Instructions
-    ctx.fillStyle = "white";
-    ctx.font = "16px sans-serif";
-    ctx.fillText("Use WASD/Arrows to move. Q/E to rotate.", 20, 30);
+    // Draw collision debug info (contact points & normals)
+    solver.drawDebug(ctx);
 
-    // Call this function again on the next animation frame.
+    // UI
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.font = "14px sans-serif";
+    ctx.fillText("Click/tap to spawn objects. Bodies: " + bodies.length, 20, 25);
+    ctx.fillText("Sub-steps: " + SUB_STEPS + " | Solver iterations: " + solver.iterations, 20, 45);
+
     requestAnimationFrame(update);
 }
 
@@ -947,57 +1329,37 @@ const views = document.querySelectorAll('.pane');
 const scrollPositions = {};
 
 function switchView(viewId) {
-    const currentActive = document.querySelector('.pane.active');
-    if (currentActive) {
-        if (currentActive.id === 'view-code') {
-            if (typeof editor !== 'undefined') {
-                const info = editor.getScrollInfo();
-                scrollPositions['view-code'] = { left: info.left, top: info.top };
-            }
-        } else if (currentActive.id === 'view-tutorial') {
-            const iframe = currentActive.querySelector('iframe');
-            if (iframe && iframe.contentWindow) {
-                try { scrollPositions['view-tutorial'] = iframe.contentWindow.scrollY; } catch (e) { }
-            }
-        } else {
-            scrollPositions[currentActive.id] = currentActive.scrollTop;
+    // Save scroll position for tutorial
+    const tutorialFrame = document.querySelector('.tutorial-frame');
+    views.forEach(v => {
+        if (v.classList.contains('active') && v.id === 'view-tutorial' && tutorialFrame) {
+            try {
+                scrollPositions['tutorial'] = tutorialFrame.contentWindow.scrollY || 0;
+            } catch (e) { }
         }
+    });
+
+    views.forEach(v => v.classList.remove('active'));
+    navItems.forEach(ni => ni.classList.remove('active'));
+
+    const target = document.getElementById(viewId);
+    if (target) target.classList.add('active');
+
+    navItems.forEach(ni => {
+        if (ni.dataset.target === viewId) ni.classList.add('active');
+    });
+
+    // Restore scroll position
+    if (viewId === 'view-tutorial' && tutorialFrame) {
+        setTimeout(() => {
+            try {
+                tutorialFrame.contentWindow.scrollTo(0, scrollPositions['tutorial'] || 0);
+            } catch (e) { }
+        }, 50);
     }
 
-    views.forEach(view => {
-        if (view.id === viewId) {
-            view.classList.add('active');
-            setTimeout(() => {
-                if (viewId === 'view-code') {
-                    if (typeof editor !== 'undefined') {
-                        editor.refresh();
-                        const pos = scrollPositions['view-code'] || { left: 0, top: 0 };
-                        editor.scrollTo(pos.left, pos.top);
-                    }
-                } else if (viewId === 'view-tutorial') {
-                    const iframe = view.querySelector('iframe');
-                    if (iframe && iframe.contentWindow) {
-                        try { iframe.contentWindow.scrollTo(0, scrollPositions['view-tutorial'] || 0); } catch (e) { }
-                    }
-                } else {
-                    view.scrollTop = scrollPositions[viewId] || 0;
-                }
-            }, 10);
-        } else {
-            view.classList.remove('active');
-        }
-    });
-
-    navItems.forEach(item => {
-        if (item.dataset.target === viewId) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-
-    if (viewId === 'view-preview') {
-        updatePreview();
+    if (viewId === 'view-code') {
+        setTimeout(() => editor.refresh(), 50);
     }
 }
 
@@ -1005,9 +1367,8 @@ const editorContainer = document.getElementById('editor-container');
 const previewFrame = document.getElementById('preview-frame');
 const runBtn = document.getElementById('run-btn');
 const resetBtn = document.getElementById('reset-btn');
-const tabBar = document.getElementById('file-tabs');
 
-let files = { ...initialFiles };
+let files = JSON.parse(JSON.stringify(initialFiles));
 let activeFile = 'main.js';
 
 const editor = CodeMirror(editorContainer, {
@@ -1028,23 +1389,19 @@ editor.on('change', () => {
 function getFileMode(filename) {
     if (filename.endsWith('.html')) return 'htmlmixed';
     if (filename.endsWith('.css')) return 'css';
-    if (filename.endsWith('.js')) return 'javascript';
-    return 'text/plain';
+    return 'javascript';
 }
 
 function renderTabs() {
+    const tabBar = document.getElementById('file-tabs');
     tabBar.innerHTML = '';
-    const order = ['index.html', 'style.css', 'vector.js', 'body.js', 'circle.js', 'polygon.js', 'manifold.js', 'collisions.js', 'main.js'];
-    const keys = Object.keys(files);
-    const sortedKeys = order.filter(k => keys.includes(k)).concat(keys.filter(k => !order.includes(k)));
-
-    sortedKeys.forEach(filename => {
+    for (const name of Object.keys(files)) {
         const tab = document.createElement('div');
-        tab.className = `tab ${filename === activeFile ? 'active' : ''}`;
-        tab.textContent = filename;
-        tab.onclick = () => switchFile(filename);
+        tab.className = 'tab' + (name === activeFile ? ' active' : '');
+        tab.textContent = name;
+        tab.onclick = () => switchFile(name);
         tabBar.appendChild(tab);
-    });
+    }
 }
 
 function switchFile(filename) {
@@ -1055,22 +1412,21 @@ function switchFile(filename) {
 }
 
 function updatePreview() {
-    const htmlContent = files['index.html'];
+    const htmlContent = files['index.html'] || '<!DOCTYPE html><html><head></head><body></body></html>';
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlContent, 'text/html');
 
     const styleTag = doc.createElement('style');
-    const cssContent = Object.keys(files).filter(f => f.endsWith('.css')).map(f => files[f]).join('\n');
+    const cssContent = files['style.css'] || '';
     styleTag.textContent = cssContent;
     doc.head.appendChild(styleTag);
 
-    const jsOrder = ['vector.js', 'body.js', 'circle.js', 'polygon.js', 'manifold.js', 'collisions.js', 'screen.js', 'main.js'];
-    const jsFiles = Object.keys(files).filter(f => f.endsWith('.js'));
-    const sortedJsFiles = jsOrder.filter(f => jsFiles.includes(f)).concat(jsFiles.filter(f => !jsOrder.includes(f)));
+    // Gather JS files in the correct dependency order
+    const jsOrder = ['vector.js', 'body.js', 'circle.js', 'polygon.js', 'manifold.js', 'collisions.js', 'solver.js', 'screen.js', 'main.js'];
 
     const scriptTag = doc.createElement('script');
-    const combinedScript = sortedJsFiles.map(f => {
-        return `// File: ${f}\n${files[f]}`;
+    const combinedScript = jsOrder.filter(f => files[f]).map(f => {
+        return "// File: " + f + "\n" + files[f];
     }).join('\n\n');
 
     scriptTag.textContent = combinedScript;
@@ -1081,16 +1437,16 @@ function updatePreview() {
     previewFrame.src = url;
 }
 
-
 runBtn.onclick = () => {
+    updatePreview();
     switchView('view-preview');
 };
 
 resetBtn.onclick = () => {
-    if (confirm('Reset all code to default?')) {
-        files = { ...initialFiles };
-        switchFile('main.js');
-        updatePreview();
+    if (confirm('Reset all code to initial state?')) {
+        files = JSON.parse(JSON.stringify(initialFiles));
+        editor.setValue(files[activeFile]);
+        renderTabs();
     }
 };
 

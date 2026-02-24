@@ -22,17 +22,14 @@
         });
     }
 
-    // When the audio finishes, play again from a random timestamp
     audio.addEventListener('ended', playRandom);
 
-    // Try to play immediately when the script loads
-    // We wait for DOMContentLoaded to ensure the browser has parsed the document,
-    // though the script itself might be deferred or placed at the end of the body.
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', playRandom);
-    } else {
+    let hasStarted = false;
+    window.startBgMusic = function () {
+        if (hasStarted) return;
+        hasStarted = true;
         playRandom();
-    }
+    };
 
     // Expose volume controls to the global window object so simulations can duck the volume
     window.setBgMusicVolume = function (vol) {

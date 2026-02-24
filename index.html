@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Engine Series</title>
+    <title>Physics Engine Curriculum</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,6 +17,10 @@
             --accent: #3b82f6;
             --accent-hover: #2563eb;
             --border: #27272a;
+            --green: #10b981;
+            --purple: #8b5cf6;
+            --orange: #f97316;
+            --pink: #ec4899;
         }
 
         * {
@@ -29,94 +33,208 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-primary);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             line-height: 1.5;
+            padding: 3rem 1rem;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 900px;
             width: 100%;
-            padding: 2rem;
-            text-align: center;
         }
 
         header {
-            margin-bottom: 3rem;
+            text-align: center;
+            margin-bottom: 4rem;
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             font-weight: 600;
             letter-spacing: -0.02em;
             margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         p.subtitle {
             color: var(--text-secondary);
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 300;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3.5rem;
+        }
+
+        /* Larger cards for the main IDE parts */
+        .grid.large-cards {
+            grid-template-columns: 1fr;
+        }
+
+        @media(min-width: 768px) {
+            .grid.large-cards {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         .card {
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 1.5rem;
             transition: all 0.2s ease;
             text-decoration: none;
-            display: block;
+            display: flex;
+            flex-direction: column;
             color: inherit;
+            position: relative;
+            overflow: hidden;
         }
 
         .card:hover {
             border-color: var(--accent);
-            transform: translateY(-2px);
+            transform: translateY(-4px);
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
-        .card-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .card.card-green::before {
+            background: var(--green);
+        }
+
+        .card.card-purple::before {
+            background: var(--purple);
+        }
+
+        .card.card-orange::before {
+            background: var(--orange);
+        }
+
+        .card.card-pink::before {
+            background: var(--pink);
+        }
+
+        .card-number {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-green .card-number {
+            color: var(--green);
+        }
+
+        .card-purple .card-number {
+            color: var(--purple);
+        }
+
+        .card-orange .card-number {
+            color: var(--orange);
+        }
+
+        .card-pink .card-number {
+            color: var(--pink);
         }
 
         .card-title {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 500;
+            margin-bottom: 0.75rem;
+        }
+
+        .large-cards .card-title {
+            font-size: 1.4rem;
         }
 
         .card-description {
             color: var(--text-secondary);
-            font-size: 0.95rem;
-            max-width: 400px;
-            margin: 0 auto;
+            font-size: 0.9rem;
+            flex-grow: 1;
+            margin-bottom: 1.5rem;
         }
 
-        .cta-button {
-            margin-top: 1.5rem;
-            display: inline-block;
-            background-color: var(--accent);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+        .cta-link {
             font-weight: 500;
             font-size: 0.9rem;
-            transition: background-color 0.2s;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            margin-top: auto;
         }
 
-        .card:hover .cta-button {
-            background-color: var(--accent-hover);
+        .card:hover .cta-link {
+            color: var(--accent);
+        }
+
+        .card.card-green:hover .cta-link {
+            color: var(--green);
+        }
+
+        .card.card-purple:hover .cta-link {
+            color: var(--purple);
+        }
+
+        .card.card-orange:hover .cta-link {
+            color: var(--orange);
+        }
+
+        .card.card-pink:hover .cta-link {
+            color: var(--pink);
+        }
+
+        .cta-link svg {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.2s;
+        }
+
+        .card:hover .cta-link svg {
+            transform: translateX(4px);
         }
 
         footer {
-            margin-top: 4rem;
+            margin-top: 2rem;
+            text-align: center;
             color: var(--text-secondary);
             font-size: 0.875rem;
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+            width: 100%;
+            max-width: 900px;
         }
     </style>
 </head>
@@ -124,32 +242,124 @@
 <body>
 
     <div class="container">
-        <header>
-            <h1>Physics Engine Series</h1>
-            <p class="subtitle">A journey into building a 2D physics engine from scratch.</p>
+        <header style="display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 3.5rem;">
+            <img src="phygo-logo.png" alt="Phygo Logo"
+                style="width: 120px; height: 120px; border-radius: 24px; box-shadow: 0 8px 32px rgba(96, 165, 250, 0.25);">
+            <div style="text-align: center;">
+                <h1>Phygo</h1>
+                <p class="subtitle">Physics Go! A complete interactive journey into building a 2D physics engine from
+                    scratch.</p>
+            </div>
         </header>
 
-        <a href="part1/index.html" class="card">
-            <div class="card-content">
-                <div class="card-title">Part 1: The Basics</div>
+        <h2 class="section-title">The Curriculum (IDEs)</h2>
+        <div class="grid large-cards">
+            <a href="part1/index.html" class="card">
+                <div class="card-number">Chapter 1</div>
+                <div class="card-title">The Basics</div>
                 <p class="card-description">
                     Set up the foundation with vector mathematics, basic body physics, and an interactive environment to
                     visualize your code.
                 </p>
-                <div class="cta-button">Start Part 1</div>
-            </div>
-        </a>
+                <div class="cta-link">
+                    Enter IDE
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </div>
+            </a>
 
-        <a href="part2/index.html" class="card" style="margin-top: 2rem;">
-            <div class="card-content">
-                <div class="card-title">Part 2: Collision Detection</div>
+            <a href="part2/index.html" class="card">
+                <div class="card-number">Chapter 2</div>
+                <div class="card-title">Collision Detection</div>
                 <p class="card-description">
                     Dive into the math and algorithms behind detecting touches, overlaps, and collisions between circles
-                    and polygons.
+                    and polygons using SAT.
                 </p>
-                <div class="cta-button">Start Part 2</div>
-            </div>
-        </a>
+                <div class="cta-link">
+                    Enter IDE
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </div>
+            </a>
+
+            <a href="part3/index.html" class="card">
+                <div class="card-number">Chapter 3</div>
+                <div class="card-title">Collision Resolution</div>
+                <p class="card-description">
+                    Learn how to realistically respond to collisions by calculating and applying normal impulses,
+                    friction, and position correction.
+                </p>
+                <div class="cta-link">
+                    Enter IDE
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </div>
+            </a>
+        </div>
+
+        <h2 class="section-title">Interactive Math Explorations</h2>
+        <div class="grid">
+            <a href="simulations/dot-product-tutorial.html" class="card card-green">
+                <div class="card-number">Tutorial</div>
+                <div class="card-title">Dot Product Explorer</div>
+                <p class="card-description">A guided visual intuition sequence explaining the fundamental dot product
+                    math used throughout the engine.</p>
+                <div class="cta-link">View Simulation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+            </a>
+
+            <a href="simulations/dot-product-sandbox.html" class="card card-green">
+                <div class="card-number">Sandbox</div>
+                <div class="card-title">Dot Product Sandbox</div>
+                <p class="card-description">Freely drag vectors around to see how their angles, projections, and dot
+                    product values relate in real-time.</p>
+                <div class="cta-link">View Simulation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+            </a>
+
+            <a href="simulations/sat-visualizer.html" class="card card-purple">
+                <div class="card-number">Tutorial</div>
+                <div class="card-title">SAT — Axis Checking</div>
+                <p class="card-description">A step-by-step breakdown of the Separating Axis Theorem (SAT) showing how
+                    shadows cast on normals reveal collisions.</p>
+                <div class="cta-link">View Simulation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+            </a>
+
+            <a href="simulations/sat-shadow.html" class="card card-purple">
+                <div class="card-number">Tutorial</div>
+                <div class="card-title">SAT — Shadow Projection</div>
+                <p class="card-description">Focus tightly on the 1D shadow dropping process, analyzing whether the
+                    gap/overlap sizes signify a rigid body collision.</p>
+                <div class="cta-link">View Simulation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+            </a>
+
+            <a href="simulations/clipping-tutorial.html" class="card card-orange">
+                <div class="card-number">Tutorial</div>
+                <div class="card-title">Edge Clipping</div>
+                <p class="card-description">Interactive visualization of Sutherland-Hodgman contact point generation for
+                    resolving multi-point polygon contacts.</p>
+                <div class="cta-link">View Simulation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+            </a>
+        </div>
 
         <footer>
             <p>&copy; 2026 Physics Engine Series</p>
