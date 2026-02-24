@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Engine - Part 3: Collision Resolution</title>
+    <!-- Highlight.js -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            document.querySelectorAll('pre').forEach((el) => {
+                if (!el.querySelector('code')) {
+                    const code = document.createElement('code');
+                    code.className = 'language-javascript';
+                    code.innerHTML = el.innerHTML;
+                    el.innerHTML = '';
+                    el.appendChild(code);
+                }
+            });
+            hljs.highlightAll();
+        });
+    </script>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --text: #cccccc;
+            --text-heading: #ffffff;
+            --accent: #3794ff;
+            --green: #10b981;
+            --purple: #8b5cf6;
+            --code-bg: #2d2d2d;
+            --note-bg: #252526;
+            --note-border: #3794ff;
+            --border: #3e3e42;
+        }
+
+        body {
+            font-family: 'Segoe UI', Inter, system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0 auto;
+            padding: 15px;
+            background-color: var(--bg);
+            max-width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 30px;
+                max-width: 800px;
+            }
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            color: var(--text-heading);
+            margin-top: 1.5em;
+        }
+
+        h1 {
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 0;
+            color: var(--accent);
+        }
+
+        h2 {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            color: #ff9d9d;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        .note {
+            background-color: var(--note-bg);
+            border-left: 4px solid var(--note-border);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .best-practice {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--green);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .best-practice h4 {
+            color: var(--green);
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: #fff;
+        }
+
+        .diagram {
+            text-align: center;
+            margin: 30px 0;
+            background: #09090b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+        }
+
+        ul,
+        ol {
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        img,
+        svg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .concept-box {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .concept-box h3 {
+            margin-top: 0;
+            color: var(--accent);
+        }
+    </style>
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <h1>Part 3: Collision Resolution</h1>
+
+    <div class="note">
+        <strong>Goal:</strong> Take the <code>Manifold</code> data from collision detection (Part 2) and use it to
+        physically push objects apart so they bounce, slide, and react realistically using <strong>Impulses</strong>.
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- SECTION: From Detection to Response                        -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>From Detection to Response</h2>
+
+    <p>
+        In Part 2, we successfully answered two questions: <em>"Are these shapes touching?"</em> and <em>"If so, how
+            exactly?"</em>
+        This data was packaged into a <code>Manifold</code> — an object containing three critical pieces of information:
+    </p>
+    <ul>
+        <li><code>normal</code> — The direction to push the objects apart (a unit vector pointing from Body A to Body B)
+        </li>
+        <li><code>penetration</code> — How deeply the objects are overlapping (a number in pixels)</li>
+        <li><code>contacts</code> — The exact point(s) on the surface where the shapes are touching</li>
+    </ul>
+
+    <p>
+        Now, we need to answer the final question: <em>"What happens next?"</em> We need to apply forces to separate the
+        objects. In physics engines, we do this using <strong>Impulses</strong>.
+    </p>
+
+    <div class="concept-box">
+        <h3>What's the Difference Between a Force and an Impulse?</h3>
+        <p><strong>Force</strong> (like gravity) is applied continuously, frame after frame. Each frame, gravity adds a
+            tiny bit more speed. Think of it like gently pushing a shopping cart — the longer you push, the faster it
+            goes.</p>
+        <p><strong>Impulse</strong> is an instant, one-time velocity change. Think of it like a billiard ball being
+            struck — BAM, it's instantly moving. We use impulses for collisions because the "bounce" happens in a
+            single instant, not gradually over many frames.</p>
+        <p>In code terms:<br>
+            Force: <code>velocity += (force / mass) * deltaTime</code> — gradual, depends on time<br>
+            Impulse: <code>velocity += impulse / mass</code> — instant, no time involved</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- SECTION: Engine Architecture                                -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>The Engine Architecture</h2>
+
+    <p>
+        In Part 1, our engine was simple: apply gravity, move objects. But now we need to handle collisions. If we move
+        objects by their velocities right away, two overlapping objects will sink deeper into each other before we get a
+        chance to push them apart. We must restructure the engine into a careful <strong>6-step pipeline</strong>:
+    </p>
+
+    <div class="diagram">
+        <img src="../tut-svg-loop.svg" alt="Physics Engine Loop Architecture Diagram">
+    </div>
+
+    <div class="best-practice">
+        <h4>Best Practice: Sub-stepping (Time Slicing)</h4>
+        <p>Instead of running physics once per frame (every 16ms at 60 FPS), we split the frame into <strong>4 smaller
+                sub-steps</strong> (each about 4ms). Why?</p>
+        <ul>
+            <li><strong>Prevents tunneling:</strong> A fast bullet might teleport through a thin wall in 16ms, but 4ms
+                steps are small enough to catch the collision.</li>
+            <li><strong>Stabilizes stacks:</strong> A tower of 10 boxes needs many tiny corrections to settle. 4
+                sub-steps gives the solver more chances to get it right.</li>
+        </ul>
+    </div>
+
+    <p>Here's what our engine loop looks like. Read each numbered comment carefully:</p>
+    <pre><code>
+for (let i = 0; i < subSteps; i++) {
+    // 1. Apply gravity to every body's velocity
+    for (let body of bodies) { body.addVelocity(gravity, dt); }
+
+    // 2. Check every pair of bodies for collisions (returns a list of Manifolds)
+    const manifolds = detectCollisions(bodies);
+
+    // 3. The Solver calculates impulses and changes velocities to simulate bouncing/friction
+    solver.solve(manifolds);
+
+    // 4. NOW move every body by its (corrected) velocity
+    for (let body of bodies) { body.updatePosition(dt); }
+
+    // 5. If bodies are still overlapping, nudge them apart directly
+    solver.correctPositions(manifolds);
+
+    // 6. Reset forces for next sub-step
+    for (let body of bodies) { body.clearForces(); }
+}
+    </code></pre>
+
+    <div class="note">
+        <strong>Why this order matters:</strong> Notice that Step 3 (solving collisions) happens <em>before</em> Step 4
+        (moving objects).
+        The solver adjusts velocities first, so by the time objects actually move, they're already heading in the
+        correct, post-bounce direction.
+        If we moved objects first, they'd sink into each other and we'd have to undo that movement — much messier!
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- SECTION: The 3 Core Functions                              -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>Peeking Inside: The 3 Core Functions</h2>
+
+    <p>
+        The engine loop above calls three mysterious functions: <code>detectCollisions</code>,
+        <code>solver.solve</code>, and <code>solver.correctPositions</code>.
+        Before we tackle the heavy math, let's understand what each one does at a high level.
+    </p>
+
+    <h3>1. <code>detectCollisions(bodies)</code> — Finding All Crashes</h3>
+    <p>
+        This function checks every body against every other body using the SAT algorithm from Part 2.
+        It uses a <strong>nested loop</strong>, often called <em>"brute force"</em> because it checks every possible
+        pair:
+    </p>
+    <pre><code>
+function detectCollisions(bodies) {
+    const manifolds = [];
+
+    for (let i = 0; i < bodies.length; i++) {
+        for (let j = i + 1; j < bodies.length; j++) {
+
+            // Use Part 2's SAT algorithm to check if bodies[i] and bodies[j] are touching
+            const result = Collisions.findCollision(bodies[i], bodies[j]);
+
+            if (result && result.contacts.length > 0) {
+                // Pre-calculate reusable math (explained below)
+                solver.preCompute(result);
+                manifolds.push(result);
+            }
+        }
+    }
+    return manifolds;
+}
+    </code></pre>
+
+    <div class="note">
+        <strong>Why <code>j = i + 1</code>?</strong> If we checked body 0 vs body 3, we don't also need to check body 3
+        vs body 0 — it's the same collision! Starting <code>j</code> at <code>i + 1</code> cuts our work in half.
+    </div>
+
+    <div class="note">
+        <strong>Future Optimization:</strong> With 100 objects, this checks 4,950 pairs per sub-step! In a future
+        tutorial,
+        we'll replace this with a <strong>Spatial Hash Grid</strong> that only checks nearby pairs, reducing the work
+        dramatically.
+    </div>
+
+    <h3>2. <code>solver.preCompute(manifold)</code> — Preparing the Math</h3>
+    <p>
+        The solver loop runs <strong>10 iterations × 4 sub-steps = 40 times per frame</strong>. To avoid recalculating
+        the same values 40 times, we pre-compute expensive results once and store them.
+        Here's what <code>preCompute</code> calculates for each collision:
+    </p>
+    <pre><code>
+preCompute(m) {
+    const a = m.bodyA, b = m.bodyB;  // The two colliding bodies
+    const n = m.normal;              // Direction to push them apart
+
+    // Tangent = perpendicular to normal (for friction)
+    // If normal points UP (0, -1), tangent points RIGHT (1, 0)
+    const t = new Vector(-n.y, n.x);
+
+    // Combine material properties of both surfaces:
+    m.e = Math.min(a.restitution, b.restitution);  // Bounciness (least bouncy wins)
+    m.mu = Math.sqrt(a.friction * b.friction);      // Friction (geometric average)
+    m.tangent = t;
+
+    // For each contact point, compute "effective mass"
+    // (explained in detail in Step 3 below)
+    m.contactData = [];
+    for (let c of m.contacts) {
+        // rA, rB: vectors from each body's CENTER to the contact point
+        const rA = Vector.sub(c, a.pos);
+        const rB = Vector.sub(c, b.pos);
+
+        // ... effective mass calculation (covered in Step 3)
+
+        m.contactData.push({
+            rA, rB,
+            massN: /* normal effective mass */,
+            massT: /* tangent effective mass */,
+            jnAcc: 0,  // Accumulated normal impulse (starts at zero)
+            jtAcc: 0   // Accumulated friction impulse (starts at zero)
+        });
+    }
+}
+    </code></pre>
+
+    <div class="concept-box">
+        <h3>Variable Name Glossary</h3>
+        <p>The solver uses short variable names for performance. Here's what they all mean:</p>
+        <ul>
+            <li><code>a</code>, <code>b</code> — The two colliding bodies (Body A and Body B)</li>
+            <li><code>n</code> — The collision <strong>Normal</strong> vector (direction to push apart)</li>
+            <li><code>t</code> — The <strong>Tangent</strong> vector (perpendicular to normal, for friction/sliding)
+            </li>
+            <li><code>e</code> — <strong>Restitution</strong> (bounciness, 0 = no bounce, 1 = perfect bounce)</li>
+            <li><code>mu</code> (μ) — <strong>Friction coefficient</strong> (0 = ice, 1 = sandpaper)</li>
+            <li><code>rA</code>, <code>rB</code> — <strong>Radius vectors</strong> from each body's center to the
+                contact point</li>
+            <li><code>jn</code> — Normal impulse magnitude (how hard to bounce)</li>
+            <li><code>jt</code> — Tangent impulse magnitude (how hard friction pushes)</li>
+            <li><code>jnAcc</code> — <strong>Accumulated</strong> normal impulse across solver iterations</li>
+            <li><code>jtAcc</code> — <strong>Accumulated</strong> friction impulse across solver iterations</li>
+            <li><code>massN</code> — Effective mass in the normal direction (includes rotation)</li>
+            <li><code>massT</code> — Effective mass in the tangent direction (includes rotation)</li>
+            <li><code>invMass</code> — 1 / mass. Heavy objects have tiny invMass; static objects have invMass = 0</li>
+            <li><code>invInertia</code> — 1 / moment of inertia. Controls resistance to spinning</li>
+            <li><code>angVel</code> — Angular velocity (how fast the body is spinning, in radians/sec)</li>
+        </ul>
+    </div>
+
+    <h3>3. <code>solver.solve()</code> — The Iterative Loop</h3>
+    <p>
+        This is deceptively simple. It just loops over every collision 10 times, calling
+        <code>solveManifold</code> each time.
+        But <em>why</em> 10 times? Because correcting one collision might mess up another!
+    </p>
+    <pre><code>
+solve() {
+    // Run 10 passes over all collisions
+    for (let iter = 0; iter < this.iterations; iter++) {
+        for (let m of this.manifolds) {
+            this.solveManifold(m);  // The heavy math lives here (Steps 1-2 below)
+        }
+    }
+}
+    </code></pre>
+
+    <div class="concept-box">
+        <h3>Why Iterate? The Domino Problem</h3>
+        <p>Imagine 3 boxes stacked on top of each other (A on B on C on the floor). On the first pass, we fix the A-B
+            collision by pushing A up. But this changes A's velocity, which now affects the B-C collision below it! On
+            the second pass, we fix B-C, but that changes B's velocity, which means A-B needs fixing again...</p>
+        <p>By running 10 passes, each collision gets many chances to adjust. The corrections get smaller and smaller
+            each pass until everything <strong>converges</strong> to a stable solution. 10 iterations is a sweet spot:
+            accurate enough for realistic stacking, fast enough for 60 FPS.</p>
+    </div>
+
+    <p>
+        Now let's dive into <code>solveManifold</code> — the function where all the real physics happens.
+        We'll break it into 4 logical steps, explaining every line and variable.
+    </p>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STEP 1: Normal Impulse (Bouncing)                         -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>Step 1: The Normal Impulse (Bouncing)</h2>
+
+    <p>
+        When two objects collide, we first want to stop them from moving <em>into</em> each other and make them bounce
+        apart.
+        The direction to push is the <strong>collision normal</strong> (the <code>n</code> vector from the Manifold).
+        But how <em>hard</em> should we push? That depends on how fast they're approaching each other.
+    </p>
+
+    <h3>Step 1a: Calculate Relative Velocity</h3>
+
+    <div class="concept-box">
+        <h3>The Car Analogy: Relative Velocity</h3>
+        <p>Imagine two cars on a highway:</p>
+        <ul>
+            <li><strong>Side-by-side at 60mph:</strong> If they gently bump mirrors, the impact is tiny. They're both
+                going 60mph, but <em>relative to each other</em>, they're barely moving. Relative velocity ≈ 0.</li>
+            <li><strong>Head-on at 60mph each:</strong> The impact is devastating! Relative velocity = 120mph.</li>
+        </ul>
+        <p>We don't care how fast each object is going in absolute terms — we only care about their speed
+            <strong>relative to each other</strong> at the point of contact.
+        </p>
+    </div>
+
+    <p>Here's the code that calculates relative velocity. Let's break down every variable:</p>
+
+    <pre><code>
+// Get the radius vectors (from preCompute)
+// rA = vector from Body A's center to the contact point
+// rB = vector from Body B's center to the contact point
+const { rA, rB } = cd;
+
+// Calculate relative velocity at the contact point
+// This formula includes BOTH linear velocity and rotational (angular) velocity
+const dvx = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);
+const dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);
+    </code></pre>
+
+    <div class="note">
+        <strong>Breaking down <code>dvx</code> and <code>dvy</code>:</strong>
+        <ul>
+            <li><code>b.vel.x</code> — Body B's linear velocity in the X direction</li>
+            <li><code>b.angVel * rB.y</code> — The extra X-velocity that Body B's rotation adds at the contact point. If
+                a wheel is spinning, the point where it touches the ground is moving sideways!</li>
+            <li>We subtract Body A's equivalent values to get the <em>difference</em> (relative velocity)</li>
+            <li><code>dvx</code> = "delta velocity X" = relative velocity in the X direction</li>
+            <li><code>dvy</code> = "delta velocity Y" = relative velocity in the Y direction</li>
+        </ul>
+    </div>
+
+    <h3>Step 1b: Project Onto the Normal (Dot Product)</h3>
+
+    <p>
+        We now have relative velocity as a 2D vector <code>(dvx, dvy)</code>. But we only care about the component
+        that's moving <em>along the collision normal</em> — the part that's pushing <em>into</em> the other object.
+        We extract this using the <strong>Dot Product</strong>:
+    </p>
+
+    <div class="diagram">
+        <svg width="500" height="280" viewBox="0 0 500 280" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#00ff88" />
+                </marker>
+                <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ff4466" />
+                </marker>
+                <marker id="arrC" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#00d8ff" />
+                </marker>
+            </defs>
+            <text x="250" y="20" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">Dot Product:
+                Projecting Velocity onto Normal</text>
+
+            <!-- Contact point -->
+            <circle cx="200" cy="170" r="5" fill="#ffd166" />
+            <text x="160" y="195" fill="#ffd166" font-size="11">Contact Point</text>
+
+            <!-- Relative velocity vector (diagonal) -->
+            <line x1="200" y1="170" x2="350" y2="90" stroke="#00d8ff" stroke-width="2" marker-end="url(#arrC)" />
+            <text x="290" y="80" fill="#00d8ff" font-size="12">Relative Vel (dvx, dvy)</text>
+
+            <!-- Normal vector -->
+            <line x1="200" y1="170" x2="200" y2="70" stroke="#ff4466" stroke-width="2" marker-end="url(#arrR)" />
+            <text x="120" y="100" fill="#ff4466" font-size="12">Normal (n)</text>
+
+            <!-- Projection (dotted line) -->
+            <line x1="350" y1="90" x2="200" y2="90" stroke="#666" stroke-width="1" stroke-dasharray="4" />
+
+            <!-- Projected component along normal -->
+            <line x1="200" y1="170" x2="200" y2="90" stroke="#00ff88" stroke-width="3" marker-end="url(#arrG)" />
+            <text x="208" y="130" fill="#00ff88" font-size="12" font-weight="bold">vn (the part we want)</text>
+
+            <!-- Equation -->
+            <text x="250" y="245" fill="#aaa" font-size="13" text-anchor="middle" font-family="monospace">vn = dvx *
+                n.x + dvy * n.y</text>
+            <text x="250" y="265" fill="#666" font-size="11" text-anchor="middle">(This is the Dot Product formula)
+            </text>
+        </svg>
+    </div>
+
+    <pre><code>
+// Project the relative velocity onto the normal direction
+// vn = "velocity along normal" — how fast they're approaching each other
+const vn = dvx * n.x + dvy * n.y;
+    </code></pre>
+
+    <div class="note">
+        <strong>What does <code>vn</code> tell us?</strong>
+        <ul>
+            <li>If <code>vn &lt; 0</code> → Objects are moving <em>toward</em> each other (collision!). We need to apply
+                an impulse.</li>
+            <li>If <code>vn &gt; 0</code> → Objects are already moving <em>apart</em>. No impulse needed — they're
+                separating on their own.</li>
+        </ul>
+    </div>
+
+    <h3>Step 1c: Determine Bounciness</h3>
+
+    <pre><code>
+// Only apply bounce for significant impacts
+// If the approach speed is very small (< 1.0), set bounce to 0 (no bounce)
+// This prevents resting objects from vibrating/jittering
+const e = (-vn > 1.0) ? m.e : 0;
+    </code></pre>
+
+    <div class="note">
+        <strong>What is <code>e</code> (Restitution)?</strong> It controls bounciness on a scale of 0 to 1:
+        <ul>
+            <li><code>e = 1.0</code> — Perfect bounce (rubber ball). Object bounces back with 100% of its speed.</li>
+            <li><code>e = 0.5</code> — Partial bounce. Object bounces back at 50% speed.</li>
+            <li><code>e = 0.0</code> — No bounce (clay/lead). Object just stops dead.</li>
+        </ul>
+        <p>The <code>(-vn &gt; 1.0)</code> check is a clever trick: if the objects are approaching very slowly (like a
+            box gently resting on the floor), we skip the bounce entirely. This prevents objects from vibrating
+            infinitely on surfaces.</p>
+    </div>
+
+    <h3>Step 1d: Calculate the Impulse Magnitude</h3>
+
+    <p>Now comes the key formula. How hard do we push?</p>
+
+    <pre><code>
+// The impulse formula: j = -(1 + e) * vn / effectiveMass
+// cd.massN is 1/effectiveMass (pre-computed for speed)
+let jn = cd.massN * (-(1 + e) * vn);
+    </code></pre>
+
+    <div class="concept-box">
+        <h3>Breaking Down the Impulse Formula</h3>
+        <p>The formula <code>j = -(1 + e) * vn * massN</code> has three parts:</p>
+        <ul>
+            <li><code>vn</code> — How fast they're approaching (negative means approaching)</li>
+            <li><code>-(1 + e)</code> — The negative sign reverses the velocity (bouncing). The <code>+ e</code> adds
+                extra speed for the bounce. With <code>e = 0</code>, we just stop the approach. With <code>e = 1</code>,
+                we double-reverse to bounce back at full speed.</li>
+            <li><code>massN</code> — This is <code>1 / effectiveMass</code>. A lighter object gets a bigger velocity
+                change. A static wall (infinite mass, <code>invMass = 0</code>) doesn't move at all.</li>
+        </ul>
+        <p>Result: <code>jn</code> = a number representing how hard to push (the impulse magnitude).</p>
+    </div>
+
+    <h3>Step 1e: Accumulated Clamping</h3>
+
+    <pre><code>
+// Remember: the solver runs this 10 times per frame!
+// We accumulate impulses and ensure the total never goes negative
+const jnOld = cd.jnAcc;               // What we applied in previous iterations
+cd.jnAcc = Math.max(jnOld + jn, 0);   // Total impulse must be >= 0
+jn = cd.jnAcc - jnOld;                // Only apply the DIFFERENCE this iteration
+    </code></pre>
+
+    <div class="best-practice">
+        <h4>Why Clamp to Zero?</h4>
+        <p>A negative total impulse would mean we're <strong>pulling</strong> objects together — like objects being
+            magnetically attracted. We only want to <strong>push apart</strong>, never pull together. By ensuring
+            <code>jnAcc ≥ 0</code>, we guarantee physically correct behavior even across 10 solver iterations.
+        </p>
+    </div>
+
+    <h3>Step 1f: Apply the Impulse to Both Bodies</h3>
+
+    <pre><code>
+// Convert the scalar impulse (jn) into a 2D vector along the normal direction
+const pnx = n.x * jn;  // impulse X component
+const pny = n.y * jn;  // impulse Y component
+
+// Apply to Body A (subtract = push AWAY from collision)
+a.vel.x -= pnx * a.invMass;   // Change A's X velocity
+a.vel.y -= pny * a.invMass;   // Change A's Y velocity
+a.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;  // Change A's spin
+
+// Apply to Body B (add = push AWAY in opposite direction)
+b.vel.x += pnx * b.invMass;   // Change B's X velocity
+b.vel.y += pny * b.invMass;   // Change B's Y velocity
+b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;  // Change B's spin
+    </code></pre>
+
+    <div class="note">
+        <strong>Why subtract for A and add for B?</strong> Newton's Third Law: for every action, there's an equal and
+        opposite reaction. If we push A to the left, we push B to the right. The <code>invMass</code> ensures heavier
+        objects move less — a ball bouncing off a wall moves the ball a lot but the wall not at all (because the wall's
+        <code>invMass</code> is 0).
+    </div>
+
+    <div class="note">
+        <strong>What's the <code>angVel</code> line?</strong> That's the <strong>cross product</strong> — it calculates
+        how much the impulse makes the body spin. We'll explain this in detail in Step 3!
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STEP 2: Friction (Tangential Impulse)                     -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>Step 2: Friction (Tangential Impulse)</h2>
+
+    <p>
+        After bouncing, objects might still be <em>sliding</em> against each other. A box sitting on a tilted ramp would
+        slide forever without friction.
+        Friction acts <strong>perpendicular to the normal</strong> (along the <em>tangent</em>) to resist sliding
+        motion.
+    </p>
+
+    <div class="diagram">
+        <img src="../tut-svg-fric.svg" alt="Normal Force vs Tangent Friction Vector">
+    </div>
+
+    <div class="concept-box">
+        <h3>Normal vs. Tangent: Two Perpendicular Directions</h3>
+        <p>Think of a box on a ramp:</p>
+        <ul>
+            <li><strong>Normal direction:</strong> Straight into the ramp surface. The normal impulse prevents the box
+                from sinking through the ramp.</li>
+            <li><strong>Tangent direction:</strong> Along the ramp surface. The friction impulse prevents the box from
+                sliding down the ramp.</li>
+        </ul>
+        <p>In code, if the normal is <code>(nx, ny)</code>, the tangent is simply <code>(-ny, nx)</code> — rotated 90
+            degrees. This was calculated in <code>preCompute</code>.</p>
+    </div>
+
+    <h3>Step 2a: Calculate Sliding Speed</h3>
+
+    <pre><code>
+// IMPORTANT: We recalculate relative velocity because Step 1 changed the velocities!
+const dvx2 = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);
+const dvy2 = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);
+
+// Project onto tangent direction (how fast are they sliding?)
+// vt = "velocity along tangent" — the sliding speed
+const vt = dvx2 * t.x + dvy2 * t.y;
+
+// Calculate friction impulse needed to stop the sliding
+let jt = cd.massT * (-vt);
+    </code></pre>
+
+    <div class="note">
+        <strong>Why recalculate velocity?</strong> In Step 1, we changed <code>a.vel</code> and <code>b.vel</code> by
+        applying the normal impulse. The relative velocity is now different! We must use the updated values.
+    </div>
+
+    <h3>Step 2b: Coulomb Friction Clamping</h3>
+
+    <div class="best-practice">
+        <h4>Coulomb's Friction Law</h4>
+        <p>Imagine pushing an empty cardboard box across a smooth floor — easy! Now someone puts a 50lb weight on top —
+            suddenly it's much harder to push. Why?</p>
+        <p><strong>Coulomb's Law:</strong> Maximum friction = Normal force × friction coefficient (μ). The harder you
+            press two surfaces together (more normal force), the more friction resists sliding.</p>
+        <p>In our engine: <code>maxFriction = jnAcc * mu</code>. The friction impulse can never exceed this limit.</p>
+    </div>
+
+    <pre><code>
+// Coulomb's friction law: friction <= mu * normal force
+// jnAcc = how hard we pushed apart (from Step 1)
+// m.mu = combined friction coefficient of both surfaces
+const maxF = cd.jnAcc * m.mu;
+
+// Clamp friction impulse to [-maxF, maxF] range
+// Uses accumulated clamping (same pattern as Step 1)
+const jtOld = cd.jtAcc;
+cd.jtAcc = Math.max(-maxF, Math.min(jtOld + jt, maxF));
+jt = cd.jtAcc - jtOld;
+    </code></pre>
+
+    <div class="note">
+        <strong>Why clamp to <code>[-maxF, maxF]</code> instead of <code>[0, maxF]</code>?</strong> Unlike normal
+        impulses which only push apart, friction can push in <em>either</em> direction along the tangent. A box can
+        slide left or right, and friction opposes whichever direction it's sliding.
+    </div>
+
+    <h3>Step 2c: Apply the Friction Impulse</h3>
+
+    <pre><code>
+// Convert friction magnitude to a 2D vector along the tangent
+const ptx = t.x * jt;  // friction impulse X
+const pty = t.y * jt;  // friction impulse Y
+
+// Apply to both bodies (same pattern as normal impulse)
+a.vel.x -= ptx * a.invMass;
+a.vel.y -= pty * a.invMass;
+a.angVel -= (rA.x * pty - rA.y * ptx) * a.invInertia;
+
+b.vel.x += ptx * b.invMass;
+b.vel.y += pty * b.invMass;
+b.angVel += (rB.x * pty - rB.y * ptx) * b.invInertia;
+    </code></pre>
+
+    <p>
+        Notice this is <strong>identical in structure</strong> to the normal impulse application! The only difference
+        is we use the tangent vector <code>t</code> instead of the normal <code>n</code>, and the friction magnitude
+        <code>jt</code> instead of the bounce magnitude <code>jn</code>.
+    </p>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STEP 3: Angular Velocity & Inertia                        -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>Step 3: Angular Velocity &amp; Inertia (Spinning)</h2>
+
+    <p>
+        You may have noticed the mysterious <code>angVel</code> lines in Steps 1 and 2. These handle
+        <strong>rotation</strong>.
+        Without them, every collision would just push objects in straight lines — no spinning, no tumbling, no realistic
+        behavior. Let's break this down piece by piece.
+    </p>
+
+    <h3>Step 3a: Why Do Objects Spin?</h3>
+
+    <p>
+        In the real world, if you flick a pencil at its tip, it spins. If you push it dead center, it slides without
+        spinning. <strong>Where</strong> the force hits relative to the center determines how much spin it creates.
+        This rotational force is called <strong>Torque</strong>.
+    </p>
+
+    <div class="diagram">
+        <img src="../tut-svg-ang.svg" alt="Angular momentum torque from off-center impact">
+    </div>
+
+    <div class="concept-box" style="border-color: var(--purple);">
+        <h3 style="color: var(--purple);">The Door Hinge Analogy</h3>
+        <p>Imagine a heavy door on a hinge:</p>
+        <ul>
+            <li>Push <strong>right at the hinge</strong> → The door barely moves. Zero torque.</li>
+            <li>Push <strong>at the handle</strong> (far from hinge) → It swings open easily. Lots of torque.</li>
+            <li>The <strong>same force</strong> creates <strong>more spin</strong> when applied further from the pivot
+                point.</li>
+        </ul>
+        <p>In our engine:</p>
+        <ul>
+            <li>The <strong>"hinge"</strong> = the body's center of mass (<code>a.pos</code>)</li>
+            <li>The <strong>"push point"</strong> = the contact point where the collision happens</li>
+            <li>The <strong>"distance to hinge"</strong> = the radius vector <code>rA</code></li>
+        </ul>
+    </div>
+
+    <h3>Step 3b: The Radius Vector (<code>rA</code> and <code>rB</code>)</h3>
+
+    <p>
+        The first thing we calculate is the <strong>radius vector</strong> — a line from each body's center to the
+        contact point. This tells us <em>how far off-center</em> the collision is.
+    </p>
+
+    <div class="diagram">
+        <svg width="550" height="300" viewBox="0 0 550 300" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrOr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#f97316" />
+                </marker>
+            </defs>
+            <text x="275" y="25" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">The Radius Vector
+                (rA)</text>
+
+            <!-- Box body -->
+            <rect x="100" y="80" width="140" height="140" fill="rgba(55,148,255,0.15)" stroke="#3794ff" stroke-width="2"
+                rx="4" />
+            <text x="170" y="200" fill="#3794ff" font-size="11" text-anchor="middle">Body A</text>
+
+            <!-- Center of mass -->
+            <circle cx="170" cy="150" r="6" fill="#3794ff" />
+            <text x="178" y="143" fill="#3794ff" font-size="11">center</text>
+            <text x="178" y="156" fill="#3794ff" font-size="10">(170, 150)</text>
+
+            <!-- Contact point at corner -->
+            <circle cx="240" cy="80" r="6" fill="#ffd166" />
+            <text x="248" y="77" fill="#ffd166" font-size="11">contact</text>
+            <text x="248" y="90" fill="#ffd166" font-size="10">(240, 80)</text>
+
+            <!-- Radius vector rA -->
+            <line x1="170" y1="150" x2="240" y2="80" stroke="#f97316" stroke-width="3" marker-end="url(#arrOr2)" />
+            <text x="220" y="130" fill="#f97316" font-size="13" font-weight="bold">rA</text>
+
+            <!-- Calculation -->
+            <rect x="310" y="70" width="220" height="140" fill="rgba(0,0,0,0.4)" rx="8" />
+            <text x="320" y="95" fill="#fff" font-size="13" font-weight="bold">How to calculate rA:</text>
+            <text x="320" y="120" fill="#f97316" font-size="12" font-family="monospace">rA = contact - center</text>
+            <text x="320" y="145" fill="#ccc" font-size="12" font-family="monospace">rA.x = 240 - 170 = 70</text>
+            <text x="320" y="170" fill="#ccc" font-size="12" font-family="monospace">rA.y = 80 - 150 = -70</text>
+            <text x="320" y="200" fill="#00ff88" font-size="12" font-family="monospace">rA = (70, -70)</text>
+
+            <!-- Bottom explanation -->
+            <text x="275" y="260" fill="#aaa" font-size="12" text-anchor="middle">In code:</text>
+            <text x="275" y="280" fill="#f97316" font-size="12" text-anchor="middle" font-family="monospace">const rA =
+                Vector.sub(contactPoint, a.pos);</text>
+        </svg>
+    </div>
+
+    <pre><code>
+// rA = vector from Body A's center to the contact point
+// rB = vector from Body B's center to the contact point
+const rA = Vector.sub(c, a.pos);  // contactPoint - bodyA.position
+const rB = Vector.sub(c, b.pos);  // contactPoint - bodyB.position
+    </code></pre>
+
+    <div class="note">
+        <strong>What does <code>rA</code> look like?</strong> If Body A's center is at (170, 150) and the contact
+        point is at the top-right corner (240, 80):
+        <ul>
+            <li><code>rA.x = 240 - 170 = 70</code> (contact is 70px to the right of center)</li>
+            <li><code>rA.y = 80 - 150 = -70</code> (contact is 70px above center)</li>
+            <li>So <code>rA = (70, -70)</code> — it points diagonally up-right toward the corner</li>
+        </ul>
+        <p>If the contact happened at <strong>dead center</strong>, <code>rA</code> would be <code>(0, 0)</code> —
+            zero distance, zero spin.</p>
+    </div>
+
+    <h3>Step 3c: The Cross Product — Measuring Torque</h3>
+
+    <p>
+        Now we need to answer: <em>"Given a push in direction <code>n</code>, and a radius <code>rA</code> from the
+            center, how much spin does this create?"</em> The answer is the <strong>2D Cross Product</strong>.
+    </p>
+
+    <div class="concept-box" style="border-color: var(--purple);">
+        <h3 style="color: var(--purple);">The 2D Cross Product — In Plain English</h3>
+        <p>In 3D, a cross product gives you a new vector. But in 2D, it simplifies to just <strong>a single
+                number</strong>:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.1em; color: #f97316;">
+            rAxN = rA.x * n.y - rA.y * n.x
+        </div>
+        <p>This number tells you:</p>
+        <ul>
+            <li><strong>Positive</strong> → push creates <strong>counter-clockwise</strong> spin</li>
+            <li><strong>Negative</strong> → push creates <strong>clockwise</strong> spin</li>
+            <li><strong>Zero</strong> → <em>no spin</em> (the push goes straight through the center)</li>
+            <li><strong>Bigger absolute value</strong> → <em>more</em> spin</li>
+        </ul>
+    </div>
+
+    <div class="diagram">
+        <svg width="600" height="320" viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg">
+            <text x="300" y="25" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">Cross Product: Two
+                Scenarios</text>
+
+            <!-- SCENARIO 1: Corner hit -->
+            <rect x="30" y="45" width="250" height="260" fill="rgba(0,0,0,0.3)" rx="8" />
+            <text x="155" y="70" fill="#00ff88" font-size="13" font-weight="bold" text-anchor="middle">Corner Hit → BIG
+                Spin</text>
+
+            <rect x="70" y="110" width="80" height="80" fill="rgba(55,148,255,0.15)" stroke="#3794ff" stroke-width="2"
+                rx="4" />
+            <circle cx="110" cy="150" r="4" fill="#3794ff" />
+            <text x="118" y="148" fill="#3794ff" font-size="10">center</text>
+            <circle cx="150" cy="110" r="4" fill="#ffd166" />
+            <line x1="110" y1="150" x2="150" y2="110" stroke="#f97316" stroke-width="2" />
+            <text x="140" y="140" fill="#f97316" font-size="10">rA=(40,-40)</text>
+            <line x1="150" y1="110" x2="150" y2="75" stroke="#ff4466" stroke-width="2" />
+            <text x="158" y="90" fill="#ff4466" font-size="10">n=(0,-1)</text>
+
+            <path d="M 170 150 A 30 30 0 0 1 140 180" stroke="#00ff88" stroke-width="2" fill="none" />
+            <text x="175" y="175" fill="#00ff88" font-size="10">Spin!</text>
+
+            <text x="155" y="220" fill="#ccc" font-size="11" text-anchor="middle" font-family="monospace">rAxN = 40 *
+                (-1) - (-40) * 0</text>
+            <text x="155" y="240" fill="#00ff88" font-size="13" text-anchor="middle" font-family="monospace"
+                font-weight="bold">rAxN = -40 (big spin!)</text>
+            <text x="155" y="265" fill="#aaa" font-size="10" text-anchor="middle">Push is far from center</text>
+            <text x="155" y="280" fill="#aaa" font-size="10" text-anchor="middle">→ lots of rotation</text>
+
+            <!-- SCENARIO 2: Center hit -->
+            <rect x="320" y="45" width="250" height="260" fill="rgba(0,0,0,0.3)" rx="8" />
+            <text x="445" y="70" fill="#ff4466" font-size="13" font-weight="bold" text-anchor="middle">Center Hit → NO
+                Spin</text>
+
+            <rect x="360" y="110" width="80" height="80" fill="rgba(55,148,255,0.15)" stroke="#3794ff" stroke-width="2"
+                rx="4" />
+            <circle cx="400" cy="150" r="4" fill="#3794ff" />
+            <text x="408" y="148" fill="#3794ff" font-size="10">center</text>
+            <circle cx="400" cy="110" r="4" fill="#ffd166" />
+            <line x1="400" y1="150" x2="400" y2="110" stroke="#f97316" stroke-width="2" />
+            <text x="408" y="130" fill="#f97316" font-size="10">rA=(0,-40)</text>
+            <line x1="400" y1="110" x2="400" y2="75" stroke="#ff4466" stroke-width="2" />
+            <text x="408" y="90" fill="#ff4466" font-size="10">n=(0,-1)</text>
+
+            <text x="445" y="220" fill="#ccc" font-size="11" text-anchor="middle" font-family="monospace">rAxN = 0 *
+                (-1) - (-40) * 0</text>
+            <text x="445" y="240" fill="#ff4466" font-size="13" text-anchor="middle" font-family="monospace"
+                font-weight="bold">rAxN = 0 (no spin!)</text>
+            <text x="445" y="265" fill="#aaa" font-size="10" text-anchor="middle">Push goes through center</text>
+            <text x="445" y="280" fill="#aaa" font-size="10" text-anchor="middle">→ pure linear push</text>
+        </svg>
+    </div>
+
+    <pre><code>
+// Cross product: rA × n
+// "How much spin does a push in direction n create,
+//  when applied at distance rA from the center?"
+const rAxN = rA.x * n.y - rA.y * n.x;
+const rBxN = rB.x * n.y - rB.y * n.x;
+    </code></pre>
+
+    <div class="note">
+        <strong>Worked example (corner hit):</strong> If <code>rA = (40, -40)</code> and <code>n = (0, -1)</code>
+        (normal points up):
+        <ul>
+            <li><code>rAxN = 40 × (-1) - (-40) × 0 = -40 - 0 = <strong>-40</strong></code></li>
+            <li>Big number → strong clockwise spin!</li>
+        </ul>
+        <strong>Worked example (center hit):</strong> If <code>rA = (0, -40)</code> and <code>n = (0, -1)</code>:
+        <ul>
+            <li><code>rAxN = 0 × (-1) - (-40) × 0 = 0 - 0 = <strong>0</strong></code></li>
+            <li>Zero → no spin at all. The push goes straight through the center.</li>
+        </ul>
+    </div>
+
+    <h3>Step 3d: Effective Mass (<code>kN</code> and <code>massN</code>)</h3>
+
+    <p>
+        Now for the part that looks scariest in the code. But it's actually logical once you understand
+        <em>why</em> we need it.
+    </p>
+
+    <div class="concept-box">
+        <h3>Why Can't We Just Use Regular Mass?</h3>
+        <p>In Step 1, we used <code>massN</code> (not regular mass) to calculate the impulse:
+            <code>jn = massN * (-(1 + e) * vn)</code>. Why?
+        </p>
+        <p>Because regular mass only accounts for <strong>linear motion</strong> (pushing). When a collision happens
+            off-center, part of the impulse goes into <strong>spinning</strong> the object, not pushing it. This means
+            the object is effectively <em>easier to move</em> (it absorbs the impulse two ways: translation +
+            rotation).</p>
+        <p><strong>Effective Mass</strong> combines both effects into one number so our impulse formula works
+            correctly for collisions at any point — center, corner, or anywhere in between.</p>
+    </div>
+
+    <div class="diagram">
+        <svg width="550" height="280" viewBox="0 0 550 280" xmlns="http://www.w3.org/2000/svg">
+            <text x="275" y="25" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">Effective Mass
+                Formula (kN)</text>
+
+            <!-- Formula -->
+            <rect x="40" y="50" width="470" height="50" fill="rgba(0,0,0,0.4)" rx="8" />
+            <text x="275" y="82" fill="#ccc" font-size="14" text-anchor="middle" font-family="monospace">kN = invMassA
+                + invMassB + rAxN² × invInertiaA + rBxN² × invInertiaB</text>
+
+            <!-- Linear part -->
+            <rect x="40" y="120" width="220" height="140" fill="rgba(55,148,255,0.1)" stroke="#3794ff" stroke-width="1"
+                rx="8" />
+            <text x="150" y="148" fill="#3794ff" font-size="13" font-weight="bold" text-anchor="middle">Linear Part
+            </text>
+            <text x="150" y="172" fill="#ccc" font-size="12" text-anchor="middle" font-family="monospace">invMassA +
+                invMassB</text>
+            <text x="150" y="196" fill="#aaa" font-size="11" text-anchor="middle">"How easy to push</text>
+            <text x="150" y="212" fill="#aaa" font-size="11" text-anchor="middle">these objects apart?"</text>
+            <text x="150" y="240" fill="#666" font-size="10" text-anchor="middle">Heavy → small invMass</text>
+            <text x="150" y="254" fill="#666" font-size="10" text-anchor="middle">Static wall → invMass = 0</text>
+
+            <!-- Rotational part -->
+            <rect x="290" y="120" width="220" height="140" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="1"
+                rx="8" />
+            <text x="400" y="148" fill="#8b5cf6" font-size="13" font-weight="bold" text-anchor="middle">Rotational
+                Part</text>
+            <text x="400" y="172" fill="#ccc" font-size="11" text-anchor="middle" font-family="monospace">rAxN² ×
+                invInertiaA</text>
+            <text x="400" y="196" fill="#aaa" font-size="11" text-anchor="middle">"How easy to spin</text>
+            <text x="400" y="212" fill="#aaa" font-size="11" text-anchor="middle">the object this way?"</text>
+            <text x="400" y="240" fill="#666" font-size="10" text-anchor="middle">Corner hit → rAxN big → spin</text>
+            <text x="400" y="254" fill="#666" font-size="10" text-anchor="middle">Center hit → rAxN = 0 → no spin
+            </text>
+        </svg>
+    </div>
+
+    <pre><code>
+// EFFECTIVE MASS along the normal direction
+// Think of it as: "How easy is it to separate these objects
+//    with a push along n?"
+const kN = a.invMass + b.invMass         // How easy to PUSH apart (linear)
+         + rAxN * rAxN * a.invInertia    // + How easy to SPIN body A
+         + rBxN * rBxN * b.invInertia;   // + How easy to SPIN body B
+    </code></pre>
+
+    <div class="note">
+        <strong>Breaking down each term:</strong>
+        <ul>
+            <li><code>a.invMass</code> — 1 / (mass of A). If A weighs 10kg, invMass = 0.1. If A is a static wall,
+                invMass = 0 (immovable).</li>
+            <li><code>b.invMass</code> — Same for Body B.</li>
+            <li><code>rAxN * rAxN</code> — The cross product <strong>squared</strong>. Squaring makes it always
+                positive. A corner hit (rAxN = -40) gives 1600. A center hit (rAxN = 0) gives 0.</li>
+            <li><code>a.invInertia</code> — 1 / (moment of inertia). "How easy is it to spin this shape?" A thin rod
+                spins easily (high invInertia). A heavy wide block resists (low invInertia).</li>
+        </ul>
+        <p><strong>The key insight:</strong> When <code>rAxN = 0</code> (center hit), the rotational part becomes
+            0, and kN equals just <code>invMassA + invMassB</code> — pure linear motion. When <code>rAxN</code> is
+            large (corner hit), the rotational terms grow, making kN <em>bigger</em> (the object is easier to "move"
+            because the impulse is shared across both pushing and spinning).</p>
+    </div>
+
+    <pre><code>
+// We store 1/kN (the inverse) because the impulse formula uses division:
+//   jn = -(1 + e) * vn / kN
+// Division is slow, so we pre-compute 1/kN and multiply instead:
+//   jn = -(1 + e) * vn * massN    (where massN = 1/kN)
+const massN = kN > 0 ? 1 / kN : 0;
+    </code></pre>
+
+    <h3>Step 3e: Same for Friction Direction (Tangent)</h3>
+
+    <p>
+        We do the exact same calculation for the <strong>tangent direction</strong> (used in Step 2 for friction).
+        The only difference is we use <code>t</code> (tangent vector) instead of <code>n</code> (normal vector):
+    </p>
+
+    <pre><code>
+// Cross product with tangent instead of normal
+const rAxT = rA.x * t.y - rA.y * t.x;
+const rBxT = rB.x * t.y - rB.y * t.x;
+
+// Effective mass along tangent direction (for friction)
+const kT = a.invMass + b.invMass
+         + rAxT * rAxT * a.invInertia
+         + rBxT * rBxT * b.invInertia;
+    </code></pre>
+
+    <div class="note">
+        <strong>Why two effective masses?</strong> A collision pushes in <em>two</em> perpendicular directions:
+        normal (bouncing) and tangent (friction). The effective mass can be different in each direction because
+        the cross product value changes depending on the push direction relative to the radius vector.
+    </div>
+
+    <h3>Step 3f: Storing the Contact Data</h3>
+
+    <p>All these pre-computed values get stored for the solver to use 10× per frame:</p>
+
+    <pre><code>
+m.contactData.push({
+    rA,                              // Radius: A's center → contact
+    rB,                              // Radius: B's center → contact
+    massN: kN > 0 ? 1 / kN : 0,     // Effective mass for bounce (1/kN)
+    massT: kT > 0 ? 1 / kT : 0,     // Effective mass for friction (1/kT)
+    jnAcc: 0,                        // Accumulated normal impulse starts at 0
+    jtAcc: 0                         // Accumulated friction impulse starts at 0
+});
+    </code></pre>
+
+    <h3>Step 3g: How the Solver Applies Spin</h3>
+
+    <p>
+        Back in Steps 1 and 2, after computing the impulse vector <code>(pnx, pny)</code>, we applied it to angular
+        velocity using the same cross product idea:
+    </p>
+
+    <div
+        style="background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 8px; margin: 20px 0; font-family: monospace; color: var(--purple);">
+        <p style="margin:0; font-size: 1.05em;">// How much does this impulse make Body A spin?</p>
+        <p style="margin:5px 0 0 0; font-size: 1.05em;">torque = rA.x * pny - rA.y * pnx</p>
+        <p style="margin:5px 0 0 0; font-size: 1.05em;">a.angVel -= torque * a.invInertia</p>
+    </div>
+
+    <div class="note">
+        <strong>Line-by-line:</strong>
+        <ul>
+            <li><code>rA.x * pny - rA.y * pnx</code> — Cross product of radius × impulse = <strong>torque</strong>.
+                How much rotational force the impulse creates at this contact point.</li>
+            <li><code>* a.invInertia</code> — Divides by moment of inertia. Easy-to-spin objects (high invInertia)
+                get lots of angular velocity change. Hard-to-spin objects (low invInertia) barely rotate.</li>
+            <li><code>a.angVel -=</code> — Subtract from A's spin (A gets pushed opposite to the impulse).</li>
+            <li>Body B uses <code>+=</code> instead (Newton's Third Law — equal and opposite reaction).</li>
+        </ul>
+    </div>
+
+    <ul>
+        <li><strong>Corner hit:</strong> <code>rA</code> is large → cross product is large → <code>angVel</code>
+            changes a lot → violent spin!</li>
+        <li><strong>Center hit:</strong> <code>rA ≈ (0,0)</code> → cross product ≈ 0 → <code>angVel</code> barely
+            changes → no spin, just linear push.</li>
+    </ul>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STEP 4: Position Correction                               -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>Step 4: Position Correction (Dealing with Sinking)</h2>
+
+    <p>
+        Impulses change <em>velocity</em>. But what if objects are already overlapping by the time we detect the
+        collision?
+        Just changing their speed won't undo the overlap — they'll still be stuck inside each other.
+        Over many frames, floating-point errors accumulate, and objects slowly sink into each other.
+    </p>
+
+    <div class="concept-box">
+        <h3>The Sinking Problem</h3>
+        <p>Imagine stacking 10 heavy boxes. Each frame, tiny floating-point errors mean the solver doesn't
+            <em>perfectly</em> stop all the velocity. The bottom box sinks 0.001 pixels into the floor. Next frame,
+            0.002. After a few seconds, it's visibly inside the floor!
+        </p>
+        <p><strong>Solution:</strong> After the velocity solver finishes, we directly move overlapping objects apart by
+            a
+            fraction of their overlap. This is called <strong>Baumgarte Stabilization</strong>.</p>
+    </div>
+
+    <pre><code>
+correctPositions() {
+    const percent = 0.4;  // Fix 40% of the overlap per frame
+    const slop = 0.01;    // Allow 0.01 pixels of overlap (prevents jitter)
+
+    for (let m of this.manifolds) {
+        const a = m.bodyA, b = m.bodyB;
+
+        // invMass: 0 for static objects, so they never move
+        const totalInv = a.invMass + b.invMass;
+        if (totalInv === 0) continue;  // Both are static walls — skip
+
+        // Only correct if overlap exceeds the slop threshold
+        // Math.max(..., 0) means: if penetration < slop, correction is 0
+        const corr = Math.max(m.penetration - slop, 0) / totalInv * percent;
+
+        // Push Body A in the -normal direction (away from B)
+        a.pos.x -= m.normal.x * corr * a.invMass;
+        a.pos.y -= m.normal.y * corr * a.invMass;
+
+        // Push Body B in the +normal direction (away from A)
+        b.pos.x += m.normal.x * corr * b.invMass;
+        b.pos.y += m.normal.y * corr * b.invMass;
+    }
+}
+    </code></pre>
+
+    <div class="best-practice">
+        <h4>Why the "Slop" Tolerance?</h4>
+        <p>If we corrected positions perfectly to 0.00 overlap every frame, floating-point rounding errors would fight
+            each other. One frame the correction pushes 0.001 right, next frame it pushes 0.001 left. The object
+            vibrates visibly!</p>
+        <p>By allowing a <strong>tiny 0.01-pixel overlap</strong> (called "slop"), we create a dead zone where no
+            correction happens. Objects rest perfectly still inside this invisible buffer zone. It's too small to see
+            but
+            completely eliminates jitter.</p>
+    </div>
+
+    <div class="note">
+        <strong>Why only 40% per frame?</strong> If we corrected 100% of the overlap instantly, it would look jarring —
+        objects would teleport. Correcting 40% per frame creates a smooth, gradual separation that looks natural. Over
+        3-4 frames, the overlap is essentially gone.
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- SUMMARY                                                    -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <h2>Putting It All Together</h2>
+
+    <p>Every frame, our physics engine performs this complete sequence:</p>
+    <ol>
+        <li><strong>Apply gravity</strong> to all body velocities</li>
+        <li><strong>Detect collisions</strong> between every pair of bodies (using Part 2's SAT)</li>
+        <li><strong>Pre-compute</strong> reusable values: tangent, bounciness, friction, effective mass</li>
+        <li><strong>Solve 10 iterations</strong> — for each collision:
+            <ul>
+                <li>Calculate how fast objects approach along the normal (<code>vn</code> via dot product)</li>
+                <li>Apply a normal impulse to make them bounce (<code>jn</code>), clamped to never pull</li>
+                <li>Calculate how fast they slide along the tangent (<code>vt</code> via dot product)</li>
+                <li>Apply a friction impulse to resist sliding (<code>jt</code>), clamped by Coulomb's law</li>
+                <li>Both impulses affect linear velocity AND angular velocity (via cross product)</li>
+            </ul>
+        </li>
+        <li><strong>Move objects</strong> by their corrected velocities</li>
+        <li><strong>Fix overlap</strong> by nudging positions apart (Baumgarte stabilization with slop)</li>
+    </ol>
+
+    <h2>Explore the Code</h2>
+
+    <p>
+        Click through the tabs above to explore the completed physics engine.
+        <code>solver.js</code> contains all the impulse math covered in this tutorial.
+        <code>main.js</code> sets up a scene with dynamic boxes, bouncy balls, and static terrain.
+        Try clicking the preview area to spawn more objects and watch the solver effortlessly handle collisions,
+        stacking, and friction!
+    </p>
+
+    <script src="../simulations/bg-music.js"></script>
+</body>
+
+</html>
