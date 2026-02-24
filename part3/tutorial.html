@@ -515,7 +515,34 @@ solve() {
         </p>
     </div>
 
-    <p>Here's the code that calculates relative velocity. Let's break down every variable:</p>
+    <div class="concept-box" style="border-color: var(--green);">
+        <h3 style="color: var(--green);">Vector Formula First</h3>
+        <p>The velocity at any point on a spinning body combines two parts:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            v<sub>contact</sub> = v<sub>linear</sub> + ω × r
+        </div>
+        <ul>
+            <li><code>v<sub>linear</sub></code> — the body's straight-line velocity (<code>vel</code>)</li>
+            <li><code>ω</code> (omega) — angular velocity (<code>angVel</code>) — how fast it spins</li>
+            <li><code>r</code> — radius vector from center to the contact point</li>
+            <li><code>ω × r</code> — the extra velocity that spinning adds at that point</li>
+        </ul>
+        <p>Relative velocity = B's contact velocity <em>minus</em> A's contact velocity:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            dv = (v<sub>B</sub> + ω<sub>B</sub> × r<sub>B</sub>) − (v<sub>A</sub> + ω<sub>A</sub> × r<sub>A</sub>)
+        </div>
+        <p>In 2D, the cross product <code>ω × r</code> expands to just two components:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1em; color: #ccc; line-height: 1.8;">
+            (ω × r).x = −ω · r.y<br>
+            (ω × r).y = +ω · r.x
+        </div>
+        <p>Now watch how each piece of this vector formula maps directly to the code below:</p>
+    </div>
+
+    <p>Here's the code — each line is just one piece of the vector formula above:</p>
 
     <pre><code>
 // Get the radius vectors (from preCompute)
@@ -523,8 +550,10 @@ solve() {
 // rB = vector from Body B's center to the contact point
 const { rA, rB } = cd;
 
-// Calculate relative velocity at the contact point
-// This formula includes BOTH linear velocity and rotational (angular) velocity
+// dv = (v_B + ω_B × r_B) − (v_A + ω_A × r_A)
+// Expanding the 2D cross product ω × r into components:
+//   x-component: vel.x + (-angVel * r.y)  →  vel.x - angVel * r.y
+//   y-component: vel.y + (+angVel * r.x)  →  vel.y + angVel * r.x
 const dvx = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);
 const dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);
     </code></pre>
@@ -548,6 +577,11 @@ const dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);
         that's moving <em>along the collision normal</em> — the part that's pushing <em>into</em> the other object.
         We extract this using the <strong>Dot Product</strong>:
     </p>
+
+    <div
+        style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 15px 0; font-family: monospace; font-size: 1.1em; color: #00ff88; text-align: center;">
+        v<sub>n</sub> = dv · n &nbsp;&nbsp;&nbsp; (dot product of relative velocity with normal)
+    </div>
 
     <div class="diagram">
         <svg width="500" height="280" viewBox="0 0 500 280" xmlns="http://www.w3.org/2000/svg">
@@ -673,20 +707,48 @@ jn = cd.jnAcc - jnOld;                // Only apply the DIFFERENCE this iteratio
 
     <h3>Step 1f: Apply the Impulse to Both Bodies</h3>
 
+    <div class="concept-box" style="border-color: var(--green);">
+        <h3 style="color: var(--green);">Vector Formula First</h3>
+        <p>First, convert the scalar impulse <code>jn</code> into a 2D impulse vector:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            P = n · j<sub>n</sub> &nbsp;&nbsp;&nbsp; (impulse vector = normal × magnitude)
+        </div>
+        <p>Then apply it to each body — an impulse changes both <strong>linear</strong> and <strong>angular</strong>
+            velocity:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            Body A:<br>
+            &nbsp;&nbsp;v<sub>A</sub> −= P · invMass<sub>A</sub> &nbsp;&nbsp;&nbsp; <span style="color:#aaa;">(linear
+                velocity change)</span><br>
+            &nbsp;&nbsp;ω<sub>A</sub> −= (r<sub>A</sub> × P) · invInertia<sub>A</sub> &nbsp;&nbsp;&nbsp; <span
+                style="color:#aaa;">(angular velocity change)</span><br><br>
+            Body B:<br>
+            &nbsp;&nbsp;v<sub>B</sub> += P · invMass<sub>B</sub><br>
+            &nbsp;&nbsp;ω<sub>B</sub> += (r<sub>B</sub> × P) · invInertia<sub>B</sub>
+        </div>
+        <p>The 2D cross product <code>r × P</code> gives a scalar (torque): <code>r.x · P.y − r.y · P.x</code></p>
+    </div>
+
+    <p>Now here's the code — each line maps directly to the vector formula above:</p>
+
     <pre><code>
-// Convert the scalar impulse (jn) into a 2D vector along the normal direction
+// P = n * jn  (impulse vector = normal × magnitude)
 const pnx = n.x * jn;  // impulse X component
 const pny = n.y * jn;  // impulse Y component
 
-// Apply to Body A (subtract = push AWAY from collision)
-a.vel.x -= pnx * a.invMass;   // Change A's X velocity
-a.vel.y -= pny * a.invMass;   // Change A's Y velocity
-a.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;  // Change A's spin
+// Body A: v_A -= P * invMass_A
+a.vel.x -= pnx * a.invMass;
+a.vel.y -= pny * a.invMass;
+// Body A: ω_A -= (r_A × P) * invInertia_A
+// where r_A × P = rA.x * pny - rA.y * pnx  (2D cross product = torque)
+a.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;
 
-// Apply to Body B (add = push AWAY in opposite direction)
-b.vel.x += pnx * b.invMass;   // Change B's X velocity
-b.vel.y += pny * b.invMass;   // Change B's Y velocity
-b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;  // Change B's spin
+// Body B: v_B += P * invMass_B  (opposite direction — Newton's 3rd Law)
+b.vel.x += pnx * b.invMass;
+b.vel.y += pny * b.invMass;
+// Body B: ω_B += (r_B × P) * invInertia_B
+b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;
     </code></pre>
 
     <div class="note">
@@ -733,16 +795,32 @@ b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;  // Change B's spin
 
     <h3>Step 2a: Calculate Sliding Speed</h3>
 
+    <div class="note">
+        <strong>Same vector formula, updated values:</strong>
+        <p>The normal impulse from Step 1 just changed <code>v</code> and <code>ω</code> for both bodies. We recalculate
+            using the same relative velocity formula, but with the updated velocities:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            dv = (v<sub>B</sub> + ω<sub>B</sub> × r<sub>B</sub>) − (v<sub>A</sub> + ω<sub>A</sub> × r<sub>A</sub>)
+            &nbsp;&nbsp;&nbsp; <span style="color:#aaa;">← same formula, updated v and ω</span>
+        </div>
+        <p>Then we project onto the <strong>tangent</strong> instead of the normal:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            v<sub>t</sub> = dv · t &nbsp;&nbsp;&nbsp; <span style="color:#aaa;">(dot product with tangent = sliding
+                speed)</span>
+        </div>
+    </div>
+
     <pre><code>
-// IMPORTANT: We recalculate relative velocity because Step 1 changed the velocities!
+// dv = (v_B + ω_B × r_B) − (v_A + ω_A × r_A)  ← same formula, updated values
 const dvx2 = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);
 const dvy2 = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);
 
-// Project onto tangent direction (how fast are they sliding?)
-// vt = "velocity along tangent" — the sliding speed
+// vt = dv · t  (dot product with tangent = sliding speed)
 const vt = dvx2 * t.x + dvy2 * t.y;
 
-// Calculate friction impulse needed to stop the sliding
+// Friction impulse needed to stop the sliding
 let jt = cd.massT * (-vt);
     </code></pre>
 
@@ -1016,6 +1094,17 @@ const rBxN = rB.x * n.y - rB.y * n.x;
         </ul>
     </div>
 
+    <div class="diagram"
+        style="background: var(--bg); border: 2px solid var(--purple); padding: 0; overflow: hidden; height: 450px; position: relative;">
+        <iframe src="../simulations/torque-poke-visualizer.html"
+            style="width: 100%; height: 100%; border: none;"></iframe>
+        <div
+            style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); padding: 10px; color: #fff; font-size: 13px; text-align: center;">
+            <strong>Interactive Lab:</strong> Drag on the box to "poke" it. See how impact distance from center (rA)
+            affects spin!
+        </div>
+    </div>
+
     <h3>Step 3d: Effective Mass (<code>kN</code> and <code>massN</code>)</h3>
 
     <p>
@@ -1034,6 +1123,22 @@ const rBxN = rB.x * n.y - rB.y * n.x;
             rotation).</p>
         <p><strong>Effective Mass</strong> combines both effects into one number so our impulse formula works
             correctly for collisions at any point — center, corner, or anywhere in between.</p>
+    </div>
+
+    <div class="concept-box" style="border-color: var(--green);">
+        <h3 style="color: var(--green);">Vector Formula First</h3>
+        <p>The effective mass along any direction <code>d</code> (normal or tangent) is:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            k<sub>d</sub> = invMass<sub>A</sub> + invMass<sub>B</sub> + (r<sub>A</sub> × d)² · invInertia<sub>A</sub> +
+            (r<sub>B</sub> × d)² · invInertia<sub>B</sub>
+        </div>
+        <p>Where <code>r × d</code> is the 2D cross product (a scalar). Squaring it makes it always positive.</p>
+        <ul>
+            <li>For <strong>bounce</strong>: use <code>d = n</code> (normal) → gives <code>k<sub>N</sub></code></li>
+            <li>For <strong>friction</strong>: use <code>d = t</code> (tangent) → gives <code>k<sub>T</sub></code></li>
+        </ul>
+        <p>We store <code>massN = 1/k<sub>N</sub></code> so we can multiply instead of divide (faster).</p>
     </div>
 
     <div class="diagram">
@@ -1153,10 +1258,25 @@ m.contactData.push({
         velocity using the same cross product idea:
     </p>
 
+    <div class="concept-box" style="border-color: var(--green);">
+        <h3 style="color: var(--green);">Vector Formula</h3>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1.05em; color: #00ff88; line-height: 1.8;">
+            torque = r × P &nbsp;&nbsp;&nbsp; <span style="color:#aaa;">(2D cross product → scalar)</span><br>
+            Δω = torque · invInertia &nbsp;&nbsp;&nbsp; <span style="color:#aaa;">(angular velocity change)</span>
+        </div>
+        <p>Expanding the 2D cross product <code>r × P</code>:</p>
+        <div
+            style="background: rgba(0,0,0,0.4); padding: 12px 18px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 1em; color: #ccc; line-height: 1.8;">
+            r × P = r.x · P.y − r.y · P.x
+        </div>
+    </div>
+
     <div
         style="background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 8px; margin: 20px 0; font-family: monospace; color: var(--purple);">
-        <p style="margin:0; font-size: 1.05em;">// How much does this impulse make Body A spin?</p>
+        <p style="margin:0; font-size: 1.05em;">// torque = r × P = rA.x * pny - rA.y * pnx</p>
         <p style="margin:5px 0 0 0; font-size: 1.05em;">torque = rA.x * pny - rA.y * pnx</p>
+        <p style="margin:5px 0 0 0; font-size: 1.05em;">// Δω = torque * invInertia</p>
         <p style="margin:5px 0 0 0; font-size: 1.05em;">a.angVel -= torque * a.invInertia</p>
     </div>
 

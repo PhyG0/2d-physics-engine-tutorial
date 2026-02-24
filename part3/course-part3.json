@@ -1,0 +1,439 @@
+{
+    "code": "physics-engine-part-3",
+    "title": "Building a Physics Engine from Scratch - Part 3",
+    "description": "Learn impulse-based collision resolution for 2D physics engines.",
+    "visible": true,
+    "lessons": [
+        {
+            "title": "Collision Resolution",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "# Part 3: Collision Resolution\n\n> **Note:**\n>\n> **Goal:** Take the `Manifold` data from collision detection (Part 2) and use it to physically push objects apart so they bounce, slide, and react realistically using **Impulses**.",
+                    "index": 1,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## From Detection to Response\n\nIn Part 2, we successfully answered two questions: *\"Are these shapes touching?\"* and *\"If so, how exactly?\"* This data was packaged into a `Manifold` — an object containing three critical pieces of information:\n\n* `normal` — The direction to push the objects apart (a unit vector pointing from Body A to Body B)\n* `penetration` — How deeply the objects are overlapping (a number in pixels)\n* `contacts` — The exact point(s) on the surface where the shapes are touching\n\nNow, we need to answer the final question: *\"What happens next?\"* We need to apply forces to separate the objects. In physics engines, we do this using **Impulses**.\n\n> **Concept:**\n>\n> ### What's the Difference Between a Force and an Impulse?\n>\n> **Force** (like gravity) is applied continuously, frame after frame. Each frame, gravity adds a tiny bit more speed. Think of it like gently pushing a shopping cart — the longer you push, the faster it goes.\n>\n> **Impulse** is an instant, one-time velocity change. Think of it like a billiard ball being struck — BAM, it's instantly moving. We use impulses for collisions because the \"bounce\" happens in a single instant, not gradually over many frames.\n>\n> In code terms:  \n>  Force: `velocity += (force / mass) * deltaTime` — gradual, depends on time  \n>  Impulse: `velocity += impulse / mass` — instant, no time involved",
+                    "index": 2,
+                    "codeId": null,
+                    "correctAnswer": ""
+                }
+            ]
+        },
+        {
+            "title": "The Engine Architecture",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## The Engine Architecture\n\nIn Part 1, our engine was simple: apply gravity, move objects. But now we need to handle collisions. If we move objects by their velocities right away, two overlapping objects will sink deeper into each other before we get a chance to push them apart. We must restructure the engine into a careful **6-step pipeline**:\n\n![engine-loop](/media/files/699db8d8db745e564bcb96c4)\n\n> **Best Practice:**\n>\n> #### Best Practice: Sub-stepping (Time Slicing)\n>\n> Instead of running physics once per frame (every 16ms at 60 FPS), we split the frame into **4 smaller sub-steps** (each about 4ms). Why?\n>\n> * **Prevents tunneling:** A fast bullet might teleport through a thin wall in 16ms, but 4ms steps are small enough to catch the collision.\n> * **Stabilizes stacks:** A tower of 10 boxes needs many tiny corrections to settle. 4 sub-steps gives the solver more chances to get it right.\n\nHere's what our engine loop looks like. Read each numbered comment carefully:\n\n```javascript\nfor (let i = 0; i < subSteps; i++) {\n    // 1. Apply gravity to every body's velocity\n    for (let body of bodies) { body.addVelocity(gravity, dt); }\n\n    // 2. Check every pair of bodies for collisions (returns a list of Manifolds)\n    const manifolds = detectCollisions(bodies);\n\n    // 3. The Solver calculates impulses and changes velocities to simulate bouncing/friction\n    solver.solve(manifolds);\n\n    // 4. NOW move every body by its (corrected) velocity\n    for (let body of bodies) { body.updatePosition(dt); }\n\n    // 5. If bodies are still overlapping, nudge them apart directly\n    solver.correctPositions(manifolds);\n\n    // 6. Reset forces for next sub-step\n    for (let body of bodies) { body.clearForces(); }\n}\n```\n\n> **Note:**\n>\n> **Why this order matters:** Notice that Step 3 (solving collisions) happens *before* Step 4 (moving objects). The solver adjusts velocities first, so by the time objects actually move, they're already heading in the correct, post-bounce direction. If we moved objects first, they'd sink into each other and we'd have to undo that movement — much messier!",
+                    "index": 1,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "### Quiz: Sub-stepping\n\nWhy do physics engines often split a frame into several \"sub-steps\"?",
+                    "index": 2,
+                    "codeId": null,
+                    "answers": [
+                        {
+                            "text": "To increase the frame rate of the game screen to 240 FPS.",
+                            "correct": false
+                        },
+                        {
+                            "text": "To prevent objects from tunneling through walls and to stabilize stacked objects.",
+                            "correct": true
+                        },
+                        {
+                            "text": "To make gravity pull objects 4 times faster.",
+                            "correct": false
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Peeking Inside: The 3 Core Functions",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Peeking Inside: The 3 Core Functions\n\nThe engine loop above calls three mysterious functions: `detectCollisions`, `solver.solve`, and `solver.correctPositions`. Before we tackle the heavy math, let's understand what each one does at a high level.",
+                    "index": 1,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### 1. `detectCollisions(bodies)` — Finding All Crashes\n\nThis function checks every body against every other body using the SAT algorithm from Part 2. It uses a **nested loop**, often called *\"brute force\"* because it checks every possible pair:\n\n```javascript\nfunction detectCollisions(bodies) {\n    const manifolds = [];\n\n    for (let i = 0; i < bodies.length; i++) {\n        for (let j = i + 1; j < bodies.length; j++) {\n\n            // Use Part 2's SAT algorithm to check if bodies[i] and bodies[j] are touching\n            const result = Collisions.findCollision(bodies[i], bodies[j]);\n\n            if (result && result.contacts.length > 0) {\n                // Pre-calculate reusable math (explained below)\n                solver.preCompute(result);\n                manifolds.push(result);\n            }\n        }\n    }\n    return manifolds;\n}\n```\n\n> **Note:**\n>\n> **Why `j = i + 1`?** If we checked body 0 vs body 3, we don't also need to check body 3 vs body 0 — it's the same collision! Starting `j` at `i + 1` cuts our work in half.\n\n> **Note:**\n>\n> **Future Optimization:** With 100 objects, this checks 4,950 pairs per sub-step! In a future tutorial, we'll replace this with a **Spatial Hash Grid** that only checks nearby pairs, reducing the work dramatically.",
+                    "index": 2,
+                    "codeId": null
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "### Quiz: Loop Optimization\n\nIn the collision detection nested loop, why do we start the inner loop at `j = i + 1`?",
+                    "index": 3,
+                    "codeId": null,
+                    "answers": [
+                        {
+                            "text": "It prevents checking an object against itself and avoids duplicate pair checks, cutting work in half.",
+                            "correct": true
+                        },
+                        {
+                            "text": "It skips static bodies like the floor to improve performance.",
+                            "correct": false
+                        },
+                        {
+                            "text": "It's a requirement of the SAT algorithm only.",
+                            "correct": false
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### 2. `solver.preCompute(manifold)` — Preparing the Math\n\nThe solver loop runs **10 iterations × 4 sub-steps = 40 times per frame**. To avoid recalculating the same values 40 times, we pre-compute expensive results once and store them. Here's what `preCompute` calculates for each collision:\n\n```javascript\npreCompute(m) {\n    const a = m.bodyA, b = m.bodyB;  // The two colliding bodies\n    const n = m.normal;              // Direction to push them apart\n\n    // Tangent = perpendicular to normal (for friction)\n    // If normal points UP (0, -1), tangent points RIGHT (1, 0)\n    const t = new Vector(-n.y, n.x);\n\n    // Combine material properties of both surfaces:\n    m.e = Math.min(a.restitution, b.restitution);  // Bounciness (least bouncy wins)\n    m.mu = Math.sqrt(a.friction * b.friction);      // Friction (geometric average)\n    m.tangent = t;\n\n    // For each contact point, compute \"effective mass\"\n    // (explained in detail in Step 3 below)\n    m.contactData = [];\n    for (let c of m.contacts) {\n        // rA, rB: vectors from each body's CENTER to the contact point\n        const rA = Vector.sub(c, a.pos);\n        const rB = Vector.sub(c, b.pos);\n\n        // ... effective mass calculation (covered in Step 3)\n\n        m.contactData.push({\n            rA, rB,\n            massN: /* normal effective mass */,\n            massT: /* tangent effective mass */,\n            jnAcc: 0,  // Accumulated normal impulse (starts at zero)\n            jtAcc: 0   // Accumulated friction impulse (starts at zero)\n        });\n    }\n}\n```\n\n> **Concept:**\n>\n> ### Variable Name Glossary\n>\n> The solver uses short variable names for performance. Here's what they all mean:\n>\n> * `a`, `b` — The two colliding bodies (Body A and Body B)\n> * `n` — The collision **Normal** vector (direction to push apart)\n> * `t` — The **Tangent** vector (perpendicular to normal, for friction/sliding)\n> * `e` — **Restitution** (bounciness, 0 = no bounce, 1 = perfect bounce)\n> * `mu` (μ) — **Friction coefficient** (0 = ice, 1 = sandpaper)\n> * `rA`, `rB` — **Radius vectors** from each body's center to the contact point\n> * `jn` — Normal impulse magnitude (how hard to bounce)\n> * `jt` — Tangent impulse magnitude (how hard friction pushes)\n> * `jnAcc` — **Accumulated** normal impulse across solver iterations\n> * `jtAcc` — **Accumulated** friction impulse across solver iterations\n> * `massN` — Effective mass in the normal direction (includes rotation)\n> * `massT` — Effective mass in the tangent direction (includes rotation)\n> * `invMass` — 1 / mass. Heavy objects have tiny invMass; static objects have invMass = 0\n> * `invInertia` — 1 / moment of inertia. Controls resistance to spinning\n> * `angVel` — Angular velocity (how fast the body is spinning, in radians/sec)",
+                    "index": 4,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### 3. `solver.solve()` — The Iterative Loop\n\nThis is deceptively simple. It just loops over every collision 10 times, calling `solveManifold` each time. But *why* 10 times? Because correcting one collision might mess up another!\n\n```javascript\nsolve() {\n    // Run 10 passes over all collisions\n    for (let iter = 0; iter < this.iterations; iter++) {\n        for (let m of this.manifolds) {\n            this.solveManifold(m);  // The heavy math lives here (Steps 1-2 below)\n        }\n    }\n}\n```\n\n> **Concept:**\n>\n> ### Why Iterate? The Domino Problem\n>\n> Imagine 3 boxes stacked on top of each other (A on B on C on the floor). On the first pass, we fix the A-B collision by pushing A up. But this changes A's velocity, which now affects the B-C collision below it! On the second pass, we fix B-C, but that changes B's velocity, which means A-B needs fixing again...\n>\n> By running 10 passes, each collision gets many chances to adjust. The corrections get smaller and smaller each pass until everything **converges** to a stable solution. 10 iterations is a sweet spot: accurate enough for realistic stacking, fast enough for 60 FPS.\n\nNow let's dive into `solveManifold` — the function where all the real physics happens. We'll break it into 4 logical steps, explaining every line and variable.",
+                    "index": 5,
+                    "codeId": null
+                }
+            ]
+        },
+        {
+            "title": "Step 1: The Normal Impulse (Bouncing)",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Step 1: The Normal Impulse (Bouncing)\n\nWhen two objects collide, we first want to stop them from moving *into* each other and make them bounce apart. The direction to push is the **collision normal** (the `n` vector from the Manifold). But how *hard* should we push? That depends on how fast they're approaching each other.",
+                    "index": 1,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 1a: Calculate Relative Velocity\n\n> **Concept:**\n>\n> ### The Car Analogy: Relative Velocity\n>\n> Imagine two cars on a highway:\n>\n> * **Side-by-side at 60mph:** If they gently bump mirrors, the impact is tiny. They're both going 60mph, but *relative to each other*, they're barely moving. Relative velocity ≈ 0.\n> * **Head-on at 60mph each:** The impact is devastating! Relative velocity = 120mph.\n>\n> We don't care how fast each object is going in absolute terms — we only care about their speed **relative to each other** at the point of contact.\n\n> **Concept:**\n>\n> ### Vector Formula First\n>\n> The velocity at any point on a spinning body combines two parts:\n>\n> **v_contact = v_linear + ω × r**\n>\n> * `v_linear` — the body's straight-line velocity (`vel`)\n> * `ω` (omega) — angular velocity (`angVel`) — how fast it spins\n> * `r` — radius vector from center to the contact point\n> * `ω × r` — the extra velocity that spinning adds at that point\n>\n> Relative velocity = B's contact velocity *minus* A's contact velocity:\n>\n> **dv = (v_B + ω_B × r_B) − (v_A + ω_A × r_A)**\n>\n> In 2D, the cross product `ω × r` expands to just two components:\n>\n> * `(ω × r).x = −ω · r.y`\n> * `(ω × r).y = +ω · r.x`\n>\n> Now watch how each piece of this vector formula maps directly to the code below.\n\nHere's the code — each line is just one piece of the vector formula above:\n\n```javascript\n// Get the radius vectors (from preCompute)\n// rA = vector from Body A's center to the contact point\n// rB = vector from Body B's center to the contact point\nconst { rA, rB } = cd;\n\n// dv = (v_B + ω_B × r_B) − (v_A + ω_A × r_A)\n// Expanding the 2D cross product ω × r into components:\n//   x-component: vel.x + (-angVel * r.y)  →  vel.x - angVel * r.y\n//   y-component: vel.y + (+angVel * r.x)  →  vel.y + angVel * r.x\nconst dvx = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);\nconst dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);\n```\n\n> **Note:**\n>\n> **Breaking down `dvx` and `dvy`:**\n>\n> * `b.vel.x` — Body B's linear velocity in the X direction\n> * `b.angVel * rB.y` — The extra X-velocity that Body B's rotation adds at the contact point. If a wheel is spinning, the point where it touches the ground is moving sideways!\n> * We subtract Body A's equivalent values to get the *difference* (relative velocity)\n> * `dvx` = \"delta velocity X\" = relative velocity in the X direction\n> * `dvy` = \"delta velocity Y\" = relative velocity in the Y direction",
+                    "index": 2,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 1b: Project Onto the Normal (Dot Product)\n\nWe now have relative velocity as a 2D vector `(dvx, dvy)`. But we only care about the component that's moving *along the collision normal* — the part that's pushing *into* the other object. We extract this using the **Dot Product**:\n\n**v_n = dv · n** (dot product of relative velocity with normal)\n\n![relative-velocity](/media/files/699db961db745e564bcb96c5)\n\n```javascript\n// vn = dv · n  (dot product of relative velocity with normal)\n// vn = \"velocity along normal\" — how fast they're approaching each other\nconst vn = dvx * n.x + dvy * n.y;\n```\n\n> **Note:**\n>\n> **What does `vn` tell us?**\n>\n> * If `vn < 0` → Objects are moving *toward* each other (collision!). We need to apply an impulse.\n> * If `vn > 0` → Objects are already moving *apart*. No impulse needed — they're separating on their own.",
+                    "index": 3,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "### Quiz: Relative Velocity Projection\n\nIf the relative velocity projected onto the normal (`vn`) is definitively greater than 0, what does it mean?",
+                    "index": 4,
+                    "codeId": null,
+                    "answers": [
+                        {
+                            "text": "The objects are colliding very hard!",
+                            "correct": false
+                        },
+                        {
+                            "text": "The objects are already moving apart, so no collision impulse is needed.",
+                            "correct": true
+                        },
+                        {
+                            "text": "The objects must have a perfectly elastic collision.",
+                            "correct": false
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 1c: Determine Bounciness\n\n```javascript\n// Only apply bounce for significant impacts\n// If the approach speed is very small (< 1.0), set bounce to 0 (no bounce)\n// This prevents resting objects from vibrating/jittering\nconst e = (-vn > 1.0) ? m.e : 0;\n```\n\n> **Note:**\n>\n> **What is `e` (Restitution)?** It controls bounciness on a scale of 0 to 1:\n>\n> * `e = 1.0` — Perfect bounce (rubber ball). Object bounces back with 100% of its speed.\n> * `e = 0.5` — Partial bounce. Object bounces back at 50% speed.\n> * `e = 0.0` — No bounce (clay/lead). Object just stops dead.\n>\n> The `(-vn > 1.0)` check is a clever trick: if the objects are approaching very slowly (like a box gently resting on the floor), we skip the bounce entirely. This prevents objects from vibrating infinitely on surfaces.",
+                    "index": 5,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 1d: Calculate the Impulse Magnitude\n\nNow comes the key formula. How hard do we push?\n\n```javascript\n// The impulse formula: j = -(1 + e) * vn / effectiveMass\n// cd.massN is 1/effectiveMass (pre-computed for speed)\nlet jn = cd.massN * (-(1 + e) * vn);\n```\n\n> **Concept:**\n>\n> ### Breaking Down the Impulse Formula\n>\n> The formula `j = -(1 + e) * vn * massN` has three parts:\n>\n> * `vn` — How fast they're approaching (negative means approaching)\n> * `-(1 + e)` — The negative sign reverses the velocity (bouncing). The `+ e` adds extra speed for the bounce. With `e = 0`, we just stop the approach. With `e = 1`, we double-reverse to bounce back at full speed.\n> * `massN` — This is `1 / effectiveMass`. A lighter object gets a bigger velocity change. A static wall (infinite mass, `invMass = 0`) doesn't move at all.\n>\n> Result: `jn` = a number representing how hard to push (the impulse magnitude).",
+                    "index": 6,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 1e: Accumulated Clamping\n\n```javascript\n// Remember: the solver runs this 10 times per frame!\n// We accumulate impulses and ensure the total never goes negative\nconst jnOld = cd.jnAcc;               // What we applied in previous iterations\ncd.jnAcc = Math.max(jnOld + jn, 0);   // Total impulse must be >= 0\njn = cd.jnAcc - jnOld;                // Only apply the DIFFERENCE this iteration\n```\n\n> **Best Practice:**\n>\n> #### Why Clamp to Zero?\n>\n> A negative total impulse would mean we're **pulling** objects together — like objects being magnetically attracted. We only want to **push apart**, never pull together. By ensuring `jnAcc ≥ 0`, we guarantee physically correct behavior even across 10 solver iterations.",
+                    "index": 7,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 1f: Apply the Impulse to Both Bodies\n\n> **Concept:**\n>\n> ### Vector Formula First\n>\n> First, convert the scalar impulse `jn` into a 2D impulse vector:\n>\n> **P = n · j_n** (impulse vector = normal × magnitude)\n>\n> Then apply it to each body — an impulse changes both **linear** and **angular** velocity:\n>\n> **Body A:**\n> * v_A −= P · invMass_A (linear velocity change)\n> * ω_A −= (r_A × P) · invInertia_A (angular velocity change)\n>\n> **Body B:**\n> * v_B += P · invMass_B\n> * ω_B += (r_B × P) · invInertia_B\n>\n> The 2D cross product `r × P` gives a scalar (torque): `r.x · P.y − r.y · P.x`\n\nNow here's the code — each line maps directly to the vector formula above:\n\n```javascript\n// P = n * jn  (impulse vector = normal × magnitude)\nconst pnx = n.x * jn;  // impulse X component\nconst pny = n.y * jn;  // impulse Y component\n\n// Body A: v_A -= P * invMass_A\na.vel.x -= pnx * a.invMass;\na.vel.y -= pny * a.invMass;\n// Body A: ω_A -= (r_A × P) * invInertia_A\n// where r_A × P = rA.x * pny - rA.y * pnx  (2D cross product = torque)\na.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;\n\n// Body B: v_B += P * invMass_B  (opposite direction — Newton's 3rd Law)\nb.vel.x += pnx * b.invMass;\nb.vel.y += pny * b.invMass;\n// Body B: ω_B += (r_B × P) * invInertia_B\nb.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;\n```\n\n> **Note:**\n>\n> **Why subtract for A and add for B?** Newton's Third Law: for every action, there's an equal and opposite reaction. If we push A to the left, we push B to the right. The `invMass` ensures heavier objects move less — a ball bouncing off a wall moves the ball a lot but the wall not at all (because the wall's `invMass` is 0).\n\n> **Note:**\n>\n> **What's the `angVel` line?** That's the **cross product** — it calculates how much the impulse makes the body spin. We'll explain this in detail in Step 3!",
+                    "index": 8,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Code Review: `solveManifold` (Step 1)\n\nPutting it all together, here is the solver with just the normal impulse (bouncing) implemented:\n\n```javascript\nsolveManifold(m) {\n    const a = m.bodyA, b = m.bodyB;\n    const n = m.normal;\n\n    for (let cd of m.contactData) {\n        const { rA, rB } = cd;\n\n        const dvx = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);\n        const dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);\n\n        // Project relative velocity onto normal direction\n        const vn = dvx * n.x + dvy * n.y;\n\n        // Only apply restitution (bounce) for significant impacts.\n        const e = (-vn > 1.0) ? m.e : 0;\n\n        // Impulse magnitude: j = -(1 + e) * vn / effectiveMass\n        let jn = cd.massN * (-(1 + e) * vn);\n\n        // Accumulated clamping: total impulse must be >= 0\n        const jnOld = cd.jnAcc;\n        cd.jnAcc = Math.max(jnOld + jn, 0);\n        jn = cd.jnAcc - jnOld;\n\n        // Apply the normal impulse to both bodies\n        const pnx = n.x * jn, pny = n.y * jn;\n        a.vel.x -= pnx * a.invMass;\n        a.vel.y -= pny * a.invMass;\n        a.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;\n        \n        b.vel.x += pnx * b.invMass;\n        b.vel.y += pny * b.invMass;\n        b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;\n    }\n}\n```",
+                    "index": 9,
+                    "codeId": null,
+                    "correctAnswer": ""
+                }
+            ]
+        },
+        {
+            "title": "Step 2: Friction (Tangential Impulse)",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Step 2: Friction (Tangential Impulse)\n\nAfter bouncing, objects might still be *sliding* against each other. A box sitting on a tilted ramp would slide forever without friction. Friction acts **perpendicular to the normal** (along the *tangent*) to resist sliding motion.\n\n![normal-vs-tangent](/media/files/699db9e2db745e564bcb96c6)\n\n> **Concept:**\n>\n> ### Normal vs. Tangent: Two Perpendicular Directions\n>\n> Think of a box on a ramp:\n>\n> * **Normal direction:** Straight into the ramp surface. The normal impulse prevents the box from sinking through the ramp.\n> * **Tangent direction:** Along the ramp surface. The friction impulse prevents the box from sliding down the ramp.\n>\n> In code, if the normal is `(nx, ny)`, the tangent is simply `(-ny, nx)` — rotated 90 degrees. This was calculated in `preCompute`.",
+                    "index": 1,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 2a: Calculate Sliding Speed\n\n> **Note:**\n>\n> **Same vector formula, updated values:**\n>\n> The normal impulse from Step 1 just changed `v` and `ω` for both bodies. We recalculate using the same relative velocity formula, but with the updated velocities:\n>\n> **dv = (v_B + ω_B × r_B) − (v_A + ω_A × r_A)** ← same formula, updated v and ω\n>\n> Then we project onto the **tangent** instead of the normal:\n>\n> **v_t = dv · t** (dot product with tangent = sliding speed)\n\n```javascript\n// dv = (v_B + ω_B × r_B) − (v_A + ω_A × r_A)  ← same formula, updated values\nconst dvx2 = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);\nconst dvy2 = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);\n\n// vt = dv · t  (dot product with tangent = sliding speed)\nconst vt = dvx2 * t.x + dvy2 * t.y;\n\n// Friction impulse needed to stop the sliding\nlet jt = cd.massT * (-vt);\n```\n\n> **Note:**\n>\n> **Why recalculate velocity?** In Step 1, we changed `a.vel` and `b.vel` by applying the normal impulse. The relative velocity is now different! We must use the updated values.",
+                    "index": 2,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 2b: Coulomb Friction Clamping\n\n> **Best Practice:**\n>\n> #### Coulomb's Friction Law\n>\n> Imagine pushing an empty cardboard box across a smooth floor — easy! Now someone puts a 50lb weight on top — suddenly it's much harder to push. Why?\n>\n> **Coulomb's Law:** Maximum friction = Normal force × friction coefficient (μ). The harder you press two surfaces together (more normal force), the more friction resists sliding.\n>\n> In our engine: `maxFriction = jnAcc * mu`. The friction impulse can never exceed this limit.\n\n```javascript\n// Coulomb's friction law: friction <= mu * normal force\n// jnAcc = how hard we pushed apart (from Step 1)\n// m.mu = combined friction coefficient of both surfaces\nconst maxF = cd.jnAcc * m.mu;\n\n// Clamp friction impulse to [-maxF, maxF] range\n// Uses accumulated clamping (same pattern as Step 1)\nconst jtOld = cd.jtAcc;\ncd.jtAcc = Math.max(-maxF, Math.min(jtOld + jt, maxF));\njt = cd.jtAcc - jtOld;\n```\n\n> **Note:**\n>\n> **Why clamp to `[-maxF, maxF]` instead of `[0, maxF]`?** Unlike normal impulses which only push apart, friction can push in *either* direction along the tangent. A box can slide left or right, and friction opposes whichever direction it's sliding.",
+                    "index": 3,
+                    "codeId": null
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "### Quiz: Friction Limits\n\nAccording to Coulomb's Friction Law in our engine, what limits the maximum allowable friction impulse?",
+                    "index": 4,
+                    "codeId": null,
+                    "answers": [
+                        {
+                            "text": "The velocities of the two colliding bodies.",
+                            "correct": false
+                        },
+                        {
+                            "text": "It cannot exceed the normal impulse multiplied by the friction coefficient (the surfaces pressing together).",
+                            "correct": true
+                        },
+                        {
+                            "text": "The absolute mass of the lighter body.",
+                            "correct": false
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 2c: Apply the Friction Impulse\n\n```javascript\n// Convert friction magnitude to a 2D vector along the tangent\nconst ptx = t.x * jt;  // friction impulse X\nconst pty = t.y * jt;  // friction impulse Y\n\n// Apply to both bodies (same pattern as normal impulse)\na.vel.x -= ptx * a.invMass;\na.vel.y -= pty * a.invMass;\na.angVel -= (rA.x * pty - rA.y * ptx) * a.invInertia;\n\nb.vel.x += ptx * b.invMass;\nb.vel.y += pty * b.invMass;\nb.angVel += (rB.x * pty - rB.y * ptx) * b.invInertia;\n```\n\nNotice this is **identical in structure** to the normal impulse application! The only difference is we use the tangent vector `t` instead of the normal `n`, and the friction magnitude `jt` instead of the bounce magnitude `jn`.",
+                    "index": 5,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Code Review: `solveManifold` (Step 2)\n\nAdding Coulomb friction to the solver. Here is how the normal and tangential impulses plug in together:\n\n```javascript\nsolveManifold(m) {\n    const a = m.bodyA, b = m.bodyB;\n    const n = m.normal, t = m.tangent;\n\n    for (let cd of m.contactData) {\n        const { rA, rB } = cd;\n\n        // ── Normal Impulse (Bouncing) ──\n        const dvx = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);\n        const dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);\n\n        const vn = dvx * n.x + dvy * n.y;\n        const e = (-vn > 1.0) ? m.e : 0;\n        let jn = cd.massN * (-(1 + e) * vn);\n\n        const jnOld = cd.jnAcc;\n        cd.jnAcc = Math.max(jnOld + jn, 0);\n        jn = cd.jnAcc - jnOld;\n\n        const pnx = n.x * jn, pny = n.y * jn;\n        a.vel.x -= pnx * a.invMass;\n        a.vel.y -= pny * a.invMass;\n        a.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;\n        \n        b.vel.x += pnx * b.invMass;\n        b.vel.y += pny * b.invMass;\n        b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;\n\n        // ── Tangential Impulse (Friction) ──\n        // Recalculate relative velocity since velocities just changed!\n        const dvx2 = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);\n        const dvy2 = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);\n\n        const vt = dvx2 * t.x + dvy2 * t.y;\n        let jt = cd.massT * (-vt);\n\n        // Clamp friction using Coulomb's law: friction <= mu * normal force\n        const maxF = cd.jnAcc * m.mu;\n        const jtOld = cd.jtAcc;\n        cd.jtAcc = Math.max(-maxF, Math.min(jtOld + jt, maxF));\n        jt = cd.jtAcc - jtOld;\n\n        const ptx = t.x * jt, pty = t.y * jt;\n        a.vel.x -= ptx * a.invMass;\n        a.vel.y -= pty * a.invMass;\n        a.angVel -= (rA.x * pty - rA.y * ptx) * a.invInertia;\n        \n        b.vel.x += ptx * b.invMass;\n        b.vel.y += pty * b.invMass;\n        b.angVel += (rB.x * pty - rB.y * ptx) * b.invInertia;\n    }\n}\n```",
+                    "index": 6,
+                    "codeId": null,
+                    "correctAnswer": ""
+                }
+            ]
+        },
+        {
+            "title": "Step 3: Angular Velocity & Inertia (Spinning)",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Step 3: Angular Velocity & Inertia (Spinning)\n\nYou may have noticed the mysterious `angVel` lines in Steps 1 and 2. These handle **rotation**. Without them, every collision would just push objects in straight lines — no spinning, no tumbling, no realistic behavior. Let's break this down piece by piece.",
+                    "index": 1,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### The Goal: Integrating Spin\n\nBefore we break down the math, let's look at the complete code for `solveManifold` that we are building toward in this step. Seeing the final structure will help you understand where the new angular velocity and cross-product equations fit in:\n\n```javascript\nsolveManifold(m) {\n        const a = m.bodyA, b = m.bodyB;\n        const n = m.normal, t = m.tangent;\n\n        for (let cd of m.contactData) {\n            const { rA, rB } = cd;\n\n            // ── Calculate relative velocity at contact point ──\n            // This accounts for both linear velocity AND angular velocity\n            const dvx = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);\n            const dvy = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);\n\n            // ══════════════════════════════════════════════════\n            // NORMAL IMPULSE (Bouncing)\n            // ══════════════════════════════════════════════════\n\n            // Project relative velocity onto normal direction\n            const vn = dvx * n.x + dvy * n.y;\n\n            // Only apply restitution (bounce) for significant impacts.\n            // Tiny velocities get no bounce (prevents jitter).\n            const e = (-vn > 1.0) ? m.e : 0;\n\n            // Impulse magnitude: j = -(1 + e) * vn / effectiveMass\n            let jn = cd.massN * (-(1 + e) * vn);\n\n            // Accumulated clamping: total impulse must be >= 0\n            // (we only push apart, never pull together)\n            const jnOld = cd.jnAcc;\n            cd.jnAcc = Math.max(jnOld + jn, 0);\n            jn = cd.jnAcc - jnOld;\n\n            // Apply the normal impulse to both bodies\n            const pnx = n.x * jn, pny = n.y * jn;\n            a.vel.x -= pnx * a.invMass;\n            a.vel.y -= pny * a.invMass;\n            a.angVel -= (rA.x * pny - rA.y * pnx) * a.invInertia;\n            b.vel.x += pnx * b.invMass;\n            b.vel.y += pny * b.invMass;\n            b.angVel += (rB.x * pny - rB.y * pnx) * b.invInertia;\n\n            // ══════════════════════════════════════════════════\n            // TANGENTIAL IMPULSE (Friction)\n            // ══════════════════════════════════════════════════\n\n            // Recalculate relative velocity (it changed after normal impulse)\n            const dvx2 = (b.vel.x - b.angVel * rB.y) - (a.vel.x - a.angVel * rA.y);\n            const dvy2 = (b.vel.y + b.angVel * rB.x) - (a.vel.y + a.angVel * rA.x);\n\n            // Project onto tangent direction (the sliding direction)\n            const vt = dvx2 * t.x + dvy2 * t.y;\n            let jt = cd.massT * (-vt);\n\n            // Coulomb's friction law: friction force <= mu * normal force\n            // This prevents friction from being stronger than gravity.\n            const maxF = cd.jnAcc * m.mu;\n            const jtOld = cd.jtAcc;\n            cd.jtAcc = Math.max(-maxF, Math.min(jtOld + jt, maxF));\n            jt = cd.jtAcc - jtOld;\n\n            // Apply the friction impulse\n            const ptx = t.x * jt, pty = t.y * jt;\n            a.vel.x -= ptx * a.invMass;\n            a.vel.y -= pty * a.invMass;\n            a.angVel -= (rA.x * pty - rA.y * ptx) * a.invInertia;\n            b.vel.x += ptx * b.invMass;\n            b.vel.y += pty * b.invMass;\n            b.angVel += (rB.x * pty - rB.y * ptx) * b.invInertia;\n        }\n```",
+                    "index": 2,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 3a: Why Do Objects Spin?\n\nIn the real world, if you flick a pencil at its tip, it spins. If you push it dead center, it slides without spinning. **Where** the force hits relative to the center determines how much spin it creates. This rotational force is called **Torque**.\n\n![torque](/media/files/699dba1bdb745e564bcb96c7)\n\n> **Concept:**\n>\n> ### The Door Hinge Analogy\n>\n> Imagine a heavy door on a hinge:\n>\n> * Push **right at the hinge** → The door barely moves. Zero torque.\n> * Push **at the handle** (far from hinge) → It swings open easily. Lots of torque.\n> * The **same force** creates **more spin** when applied further from the pivot point.\n>\n> In our engine:\n>\n> * The **\"hinge\"** = the body's center of mass (`a.pos`)\n> * The **\"push point\"** = the contact point where the collision happens\n> * The **\"distance to hinge\"** = the radius vector `rA`",
+                    "index": 3,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 3b: The Radius Vector (`rA` and `rB`)\n\nThe first thing we calculate is the **radius vector** — a line from each body's center to the contact point. This tells us *how far off-center* the collision is.\n\n![radius-vector](/media/files/699dba3ddb745e564bcb96c8)\n\n```javascript\n// rA = vector from Body A's center to the contact point\n// rB = vector from Body B's center to the contact point\nconst rA = Vector.sub(c, a.pos);  // contactPoint - bodyA.position\nconst rB = Vector.sub(c, b.pos);  // contactPoint - bodyB.position\n```\n\n> **Note:**\n>\n> **What does `rA` look like?** If Body A's center is at (170, 150) and the contact point is at the top-right corner (240, 80):\n>\n> * `rA.x = 240 - 170 = 70` (contact is 70px to the right of center)\n> * `rA.y = 80 - 150 = -70` (contact is 70px above center)\n> * So `rA = (70, -70)` — it points diagonally up-right toward the corner\n>\n> If the contact happened at **dead center**, `rA` would be `(0, 0)` — zero distance, zero spin.",
+                    "index": 4,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 3c: The Cross Product — Measuring Torque\n\nNow we need to answer: *\"Given a push in direction `n`, and a radius `rA` from the center, how much spin does this create?\"* The answer is the **2D Cross Product**.\n\n> **Concept:**\n>\n> ### The 2D Cross Product — In Plain English\n>\n> In 3D, a cross product gives you a new vector. But in 2D, it simplifies to just **a single number**:\n>\n> rAxN = rA.x * n.y - rA.y * n.x\n>\n> This number tells you:\n>\n> * **Positive** → push creates **counter-clockwise** spin\n> * **Negative** → push creates **clockwise** spin\n> * **Zero** → *no spin* (the push goes straight through the center)\n> * **Bigger absolute value** → *more* spin\n\n![2d-cross-product](/media/files/699dba65db745e564bcb96c9)\n\n```javascript\n// Cross product: rA × n\n// \"How much spin does a push in direction n create,\n//  when applied at distance rA from the center?\"\nconst rAxN = rA.x * n.y - rA.y * n.x;\nconst rBxN = rB.x * n.y - rB.y * n.x;\n```\n\n> **Note:**\n>\n> **Worked example (corner hit):** If `rA = (40, -40)` and `n = (0, -1)` (normal points up):\n>\n> * `rAxN = 40 × (-1) - (-40) × 0 = -40 - 0 = -40`\n> * Big number → strong clockwise spin!\n>\n> **Worked example (center hit):** If `rA = (0, -40)` and `n = (0, -1)`:\n>\n> * `rAxN = 0 × (-1) - (-40) × 0 = 0 - 0 = 0`\n> * Zero → no spin at all. The push goes straight through the center.",
+                    "index": 5,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 5,
+                    "mode": 1,
+                    "text": "",
+                    "index": 6,
+                    "codeId": "699dbf0c70d02d6ad1bd6989",
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "### Quiz: Rotation and Forces\n\nWhen a force is applied EXACTLY at an object's center of mass, what happens to its rotation?",
+                    "index": 7,
+                    "codeId": null,
+                    "correctAnswer": "",
+                    "answers": [
+                        {
+                            "text": "It rotates counter-clockwise.",
+                            "correct": false
+                        },
+                        {
+                            "text": "It does not rotate at all; the force creates zero torque.",
+                            "correct": true
+                        },
+                        {
+                            "text": "It rotates only if it's a polygon, but not if it's a circle.",
+                            "correct": false
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 3d: Effective Mass (`kN` and `massN`)\n\nNow for the part that looks scariest in the code. But it's actually logical once you understand *why* we need it.\n\n> **Concept:**\n>\n> ### Why Can't We Just Use Regular Mass?\n>\n> In Step 1, we used `massN` (not regular mass) to calculate the impulse: `jn = massN * (-(1 + e) * vn)`. Why?\n>\n> Because regular mass only accounts for **linear motion** (pushing). When a collision happens off-center, part of the impulse goes into **spinning** the object, not pushing it. This means the object is effectively *easier to move* (it absorbs the impulse two ways: translation + rotation).\n>\n> **Effective Mass** combines both effects into one number so our impulse formula works correctly for collisions at any point — center, corner, or anywhere in between.\n\n> **Concept:**\n>\n> ### Vector Formula First\n>\n> The effective mass along any direction `d` (normal or tangent) is:\n>\n> **k_d = invMass_A + invMass_B + (r_A × d)² · invInertia_A + (r_B × d)² · invInertia_B**\n>\n> Where `r × d` is the 2D cross product (a scalar). Squaring it makes it always positive.\n>\n> * For **bounce**: use `d = n` (normal) → gives `k_N`\n> * For **friction**: use `d = t` (tangent) → gives `k_T`\n>\n> We store `massN = 1/k_N` so we can multiply instead of divide (faster).\n\n![effective-mass](/media/files/699dba91db745e564bcb96ca)\n\n```javascript\n// k_d = invMass_A + invMass_B + (r_A × d)² · invInertia_A + (r_B × d)² · invInertia_B\n// For d = n (normal direction):\nconst kN = a.invMass + b.invMass         // How easy to PUSH apart (linear)\n         + rAxN * rAxN * a.invInertia    // + (r_A × n)² · invInertia_A\n         + rBxN * rBxN * b.invInertia;   // + (r_B × n)² · invInertia_B\n```\n\n> **Note:**\n>\n> **Breaking down each term:**\n>\n> * `a.invMass` — 1 / (mass of A). If A weighs 10kg, invMass = 0.1. If A is a static wall, invMass = 0 (immovable).\n> * `b.invMass` — Same for Body B.\n> * `rAxN * rAxN` — The cross product **squared**. Squaring makes it always positive. A corner hit (rAxN = -40) gives 1600. A center hit (rAxN = 0) gives 0.\n> * `a.invInertia` — 1 / (moment of inertia). \"How easy is it to spin this shape?\" A thin rod spins easily (high invInertia). A heavy wide block resists (low invInertia).\n>\n> **The key insight:** When `rAxN = 0` (center hit), the rotational part becomes 0, and kN equals just `invMassA + invMassB` — pure linear motion. When `rAxN` is large (corner hit), the rotational terms grow, making kN *bigger* (the object is easier to \"move\" because the impulse is shared across both pushing and spinning).\n\n```javascript\n// We store 1/kN (the inverse) because the impulse formula uses division:\n//   jn = -(1 + e) * vn / kN\n// Division is slow, so we pre-compute 1/kN and multiply instead:\n//   jn = -(1 + e) * vn * massN    (where massN = 1/kN)\nconst massN = kN > 0 ? 1 / kN : 0;\n```",
+                    "index": 8,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 3e: Same for Friction Direction (Tangent)\n\nWe do the exact same calculation for the **tangent direction** (used in Step 2 for friction). The only difference is we use `t` (tangent vector) instead of `n` (normal vector):\n\n```javascript\n// Cross product with tangent instead of normal\nconst rAxT = rA.x * t.y - rA.y * t.x;\nconst rBxT = rB.x * t.y - rB.y * t.x;\n\n// Effective mass along tangent direction (for friction)\nconst kT = a.invMass + b.invMass\n         + rAxT * rAxT * a.invInertia\n         + rBxT * rBxT * b.invInertia;\n```\n\n> **Note:**\n>\n> **Why two effective masses?** A collision pushes in *two* perpendicular directions: normal (bouncing) and tangent (friction). The effective mass can be different in each direction because the cross product value changes depending on the push direction relative to the radius vector.",
+                    "index": 9,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 3f: Storing the Contact Data\n\nAll these pre-computed values get stored for the solver to use 10× per frame:\n\n```javascript\nm.contactData.push({\n    rA,                              // Radius: A's center → contact\n    rB,                              // Radius: B's center → contact\n    massN: kN > 0 ? 1 / kN : 0,     // Effective mass for bounce (1/kN)\n    massT: kT > 0 ? 1 / kT : 0,     // Effective mass for friction (1/kT)\n    jnAcc: 0,                        // Accumulated normal impulse starts at 0\n    jtAcc: 0                         // Accumulated friction impulse starts at 0\n});\n```",
+                    "index": 10,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Step 3g: How the Solver Applies Spin\n\nBack in Steps 1 and 2, after computing the impulse vector `(pnx, pny)`, we applied it to angular velocity using the same cross product idea:\n\n> **Concept:**\n>\n> ### Vector Formula\n>\n> **torque = r × P** (2D cross product → scalar)\n> **Δω = torque · invInertia** (angular velocity change)\n>\n> Expanding the 2D cross product `r × P`:\n> `r × P = r.x · P.y − r.y · P.x`\n\nIn code:\n\n```\n// torque = r × P = rA.x * pny - rA.y * pnx\ntorque = rA.x * pny - rA.y * pnx\n// Δω = torque * invInertia\na.angVel -= torque * a.invInertia\n```\n\n> **Note:**\n>\n> **Line-by-line:**\n>\n> * `rA.x * pny - rA.y * pnx` — Cross product of radius × impulse = **torque**. How much rotational force the impulse creates at this contact point.\n> * `* a.invInertia` — Divides by moment of inertia. Easy-to-spin objects (high invInertia) get lots of angular velocity change. Hard-to-spin objects (low invInertia) barely rotate.\n> * `a.angVel -=` — Subtract from A's spin (A gets pushed opposite to the impulse).\n> * Body B uses `+=` instead (Newton's Third Law — equal and opposite reaction).\n\n* **Corner hit:** `rA` is large → cross product is large → `angVel` changes a lot → violent spin!\n* **Center hit:** `rA ≈ (0,0)` → cross product ≈ 0 → `angVel` barely changes → no spin, just linear push.",
+                    "index": 11,
+                    "codeId": null
+                },
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "### Code Review: `preCompute`\n\nNow that we understand effective mass and the cross product, here is the complete `preCompute` function that runs once per collision:\n\n```javascript\npreCompute(m) {\n    const a = m.bodyA, b = m.bodyB;\n    const n = m.normal;\n\n    // Tangent is perpendicular to the normal\n    const t = new Vector(-n.y, n.x);\n\n    // Bounciness (least bouncy wins) & Friction (geometric mean)\n    m.e = Math.min(a.restitution, b.restitution);\n    m.mu = Math.sqrt(a.friction * b.friction);\n    m.tangent = t;\n\n    m.contactData = [];\n    for (let c of m.contacts) {\n        // Radii vectors from center of mass to contact point\n        const rA = Vector.sub(c, a.pos);\n        const rB = Vector.sub(c, b.pos);\n\n        // 2D Cross Products\n        const rAxN = rA.x * n.y - rA.y * n.x;\n        const rBxN = rB.x * n.y - rB.y * n.x;\n\n        // Effective mass in Normal direction\n        const kN = a.invMass + b.invMass\n            + rAxN * rAxN * a.invInertia\n            + rBxN * rBxN * b.invInertia;\n\n        const rAxT = rA.x * t.y - rA.y * t.x;\n        const rBxT = rB.x * t.y - rB.y * t.x;\n        \n        // Effective mass in Tangent direction\n        const kT = a.invMass + b.invMass\n            + rAxT * rAxT * a.invInertia\n            + rBxT * rBxT * b.invInertia;\n\n        m.contactData.push({\n            rA, rB,\n            massN: kN > 0 ? 1 / kN : 0,\n            massT: kT > 0 ? 1 / kT : 0,\n            jnAcc: 0,\n            jtAcc: 0\n        });\n    }\n}\n```",
+                    "index": 12,
+                    "codeId": null
+                }
+            ]
+        },
+        {
+            "title": "Step 4: Position Correction (Dealing with Sinking)",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Step 4: Position Correction (Dealing with Sinking)\n\nImpulses change *velocity*. But what if objects are already overlapping by the time we detect the collision? Just changing their speed won't undo the overlap — they'll still be stuck inside each other. Over many frames, floating-point errors accumulate, and objects slowly sink into each other.\n\n> **Concept:**\n>\n> ### The Sinking Problem\n>\n> Imagine stacking 10 heavy boxes. Each frame, tiny floating-point errors mean the solver doesn't *perfectly* stop all the velocity. The bottom box sinks 0.001 pixels into the floor. Next frame, 0.002. After a few seconds, it's visibly inside the floor!\n>\n> **Solution:** After the velocity solver finishes, we directly move overlapping objects apart by a fraction of their overlap. This is called **Baumgarte Stabilization**.\n\n```javascript\ncorrectPositions() {\n    const percent = 0.4;  // Fix 40% of the overlap per frame\n    const slop = 0.01;    // Allow 0.01 pixels of overlap (prevents jitter)\n\n    for (let m of this.manifolds) {\n        const a = m.bodyA, b = m.bodyB;\n\n        // invMass: 0 for static objects, so they never move\n        const totalInv = a.invMass + b.invMass;\n        if (totalInv === 0) continue;  // Both are static walls — skip\n\n        // Only correct if overlap exceeds the slop threshold\n        // Math.max(..., 0) means: if penetration < slop, correction is 0\n        const corr = Math.max(m.penetration - slop, 0) / totalInv * percent;\n\n        // Push Body A in the -normal direction (away from B)\n        a.pos.x -= m.normal.x * corr * a.invMass;\n        a.pos.y -= m.normal.y * corr * a.invMass;\n\n        // Push Body B in the +normal direction (away from A)\n        b.pos.x += m.normal.x * corr * b.invMass;\n        b.pos.y += m.normal.y * corr * b.invMass;\n    }\n}\n```\n\n> **Best Practice:**\n>\n> #### Why the \"Slop\" Tolerance?\n>\n> If we corrected positions perfectly to 0.00 overlap every frame, floating-point rounding errors would fight each other. One frame the correction pushes 0.001 right, next frame it pushes 0.001 left. The object vibrates visibly!\n>\n> By allowing a **tiny 0.01-pixel overlap** (called \"slop\"), we create a dead zone where no correction happens. Objects rest perfectly still inside this invisible buffer zone. It's too small to see but completely eliminates jitter.\n\n> **Note:**\n>\n> **Why only 40% per frame?** If we corrected 100% of the overlap instantly, it would look jarring — objects would teleport. Correcting 40% per frame creates a smooth, gradual separation that looks natural. Over 3-4 frames, the overlap is essentially gone.",
+                    "index": 1,
+                    "codeId": null
+                },
+                {
+                    "type": 2,
+                    "mode": 1,
+                    "text": "### Quiz: Baumgarte Stabilization\n\nWhy do we allow a tiny amount of overlap (called \"slop\") when correcting positions?",
+                    "index": 2,
+                    "codeId": null,
+                    "answers": [
+                        {
+                            "text": "To prevent float-point rounding errors from making the objects visually vibrate or jitter.",
+                            "correct": true
+                        },
+                        {
+                            "text": "To simulate soft-body dynamics like jelly.",
+                            "correct": false
+                        },
+                        {
+                            "text": "To make the engine run faster by doing less math.",
+                            "correct": false
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Putting It All Together",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Putting It All Together\n\nEvery frame, our physics engine performs this complete sequence:\n\n1. **Apply gravity** to all body velocities\n2. **Detect collisions** between every pair of bodies (using Part 2's SAT)\n3. **Pre-compute** reusable values: tangent, bounciness, friction, effective mass\n4. **Solve 10 iterations** — for each collision:\n   * Calculate how fast objects approach along the normal (`vn` via dot product)\n   * Apply a normal impulse to make them bounce (`jn`), clamped to never pull\n   * Calculate how fast they slide along the tangent (`vt` via dot product)\n   * Apply a friction impulse to resist sliding (`jt`), clamped by Coulomb's law\n   * Both impulses affect linear velocity AND angular velocity (via cross product)\n5. **Move objects** by their corrected velocities\n6. **Fix overlap** by nudging positions apart (Baumgarte stabilization with slop)",
+                    "index": 1,
+                    "codeId": null
+                }
+            ]
+        },
+        {
+            "title": "Explore the Code",
+            "nodes": [
+                {
+                    "type": 1,
+                    "mode": 1,
+                    "text": "## Explore the Code\n\nCode is available here: [Building a physics engine from scratch - part 3](https://phyg0.github.io/2d-physics-engine-tutorial/part3/index.html)\n\nClick through the tabs in IDE to explore the completed physics engine. `solver.js` contains all the impulse math covered in this tutorial. `main.js` sets up a scene with dynamic boxes, bouncy balls, and static terrain. Try clicking the preview area to spawn more objects and watch the solver effortlessly handle collisions, stacking, and friction!\n\n**Next slide contains the final output of this part of the course**",
+                    "index": 1,
+                    "codeId": null,
+                    "correctAnswer": ""
+                },
+                {
+                    "type": 5,
+                    "mode": 1,
+                    "text": "",
+                    "index": 2,
+                    "codeId": "699db16570d02d6ad1bd63fd",
+                    "correctAnswer": ""
+                }
+            ]
+        }
+    ]
+}
